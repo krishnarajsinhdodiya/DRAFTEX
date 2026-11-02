@@ -6,8 +6,8 @@ no chat history must be able to continue from this file alone.
 ## Status
 - **Date:** 2026-11-03
 - **Current phase:** 0 Bootstrap: done. Next: Phase 1 LaTeX core.
-- **Branch:** `main` (Phase 0 merged with `--no-ff` from `phase/0-bootstrap`, tagged `v0.0.0`)
-- **Last green commit:** the `docs: update handoff` commit on `phase/0-bootstrap`, merged into `main`
+- **Branch:** `main` only (Phase 0 merged with `--no-ff` and tagged `v0.0.0`; `phase/0-bootstrap` deleted locally and on GitHub; post-phase fixes merged from `chore/track-rules-files`, also deleted)
+- **Last green commit:** latest `main` (CI green on ubuntu, windows and commit-hygiene)
 - **CI:** GitHub Actions `CI` workflow: `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, all green
 - **Repo:** github.com/krishnarajsinhdodiya/DRAFTEX, verified **private** on 2026-11-03
 
@@ -16,6 +16,7 @@ no chat history must be able to continue from this file alone.
 - `.gitignore` + `.gitattributes` (LF everywhere; CRLF for .ps1/.bat/.cmd) as the root commit on `main`.
 - Commit hygiene: `scripts/commit-hygiene.mjs` holds the rules (forbidden-text regex exactly as the owner specified; author and committer must be the owner). `.githooks/commit-msg` (Node, CommonJS pinned via `.githooks/package.json`) calls it; `git config core.hooksPath .githooks` is set locally. CI job `commit-hygiene` runs `--range <sha>` over all history.
   - Verified live: a commit with a co-author trailer is refused, and the hook also refused one of this session's own messages that quoted the trailer name.
+- After Phase 0: the operating-rules file and START_HERE.md are now tracked (exemption in its §4); branch-deletion rule added to its §4/§8 and SPEC §13; runtime-data ignore patterns anchored to the repo root so `src/lib/data/` is not ignored.
 - Tool attribution switched off in the local, git-ignored tool settings (empty commit/pr text, session link off; the boolean `false` form needs a newer tool version than the installed one).
 - Scaffold: Next.js 16 App Router, TypeScript strict (`noUncheckedIndexedAccess`, `noImplicitOverride`), ESLint 10 flat config (next core-web-vitals + typescript), Prettier, Tailwind 4, Vitest 5 with coverage thresholds for `src/lib/{latex,rules,auth}/**` (inert until those dirs exist), Playwright smoke test against `next start` on 127.0.0.1:3210.
 - Node 24.22.2 installed on the Mac via Homebrew as a keg-only package; the system default is still Node 22. Use `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands (or `brew link --overwrite node@24`).
@@ -26,13 +27,14 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps (Phase 1, LaTeX core; follow SPEC §13 and memory.md decisions)
 1. Session start per the owner's operating rules; branch `phase/1-latex-core` from `main`.
-2. Tectonic manager: download 0.17.0 per OS, verify the SHA-256 values recorded in memory.md, keep it outside the repo (data dir `tools/`). Pin the bundle explicitly (URL `https://relay.fullyjustified.net/default_bundle_v<N>.tar` + checksum, or a vendored copy); confirm the format version from Tectonic's source before pinning.
+2. Tectonic manager: download 0.17.0 per OS, verify the SHA-256 values recorded in memory.md, store it under `<repo>/data/tools/` (git-ignored). Pin the bundle explicitly (URL `https://relay.fullyjustified.net/default_bundle_v<N>.tar` + checksum, or a vendored copy); confirm the format version from Tectonic's source before pinning.
 3. Compile service: `execFile` with an argument array, `--untrusted`, fresh temp dir per job, 20 s limit, FIFO queue (2 concurrent), cleanup in `finally` + startup sweep.
 4. Sanitiser (allow-list) + tests for every forbidden primitive and obfuscated form (gate 7).
 5. Serialiser from paper JSON → LaTeX reproducing the reference template structure (`\dxGroupHead`, `\dxQOffset`, single `questions` env); template-level font size/geometry/per-question-marks options; slot-level CO tags.
 6. Golden compile tests (gate 3) and visual regression on ubuntu only (gate 4); fuzz 1,000 strings in batches of ~50 per document (gate 6).
-7. Gate 5 runs **locally only** (confidential fixture). Record its result here, never commit the fixture.
-8. Add `tectonic` caching to CI (`actions/cache`, pinned SHA) so goldens don't refetch packages each run.
+7. Gate 5 runs **locally only**. The owner approved `reference_papers/…/BP702T Apr 26.tex` as the fixture source (2026-11-03). Build the fixture under a git-ignored path, record the result here, never commit it or copy its text.
+8. Add `src/lib/paths.ts`: resolve the data dir as `<project root>/data` (root found from the module location, not `process.cwd()`), `DRAFTEX_DATA_DIR` override, create subfolders on first use; unit-test both paths on mac and Windows. Compile temp dirs stay under the OS temp folder per SPEC §9.
+9. Add `tectonic` caching to CI (`actions/cache`, pinned SHA) so goldens don't refetch packages each run.
 
 ## Failing tests
 - None.
@@ -42,7 +44,8 @@ no chat history must be able to continue from this file alone.
 - The Prisma CLI's npm `latest` tag points at 8.0.0-rc.29 (a release candidate). Always install `prisma@7.10.1` explicitly.
 - `eslint-config-next` pulls three plugins whose peer range stops at ESLint 9; `package.json` `overrides` force ESLint 10. Re-check when eslint-config-next updates, and drop the overrides once peers include 10.
 - GitHub will move `ubuntu-latest` to Ubuntu 26 (notice in the CI log). Watch Playwright `--with-deps` after the switch.
-- The owner's original prompt pack is at `~/Downloads/DRAFTEX-pack/` (the source used to restore docs once). `docs/SPEC.md` now differs from it in two neutral-wording lines (§12, §13) and `memory.md` in three lines; the repo copy is authoritative.
+- The original prompt pack in `~/Downloads` is gone; git is now the only copy of the operating rules, START_HERE.md, SPEC and the rules. Repo copies are authoritative.
+- Data lives inside the repo folder (owner decision): deleting or re-cloning the folder, or `git clean -x`, destroys all papers. No script may run `git clean`; Phase 6 backups and Phase 8 docs must say this plainly.
 - `next` collects anonymous telemetry by default; CI disables it via env. The Phase 8 installer must run `next telemetry disable` on the faculty laptop.
 
 ## Decisions made (copied to memory.md)
@@ -51,8 +54,7 @@ no chat history must be able to continue from this file alone.
 - The local operating-rules file, START_HERE.md and the local tool-settings folder are git-ignored (kept on the owner's disk).
 
 ## Questions for owner
-- macOS data location: memory.md assumes `~/Library/Application Support/DRAFTEX` by analogy with the accepted Windows choice. Confirm, or say if you prefer Documents on the Mac.
-- Before Phase 1 gate 5: approve `BP702T Apr 26.tex` by filename for the **local-only** fidelity fixture (it is never committed).
+- None open. (Answered 2026-11-03: data folder = `<repo>/data/` on every OS; gate 5 fixture `BP702T Apr 26.tex` approved for local use.)
 
 ## Phase checklist
 - [x] 0 Bootstrap

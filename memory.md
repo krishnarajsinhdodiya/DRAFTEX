@@ -29,11 +29,11 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Commits by owner only; zero tool attribution (settings + hook + CI) · owner requirement
 - 2026-11-03 · reference_papers/ is git-ignored (contains unreleased future papers) · exam confidentiality
 - 2026-11-03 · Single `questions` environment per paper with per-group number offset · avoids exam.cls duplicate-label warnings seen in hand-written papers
-- 2026-11-03 · The owner's local operating-rules file, START_HERE.md and the local tool-settings folder (all listed in `.gitignore`) are git-ignored and stay on the owner's disk · rule forbids naming the tool in tracked files; owner accepted
+- 2026-11-03 · The owner's local operating-rules file, START_HERE.md and the local tool-settings folder (all listed in `.gitignore`) are git-ignored and stay on the owner's disk · rule forbids naming the tool in tracked files; owner accepted [SUPERSEDED 2026-11-03 → see "Rules files tracked"]
 - 2026-11-03 · Commit-msg regex kept exactly as written; commit messages never name those files or quote trailers · owner accepted; the hook rejected one such message on day one
 - 2026-11-03 · Gate 5 (BP702T fidelity) runs locally only and is recorded in handoff; CI runs an invented-text fixture of the same structure · the real fixture is confidential paper text
 - 2026-11-03 · SQLite only in v1; Postgres later = separate migrations folder, not an env-var switch · Prisma fixes `provider` per schema and migrations are provider-specific
-- 2026-11-03 · Data dir: DB, assets, logs in `%LOCALAPPDATA%\DRAFTEX` (macOS `~/Library/Application Support/DRAFTEX`); exports and backups stay in Documents with a warning if it is cloud-synced · OneDrive/iCloud sync of a live SQLite WAL corrupts it and uploads unreleased papers
+- 2026-11-03 · Data dir: DB, assets, logs in `%LOCALAPPDATA%\DRAFTEX` (macOS `~/Library/Application Support/DRAFTEX`); exports and backups stay in Documents with a warning if it is cloud-synced · OneDrive/iCloud sync of a live SQLite WAL corrupts it and uploads unreleased papers [SUPERSEDED 2026-11-03 → see "Data dir in repo"]
 - 2026-11-03 · Node 24 LTS (24.22.2), not 22 · Node 22 EOL 2027-04-30; 24 supported to 2028-04-30; 26 is too new for native-module prebuilds
 - 2026-11-03 · Runtime compile warnings become notes on the slot and the PDF is still produced; golden tests stay zero-warning · a long chemical name must not block an exam paper
 - 2026-11-03 · Templates own font size, geometry and a "show marks per question" option; CO tag default is slot-level · reference papers vary (see facts above)
@@ -47,6 +47,10 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Prettier never touches docs/, memory.md, handoff.md · it once reformatted them; originals were restored byte-for-byte from the owner's pack
 - 2026-11-03 · GitHub Actions pinned to commit SHAs · a moved tag cannot change what runs
 - 2026-11-03 · npm 11.19 blocks package install scripts unless approved (`npm install-scripts approve <pkg>`); native deps in later phases (better-sqlite3, sharp, @node-rs/argon2) need explicit approval and must be checked in CI · observed during Phase 0 install
+- 2026-11-03 · Data dir in repo: all runtime data (DB, assets, exports, backups, logs, config.json) lives in `<repo>/data/` on every OS, git-ignored; code resolves it from the project root at runtime, `DRAFTEX_DATA_DIR` still overrides. Safeguards: no script ever runs `git clean`, update/install scripts never touch `data/`, the app warns if the repo folder is inside OneDrive/iCloud, and docs tell the user that deleting the app folder deletes papers · owner decision: data always stays with the app folder, one dynamic path in code; advisor flagged the deletion and sync risks
+- 2026-11-03 · Rules files tracked: the operating-rules file and START_HERE.md are committed and exempt from the no-tool-mention rule (exemption written in the rules file §4); the local tool-settings folder stays git-ignored · owner decision
+- 2026-11-03 · Gate 5 fixture approved: `BP702T Apr 26.tex` may be used for the local-only house-style fidelity test; it is never committed and never copied into tracked files · owner approval by filename in chat
+- 2026-11-03 · After each merge to `main`, the merged branch is deleted locally and on GitHub; between-phase fixes use short-lived `chore/` or `fix/` branches · owner requirement (operating rules §4, §8; SPEC §13)
 
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
