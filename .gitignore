@@ -1,12 +1,11 @@
 # Confidential exam material (never commit)
 reference_papers/
 
-# Local agent configuration and owner notes (kept on disk, not in git)
-CLAUDE.md
-START_HERE.md
+# Local tool settings (kept on disk, not in git)
 .claude/
 
 # Secrets and environment
+draftex.local.json
 .env
 .env.*
 !.env.example
@@ -16,10 +15,10 @@ START_HERE.md
 *.db-*
 *.sqlite
 *.sqlite-*
-data/
-exports/
-backups/
-logs/
+/data/
+/exports/
+/backups/
+/logs/
 *.log
 
 # Dependencies and build output

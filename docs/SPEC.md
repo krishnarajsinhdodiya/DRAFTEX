@@ -390,7 +390,8 @@ Installed design skills on the developer's Mac:
 
 Each phase: branch `phase/<n>-<name>` → work in small conventional commits →
 all gates green → update `memory.md` + `handoff.md` → merge `--no-ff` into
-`main` → tag `v0.<n>.0` → push → **stop and report to the owner**.
+`main` → tag `v0.<n>.0` → push → delete the phase branch locally and on
+GitHub → **stop and report to the owner**.
 
 | # | Phase | Done when |
 |---|---|---|
