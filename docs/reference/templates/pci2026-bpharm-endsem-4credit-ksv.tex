@@ -1,0 +1,129 @@
+%% =====================================================================
+%% DRAFTEX reference template
+%% PCI 2026 (NEP 2020) · B.Pharm · Theory · End-Semester · 4 credits
+%% Pattern source: PCI B.Pharm Regulations 2026, Table XV (p. 28-29)
+%%   Group I   Objective/MCQ  20 x 1 (compulsory)           = 20
+%%   Group II  Short answers  5 x 4  (attempt 5 of 7)       = 20
+%%   Group III Long answers   2 x 10 (attempt 2 of 3)       = 20
+%%   Max marks 60 · Duration 3 hours
+%% House style: reproduces the KSV external papers in docs/reference/legacy-*
+%%   (exam class, 12pt, A4, CM fonts, ruled Date|Duration|Max-marks line,
+%%    "Exam No" box, "Best wishes" footer).
+%% Every value written as \dx... below is filled by the app from the paper.
+%% This file is a REFERENCE for the generator, not a runtime file. It must
+%% compile unchanged with Tectonic and with pdflatex.
+%% =====================================================================
+\documentclass[12pt, a4paper]{exam}
+\usepackage[left=1in, top=0.9in, total={6.2in,9.7in}]{geometry}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{lastpage}
+
+%% ---------- paper metadata (generated) ----------
+\newcommand{\dxUniversity}{KADI SARVA VISHWAVIDYALAYA}
+\newcommand{\dxExamTitle}{Semester End Examination}
+\newcommand{\dxProgramLine}{B.Pharm Semester I}
+\newcommand{\dxCourse}{Human Anatomy, Physiology and Pathophysiology I [BP104T]}
+\newcommand{\dxDate}{DD/MM/YYYY}
+\newcommand{\dxDuration}{3 hours}
+\newcommand{\dxMaxMarks}{60}
+\newcommand{\dxCandidateLabel}{Exam No:}
+
+%% ---------- house-style macros (generated from template settings) ----------
+\pagestyle{headandfoot}
+\firstpageheader{}{}{\dxCandidateLabel\,\rule{2cm}{0.4pt}}
+\runningheader{}{}{}
+\firstpagefooter{}{\thepage/\pageref{LastPage}}{}
+\runningfooter{}{\thepage/\pageref{LastPage}}{}
+\newcommand{\dxRuledLine}[1]{\par\noindent #1\par\vspace{-0.6ex}\noindent\rule{\linewidth}{1pt}\par}
+%% One questions environment per paper (avoids exam.cls duplicate labels);
+%% numbering restarts at 1 in each group via \dxQOffset.
+\newcount\dxQOffset
+\newcommand{\dxGroupHead}[2]{\uplevel{\vspace{0.14in}\noindent\textbf{#1}\hfill\textbf{Marks: #2}\par\vspace{0.02in}}\global\dxQOffset=\value{question}\relax}
+\renewcommand{\questionlabel}{\the\numexpr\value{question}-\dxQOffset\relax.}
+\newcommand{\dxPartHead}[1]{\par\vspace{0.12in}\begin{center}\textbf{#1}\end{center}}
+\newcommand{\dxCO}[1]{\hfill{\footnotesize[#1]}}% optional CO tag, hidden when empty
+\newcommand{\dxBlank}{\rule{2.5cm}{0.4pt}}
+\renewcommand{\choicelabel}{\thechoice.}
+
+\begin{document}
+\fontsize{11.7}{13.9}\selectfont
+
+%% ---------- header ----------
+\begin{center}
+  {\large\textbf{\dxUniversity}}\par
+  \dxExamTitle\par
+  {\large\textbf{\dxProgramLine}}\par
+  {\large\textbf{\dxCourse}}\par
+\end{center}
+\dxRuledLine{Date: \dxDate\hfill Duration: \dxDuration\hfill Max marks: \dxMaxMarks}
+\vspace{0.04in}
+{\small
+\noindent Attempt all groups. Group I is compulsory.\par
+\noindent Draw neat and labelled diagrams wherever necessary.\par
+\noindent The figure on the right indicates marks.\par}
+
+\begin{questions}
+%% ---------- GROUP I : objective (20 x 1, compulsory) ----------
+%% DX-GROUP id=g1 type=OBJECTIVE slots=20 attempt=20 marksEach=1
+\dxGroupHead{Q.1 Answer the following questions (Compulsory).}{20}
+  %% DX-SLOT g1.1
+  \question Which of the following is the functional unit of the kidney?
+  \vspace{-0.09in}
+  \begin{multicols}{2}
+    \begin{choices}
+      \choice Neuron \choice Nephron \choice Alveolus \choice Hepatocyte
+    \end{choices}
+  \end{multicols}
+  %% DX-SLOT g1.2
+  \question The normal resting heart rate of an adult is \dxBlank{} beats per minute.
+  \vspace{-0.09in}
+  \begin{multicols}{2}
+    \begin{choices}
+      \choice 40--50 \choice 60--100 \choice 110--130 \choice 140--160
+    \end{choices}
+  \end{multicols}
+  %% DX-SLOT g1.3
+  \question Haemoglobin carries oxygen as oxyhaemoglobin. True/False
+  %% DX-SLOT g1.4
+  \question Normal plasma osmolality is approximately \SI{290}{mOsm/kg}. True/False
+  %% DX-SLOT g1.5 ... g1.20 are generated the same way
+
+%% ---------- GROUP II : short answers (attempt 5 of 7, 4 marks each) ----------
+%% DX-GROUP id=g2 type=SHORT slots=7 attempt=5 marksEach=4
+\dxGroupHead{Q.2 Answer the following questions (Any five).}{20}
+  %% DX-SLOT g2.1
+  \question Describe the structure of a typical cell membrane with a labelled diagram.\dxCO{BP104T.1}
+  %% DX-SLOT g2.2
+  \question Explain the Frank--Starling law of the heart. Cardiac output is given by
+  \[ CO = HR \times SV \]
+  Calculate $CO$ when $HR = \SI{72}{beats/min}$ and $SV = \SI{70}{mL}$.\dxCO{BP104T.3}
+  %% DX-SLOT g2.3
+  \question Tabulate the differences between arteries and veins.
+  \par\smallskip
+  \begin{tabularx}{0.8\linewidth}{@{}lXX@{}}
+    \toprule Feature & Artery & Vein\\ \midrule
+    Wall & \dots & \dots\\ \bottomrule
+  \end{tabularx}
+  %% DX-SLOT g2.4 ... g2.7 are generated the same way
+
+%% ---------- GROUP III : long answers (attempt 2 of 3, 10 marks each) ----------
+%% DX-GROUP id=g3 type=LONG slots=3 attempt=2 marksEach=10
+\dxGroupHead{Q.3 Answer the following questions (Any two).}{20}
+  %% DX-SLOT g3.1
+  \question Describe the conducting system of the heart. Add a note on the normal ECG.
+  %% DX-SLOT g3.2  (an uploaded image, e.g. a CorelDRAW export, is placed like this)
+  \question Identify the structure shown below and explain its role in synaptic transmission.
+  \par\smallskip\begin{center}\fbox{\rule{0pt}{2.2cm}\rule{5cm}{0pt}}\end{center}
+  %% in the app: \includegraphics[width=0.45\linewidth]{assets/<sha256>.png}
+  %% DX-SLOT g3.3
+  \question Classify blood cells. Describe the mechanism of blood coagulation.
+
+\end{questions}
+\vspace{0.35in}
+\begin{center}{\large\textbf{Best wishes}}\par\texttt{**********************}\end{center}
+\end{document}
