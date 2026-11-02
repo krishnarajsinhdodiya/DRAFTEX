@@ -1,0 +1,53 @@
+# Confidential exam material (never commit)
+reference_papers/
+
+# Local agent configuration and owner notes (kept on disk, not in git)
+CLAUDE.md
+START_HERE.md
+.claude/
+
+# Secrets and environment
+.env
+.env.*
+!.env.example
+
+# Databases and runtime data
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+data/
+exports/
+backups/
+logs/
+*.log
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+*.tsbuildinfo
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Tooling caches
+.tectonic-cache/
+.eslintcache
+.vitest/
+
+# OS and editor junk
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
