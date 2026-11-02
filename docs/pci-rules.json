@@ -1,0 +1,94 @@
+{
+  "$comment": "Single source of truth for PCI 2026 B.Pharm question-paper rules. Transcribed from 'B.Pharm Syllabus 2026 (NEP 2020)' (docs/reference/pci/bpharm-syllabus-2026-nep2020.pdf): Regulation 10.3 (p.12), Table XI (p.27), Tables XIII-XVI (pp.28-29). Do NOT edit numbers without citing the page. The app's PCI compliance checker reads ONLY this file.",
+  "ruleSetId": "PCI_2026_BPHARM",
+  "program": "B_PHARM",
+  "source": {
+    "document": "docs/reference/pci/bpharm-syllabus-2026-nep2020.pdf",
+    "pages": { "creditMarks": 12, "internalScheme": 27, "sessionalTheory": 28, "sessionalPractical": 28, "endSemTheory": "28-29", "endSemPractical": 29 }
+  },
+  "groupTypes": {
+    "OBJECTIVE": "MCQ or objective-type (MCQ, true/false, fill-in-the-blank, match). PCI wording: 'Multiple Choice Questions (MCQs) Or Objective Type Questions'.",
+    "SHORT": "Short answer",
+    "LONG": "Long answer"
+  },
+  "creditMarks": {
+    "4": { "total": 100, "internal": 40, "external": 60 },
+    "3": { "total": 75, "internal": 30, "external": 45 },
+    "2": { "total": 50, "internal": 20, "external": 30 },
+    "1": { "total": 50, "internal": 20, "external": 30 }
+  },
+  "theory": {
+    "SESSIONAL": {
+      "$comment": "Table XIII. Two sessionals per course; their average is the 'Sessional' column of Table XI. Paper is NOT the whole internal assessment (attendance + academic activities are separate).",
+      "4": {
+        "durationMinutes": 60, "maxMarks": 20,
+        "groups": [
+          { "type": "OBJECTIVE", "compulsory": true, "variants": [ { "slots": 4, "attempt": 4, "marksEach": 1 }, { "slots": 2, "attempt": 2, "marksEach": 2 } ], "total": 4 },
+          { "type": "SHORT", "slots": 3, "attempt": 2, "marksEach": 3, "total": 6 },
+          { "type": "LONG", "slots": 2, "attempt": 1, "marksEach": 10, "total": 10 }
+        ]
+      },
+      "3": {
+        "durationMinutes": 60, "maxMarks": 15,
+        "groups": [
+          { "type": "OBJECTIVE", "compulsory": true, "variants": [ { "slots": 2, "attempt": 2, "marksEach": 1 } ], "total": 2 },
+          { "type": "SHORT", "slots": 3, "attempt": 2, "marksEach": 3, "total": 6 },
+          { "type": "LONG", "slots": 2, "attempt": 1, "marksEach": 7, "total": 7 }
+        ]
+      },
+      "2": {
+        "durationMinutes": 60, "maxMarks": 10,
+        "groups": [
+          { "type": "OBJECTIVE", "compulsory": true, "variants": [ { "slots": 2, "attempt": 2, "marksEach": 1 } ], "total": 2 },
+          { "type": "SHORT", "slots": 2, "attempt": 1, "marksEach": 3, "total": 3 },
+          { "type": "LONG", "slots": 2, "attempt": 1, "marksEach": 5, "total": 5 }
+        ]
+      },
+      "1": { "$ref": "2" }
+    },
+    "END_SEMESTER": {
+      "$comment": "Table XV. Conducted by the university (KSV).",
+      "4": {
+        "durationMinutes": 180, "maxMarks": 60,
+        "groups": [
+          { "type": "OBJECTIVE", "compulsory": true, "variants": [ { "slots": 20, "attempt": 20, "marksEach": 1 }, { "slots": 10, "attempt": 10, "marksEach": 2 } ], "total": 20 },
+          { "type": "SHORT", "slots": 7, "attempt": 5, "marksEach": 4, "total": 20 },
+          { "type": "LONG", "slots": 3, "attempt": 2, "marksEach": 10, "total": 20 }
+        ]
+      },
+      "3": {
+        "durationMinutes": 120, "maxMarks": 45,
+        "groups": [
+          { "type": "OBJECTIVE", "compulsory": true, "variants": [ { "slots": 10, "attempt": 10, "marksEach": 1 } ], "total": 10 },
+          { "type": "SHORT", "slots": 7, "attempt": 5, "marksEach": 4, "total": 20 },
+          { "type": "LONG", "slots": 3, "attempt": 2, "marksEach": 7.5, "total": 15 }
+        ]
+      },
+      "2": {
+        "durationMinutes": 90, "maxMarks": 30,
+        "groups": [
+          { "type": "OBJECTIVE", "compulsory": true, "variants": [ { "slots": 10, "attempt": 10, "marksEach": 1 } ], "total": 10 },
+          { "type": "SHORT", "slots": 7, "attempt": 5, "marksEach": 2, "total": 10 },
+          { "type": "LONG", "slots": 3, "attempt": 2, "marksEach": 5, "total": 10 }
+        ]
+      },
+      "1": { "$ref": "2" }
+    }
+  },
+  "practical": {
+    "$comment": "Tables XIV and XVI. B.Pharm practical courses are 1 or 2 credits only. Duration: >= 4 lab hours/week -> 4 h, otherwise 3 h (footnote # on p.27 and p.29). Components are fixed, not question groups with choice.",
+    "allowedCredits": [1, 2],
+    "durationRule": { "labHoursPerWeekAtLeast": 4, "minutesIfAtLeast": 240, "minutesOtherwise": 180 },
+    "SESSIONAL": { "maxMarks": 10, "components": [ { "type": "SYNOPSIS", "marks": 2 }, { "type": "MAJOR_EXPERIMENT", "marks": 4 }, { "type": "MINOR_EXPERIMENT", "marks": 2 }, { "type": "VIVA", "marks": 2 } ] },
+    "END_SEMESTER": { "maxMarks": 30, "components": [ { "type": "SYNOPSIS", "marks": 7.5 }, { "type": "MAJOR_EXPERIMENT", "marks": 10 }, { "type": "MINOR_EXPERIMENT", "marks": 5 }, { "type": "VIVA", "marks": 7.5 } ] }
+  },
+  "outOfScope": {
+    "BP810RP": "Research project, 150 marks, Tables XVIII-XIX (dissertation book 60 + presentation 90). Not a question paper.",
+    "INTERNSHIP": "240 h, 100 marks (75 report + 25 presentation). Not a question paper.",
+    "CONTINUOUS_MODE": "Attendance / academic activities marks (Tables XI, XII). Not a question paper."
+  },
+  "notCovered": {
+    "M_PHARM": "No PCI 2026 rule set supplied. Templates allowed; checker reports 'no rule set loaded', never 'non-compliant'.",
+    "PHARM_D": "No PCI 2026 rule set supplied. Same behaviour as M_PHARM. Legacy KSV Pharm.D papers are 70 marks (year-end)."
+  }
+}

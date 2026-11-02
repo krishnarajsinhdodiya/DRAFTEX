@@ -1,0 +1,15 @@
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/
+package-lock.json
+next-env.d.ts
+reference_papers/
+docs/reference/
+assets/
+*.tex
+# Owner-authored contract documents: never reformat
+docs/
+memory.md
+handoff.md

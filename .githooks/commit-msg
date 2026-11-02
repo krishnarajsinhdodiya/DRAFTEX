@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+// Rejects commit messages that carry attribution text. Rules live in scripts/commit-hygiene.mjs.
+"use strict";
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
+
+const script = path.join(__dirname, "..", "scripts", "commit-hygiene.mjs");
+const result = spawnSync(process.execPath, [script, "--message-file", process.argv[2]], {
+  stdio: "inherit",
+});
+process.exit(result.status === null ? 1 : result.status);
