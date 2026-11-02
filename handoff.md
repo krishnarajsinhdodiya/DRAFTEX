@@ -53,6 +53,10 @@ no chat history must be able to continue from this file alone.
 - Toolchain: TypeScript 6.0.3, ESLint 10 + overrides, Actions pinned to SHAs, Prettier never touches owner docs.
 - The local operating-rules file, START_HERE.md and the local tool-settings folder are git-ignored (kept on the owner's disk).
 
+## Machine setup (owner's Mac)
+- Data folder: `/Volumes/DRAFTEX/DRAFTEX-data` (exists, empty). Pointer: `draftex.local.json` in the repo root (git-ignored) with `{"dataDir": "/Volumes/DRAFTEX/DRAFTEX-data"}`. Phase 1 `paths.ts` must honour it; do not recreate or overwrite the file.
+- Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands.
+
 ## Questions for owner
 - None open. (Answered 2026-11-03: data folder outside the repo at `~/DRAFTEX-data` by default, movable via `draftex.local.json`; gate 5 fixture `BP702T Apr 26.tex` approved for local use.)
 
