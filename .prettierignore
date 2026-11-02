@@ -9,9 +9,6 @@ reference_papers/
 docs/reference/
 assets/
 *.tex
-CLAUDE.md
-START_HERE.md
-.claude/
 # Owner-authored contract documents: never reformat
 docs/
 memory.md
