@@ -5,6 +5,7 @@ reference_papers/
 .claude/
 
 # Secrets and environment
+draftex.local.json
 .env
 .env.*
 !.env.example
