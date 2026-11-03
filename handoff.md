@@ -40,14 +40,14 @@ no chat history must be able to continue from this file alone.
 3. "New paper from this template" on the template page; the paper keeps `templateSnapshot`.
 4. Pass the course's lab hours to the checker for practical papers (D18).
 5. Asset uploads (Phase 5 item): re-encode, strip EXIF/ICC (memory.md); header logos of user templates must resolve through the template's visibility, not only `BUILT_IN_LOGOS` (`resolveAssets` in `src/server/template-preview.ts`).
-6. Decide the per-question numbering question below before building slot numbering.
+6. Per-question numbering (owner decision, memory.md): a group option that numbers each question on its own (Q.1 … Q.10, continuing across groups and sections). Group numbering stays the default. Switch the Pharm.D built-in to it and restore instructions in the "Questions 1 and 6 are compulsory" style. The serializer, checker paths, golden and visual baselines (CI ubuntu, D4) all need updating.
 7. Reuse `PdfView` and the preview pattern (debounce, latest wins, last good PDF) for the paper preview with error mapping.
 
 ## Failing tests
 - None.
 
 ## Blockers / risks
-- **Numbering**: templates number groups (Q.1 … Q.4 across two sections). The hand-written Pharm.D papers number every question (Q.1 … Q.10). The Pharm.D seed's instructions are worded to match what is printed. This needs the owner's decision before Phase 5.
+- **Numbering**: templates number groups today (Q.1 … Q.4 across two sections). Per-question numbering is decided for Phase 5 (next step 6).
 - **Untitled copies**: "New template" creates an "Untitled template" at once. If you leave without editing, it stays in "Mine" until you delete it.
 - **No pagination**: the library renders every visible template (212 rows rendered fine). Search and filters are the answer for now.
 - **Slow compile**: not simulated in the browser. The 20 s timeout message and the "Making the preview…" state are covered by unit tests and code reading only.
@@ -85,7 +85,6 @@ no chat history must be able to continue from this file alone.
 - `.claude/launch.json` (git-ignored) has a `draftex-e2e` preview on port 3212. It gets a fresh throwaway data folder on every start; the test admin's sign-in is the `ADMIN` entry in `tests/e2e/support.ts` (run `/setup` once per start).
 
 ## Questions for owner
-- Pharm.D numbering: should a group be able to number each question (Q.1 … Q.10)?
 - shadcn/ui: keep Radix + our own styles (current), or adopt the shadcn CLI components?
 - "New template": create an untitled copy at once (current), or ask for a title first?
 - Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`?

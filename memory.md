@@ -110,7 +110,8 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Builder: preview 1.5 s after the last change (first one immediately), undo 50 steps with one step per 800 ms pause, links and tab close ask before dropping unsaved changes, Ctrl/Cmd+S saves · design review findings
 - 2026-11-03 · New templates are copies of the blank built-in ("New template" = Save as new), opened straight in the builder; abandoned "Untitled template" copies stay in Mine until deleted · simplest flow; owner to confirm
 - 2026-11-03 · The e2e server links `<real data folder>/tools` into its throwaway folder (junction on Windows) and unlinks it before deleting the folder · previews need Tectonic; the real engine must never be deleted
-- 2026-11-03 · Template group numbering runs straight through the parts (Q.1 … Q.4 for two sections of two groups); hand-written Pharm.D papers number every question (Q.1 … Q.10). The group model cannot print that yet · open question for Phase 5
+- 2026-11-03 · Template group numbering runs straight through the parts (Q.1 … Q.4 for two sections of two groups); hand-written Pharm.D papers number every question (Q.1 … Q.10). The group model cannot print that yet · open question for Phase 5 [SUPERSEDED 2026-11-03 → see "Per-question numbering"]
+- 2026-11-03 · Per-question numbering: Phase 5 adds a group option to number each question on its own (Q.1 … Q.10, numbering continuing across groups and sections, as on the hand-written Pharm.D papers); group numbering stays the default. The Pharm.D built-in switches to it and its instructions go back to "Questions 1 and 6 are compulsory" style · owner decision
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -131,6 +132,6 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
 - Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable.
 - How are COs of elective options tagged on real papers? Default `BP607TAEC1.01` (see `coTag`).
-- Pharm.D (and other) papers number each question (Q.1 … Q.10); templates number groups. Should Phase 5 add "number each question" to a group?
+- Pharm.D (and other) papers number each question (Q.1 … Q.10); templates number groups. Should Phase 5 add "number each question" to a group? [ANSWERED 2026-11-03 → yes, see "Per-question numbering"]
 - shadcn/ui: keep the direct Radix + own-styles approach, or adopt the shadcn CLI components?
 - "New template" creates an Untitled copy at once; is that acceptable, or should it ask for a title first?
