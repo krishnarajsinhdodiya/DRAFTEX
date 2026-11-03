@@ -52,7 +52,13 @@ export function authStore(db: Db) {
     findLoginUser(email: string) {
       return db.user.findUnique({
         where: { email },
-        select: { id: true, passwordHash: true, isActive: true, lockedUntil: true },
+        select: {
+          id: true,
+          passwordHash: true,
+          isActive: true,
+          lockedUntil: true,
+          mustChangePassword: true,
+        },
       });
     },
 
