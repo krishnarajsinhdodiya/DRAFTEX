@@ -298,7 +298,8 @@ model Asset {
 }
 
 model CompileJob {
-  id           String        @id @default(uuid())
+  /// Increasing, so "newest 20" is exact even when two jobs share a millisecond.
+  id           Int           @id @default(autoincrement())
   paperId      String
   kind         CompileKind
   status       CompileStatus

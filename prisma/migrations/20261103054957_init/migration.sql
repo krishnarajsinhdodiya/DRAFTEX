@@ -173,7 +173,7 @@ CREATE TABLE "Asset" (
 
 -- CreateTable
 CREATE TABLE "CompileJob" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "paperId" TEXT NOT NULL,
     "kind" TEXT NOT NULL,
     "status" TEXT NOT NULL,
