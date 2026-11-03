@@ -23,6 +23,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "node scripts/db-migrate.ts",
     "setup:tectonic": "node scripts/setup-tectonic.ts",
+    "catalogue:parse": "node scripts/parse-syllabus.ts",
+    "catalogue:check": "node scripts/parse-syllabus.ts --check",
     "postinstall": "prisma generate"
   },
   "dependencies": {

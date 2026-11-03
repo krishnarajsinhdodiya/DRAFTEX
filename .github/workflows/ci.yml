@@ -49,6 +49,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run catalogue:check
       - run: npm run build
       - name: Create the data folder
         run: node scripts/ci-data-dir.mjs
