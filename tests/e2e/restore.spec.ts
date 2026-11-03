@@ -14,7 +14,8 @@ import { type APIRequestContext, type Page, expect, request, test } from "@playw
 import { diffPages, renderPdf } from "../support/pdf";
 import { ADMIN, FACULTY, asUser, signIn } from "./support";
 
-test.describe.configure({ mode: "serial" });
+// Starting a second server and compiling twice takes longer than the 30 s default.
+test.describe.configure({ mode: "serial", timeout: 120_000 });
 
 const TITLE = "Invented Pharmacology Paper";
 const PORT = 3214;
