@@ -1,5 +1,6 @@
 // Starts the built app on a fresh, throwaway data folder for end-to-end tests.
-// Never touches the real data folder. Usage: node scripts/e2e-server.ts [port]
+// Never touches the real data folder. Usage: node scripts/e2e-server.ts [port] [hostname]
+// (hostname 0.0.0.0 shows a throwaway demo to other devices on the network).
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -8,6 +9,7 @@ import path from "node:path";
 import { dataPaths, peekDataDir } from "../src/lib/paths.ts";
 
 const port = process.argv[2] ?? "3211";
+const hostname = process.argv[3] ?? "127.0.0.1";
 // The installed LaTeX engine is shared (linked), so previews compile; nothing else is.
 const realTools = dataPaths(peekDataDir()).tools;
 const dataDir = path.join(os.tmpdir(), `draftex-e2e-${port}`);
@@ -38,7 +40,7 @@ execFileSync(process.execPath, [require.resolve("prisma/build/index.js"), "migra
 const nextBin = require.resolve("next/dist/bin/next");
 const child = spawn(
   process.execPath,
-  [nextBin, "start", "--hostname", "127.0.0.1", "--port", port],
+  [nextBin, "start", "--hostname", hostname, "--port", port],
   {
     stdio: "inherit",
     env,
