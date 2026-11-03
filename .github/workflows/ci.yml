@@ -37,8 +37,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    env:
-      DRAFTEX_DATA_DIR: ${{ runner.temp }}/draftex-data
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -52,7 +50,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Create the data folder
-        run: node -e "require('node:fs').mkdirSync(process.env.DRAFTEX_DATA_DIR,{recursive:true})"
+        run: node scripts/ci-data-dir.mjs
       - name: Cache the LaTeX engine and package cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
