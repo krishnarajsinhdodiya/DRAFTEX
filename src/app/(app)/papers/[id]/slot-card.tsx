@@ -275,19 +275,6 @@ export const SlotCard = memo(function SlotCard({
         </div>
       ) : null}
 
-      {!empty ? (
-        <KeyPanel
-          name={name}
-          state={state}
-          splitUp={!(group.type === "OBJECTIVE" && group.numbering === "GROUP")}
-          problems={keyProblems}
-          allowAdvanced={allowAdvanced}
-          upload={upload}
-          onChange={(patch) => onChange(slotKey, patch)}
-          onEditorFocus={onEditorFocus}
-        />
-      ) : null}
-
       {changedMarks ? (
         <p className="px-3 pb-1.5 pl-12 text-caption text-caution">
           {name} is worth {marksText(state.marks)} instead of the group&apos;s{" "}
@@ -313,6 +300,18 @@ export const SlotCard = memo(function SlotCard({
             </li>
           ))}
         </ul>
+      ) : null}
+      {!empty ? (
+        <KeyPanel
+          name={name}
+          state={state}
+          splitUp={!(group.type === "OBJECTIVE" && group.numbering === "GROUP")}
+          problems={keyProblems}
+          allowAdvanced={allowAdvanced}
+          upload={upload}
+          onChange={(patch) => onChange(slotKey, patch)}
+          onEditorFocus={onEditorFocus}
+        />
       ) : null}
     </li>
   );

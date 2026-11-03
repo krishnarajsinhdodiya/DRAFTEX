@@ -40,7 +40,7 @@ export function keySummary(state: Pick<SlotValue, "doc" | "answerKey" | "keyCrit
     );
   }
   if (hasContent(state.answerKey)) bits.push("model answer written");
-  const rows = state.keyCriteria.length;
+  const rows = state.keyCriteria.filter((c) => c.text.trim() !== "").length;
   if (rows) bits.push(`${rows} split-up ${rows === 1 ? "row" : "rows"}`);
   return bits.length ? bits.join(" · ") : "not written yet";
 }
@@ -113,6 +113,7 @@ export function KeyPanel({
             <QuestionEditor
               initial={state.answerKey ?? EMPTY_DOC}
               label={`Model answer for ${name}`}
+              placeholder="Type the model answer: the points, working or diagram you expect."
               allowAdvanced={allowAdvanced}
               upload={upload}
               onProblem={setEditorProblem}
@@ -130,14 +131,16 @@ export function KeyPanel({
             <fieldset className="flex flex-col gap-1.5">
               <legend className="mb-1 text-caption font-medium text-ink-2">Split-up marks</legend>
               {criteria.map((c, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
+                <div key={i} className="flex items-start gap-2">
+                  <textarea
                     aria-label={`What earns marks, row ${i + 1}`}
                     value={c.text}
                     maxLength={300}
+                    rows={1}
                     placeholder="e.g. Labelled diagram"
-                    onChange={(e) => setRow(i, { text: e.target.value })}
-                    className={`${inputStyles} h-8 min-w-0 flex-1 text-small`}
+                    onChange={(e) => setRow(i, { text: e.target.value.replace(/\n/g, " ") })}
+                    // Grows with its text, so a long criterion stays readable in full.
+                    className={`${inputStyles} field-sizing-content h-auto min-h-8 min-w-0 flex-1 resize-none py-1.5 text-small`}
                   />
                   <input
                     aria-label={`Marks for row ${i + 1}`}
@@ -171,6 +174,11 @@ export function KeyPanel({
                 >
                   <Plus size={14} aria-hidden /> Add a row
                 </button>
+                {criteria.length >= 20 ? (
+                  <span className="text-caption text-ink-3">
+                    20 rows is the most a question can have.
+                  </span>
+                ) : null}
                 {criteria.length ? (
                   <span className="ml-auto text-caption text-ink-2 tabular-nums">
                     Total {marksNumber(criteriaTotal(criteria))} of {marksNumber(state.marks)}
