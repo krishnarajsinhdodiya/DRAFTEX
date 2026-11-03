@@ -253,3 +253,72 @@ export function templates(db: Db) {
     },
   };
 }
+
+// ---------- system only: built-in templates ----------
+
+export type SeedSyncResult = {
+  created: number;
+  updated: number;
+  unchanged: number;
+  /** True when no administrator exists yet, so there is no owner for the built-ins. */
+  waitingForAdmin: boolean;
+};
+
+const comparable = (f: ParsedFields) => JSON.stringify(createData(f));
+
+/**
+ * Brings the built-in templates in line with the seeds: adds missing ones and
+ * rewrites changed ones in place (version + 1). Papers keep their snapshot,
+ * so changing a seed never changes a paper. Built-ins are never deleted.
+ * They belong to the first administrator (D15); before setup this does nothing.
+ */
+export async function syncBuiltInTemplates(
+  db: Db,
+  seeds: readonly (TemplateFields & { seedKey: string })[],
+): Promise<SeedSyncResult> {
+  const result: SeedSyncResult = { created: 0, updated: 0, unchanged: 0, waitingForAdmin: false };
+  const owner = await db.user.findFirst({
+    where: { role: "ADMIN" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true },
+  });
+  if (!owner) return { ...result, waitingForAdmin: true };
+  const parsed = seeds.map(({ seedKey, ...f }) => {
+    const fields = templateFieldsSchema.parse(f);
+    assertValid(fields);
+    return { seedKey, fields };
+  });
+  const existing = new Map(
+    (await db.template.findMany({ where: { seedKey: { in: parsed.map((p) => p.seedKey) } } })).map(
+      (t) => [t.seedKey, t],
+    ),
+  );
+  await db.$transaction(async (tx) => {
+    for (const { seedKey, fields } of parsed) {
+      const old = existing.get(seedKey);
+      const fixed = { builtIn: true, visibility: "GLOBAL" as const, deletedAt: null };
+      if (!old) {
+        await tx.template.create({
+          data: { ...createData(fields), ...fixed, seedKey, ownerId: owner.id },
+        });
+        result.created++;
+        continue;
+      }
+      const same =
+        old.builtIn &&
+        old.visibility === "GLOBAL" &&
+        old.deletedAt === null &&
+        comparable(storedFields(old)) === comparable(fields);
+      if (same) {
+        result.unchanged++;
+        continue;
+      }
+      await tx.template.update({
+        where: { id: old.id },
+        data: { ...createData(fields), ...fixed, version: { increment: 1 } },
+      });
+      result.updated++;
+    }
+  });
+  return result;
+}

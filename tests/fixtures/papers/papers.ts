@@ -5,7 +5,10 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { templateFieldsSchema } from "@/lib/data/templates";
 import type { BlockNode, InlineNode, LeafBlockNode, PaperInput } from "@/lib/paper/schema";
+import { previewPaper } from "@/lib/templates/preview";
+import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import {
   kbiperSessional,
   ksvLegacy75,
@@ -32,6 +35,7 @@ function asset(rel: string): FixtureAsset {
 
 export const ASSETS = {
   kbiperLogo: asset("assets/logos/kbiper-logo.png"),
+  ksvLogo: asset("assets/logos/ksv-logo.png"),
   box: asset("tests/fixtures/latex/assets/box.pdf"),
   png: asset("tests/fixtures/latex/assets/sample.png"),
   jpg: asset("tests/fixtures/latex/assets/sample.jpg"),
@@ -446,3 +450,11 @@ export const FIXTURES = {
 } as const;
 
 export const ALL_ASSETS = Object.values(ASSETS);
+
+/** Every built-in template as the empty preview the library shows. */
+export const SEED_PREVIEWS: Record<string, () => PaperInput> = Object.fromEntries(
+  BUILT_IN_TEMPLATES.map((s) => [
+    `seed-${s.seedKey}`,
+    () => previewPaper(templateFieldsSchema.parse(s)),
+  ]),
+);

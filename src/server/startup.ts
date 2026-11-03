@@ -34,6 +34,13 @@ export async function startup(): Promise<void> {
     if (synced.created || synced.updated) {
       console.log(`[catalogue] Courses added: ${synced.created}, updated: ${synced.updated}.`);
     }
+    // Before first-run setup there is no owner yet; setup runs this again.
+    const seeded = await data.system.syncBuiltInTemplates();
+    if (seeded.created || seeded.updated) {
+      console.log(
+        `[templates] Built-in templates added: ${seeded.created}, updated: ${seeded.updated}.`,
+      );
+    }
   } catch {
     stop(
       `The database in ${paths.root} is not up to date. Run "npm run db:migrate", then start DRAFTEX again.`,

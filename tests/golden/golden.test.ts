@@ -7,7 +7,7 @@ import type { CompileService } from "@/lib/latex/compile";
 import { goldenFailures } from "@/lib/latex/log";
 import { serializePaper } from "@/lib/latex/serialize";
 import { realCompileService } from "../support/engine";
-import { ALL_ASSETS, FIXTURES } from "../fixtures/papers/papers";
+import { ALL_ASSETS, FIXTURES, SEED_PREVIEWS } from "../fixtures/papers/papers";
 
 const OUT = path.resolve("test-results/golden");
 const REFERENCE_TEX = path.resolve(
@@ -33,24 +33,22 @@ describe("golden compile", () => {
     fs.writeFileSync(path.join(OUT, "reference-handwritten.pdf"), res.pdf as Buffer);
   });
 
-  it.each(Object.keys(FIXTURES) as Array<keyof typeof FIXTURES>)(
-    "%s compiles with zero warnings",
-    async (name) => {
-      const ser = serializePaper(FIXTURES[name]());
-      if (!ser.ok)
-        throw new Error(ser.issues.map((i) => `${i.slotId ?? ""} ${i.message}`).join("\n"));
-      fs.writeFileSync(path.join(OUT, `${name}.tex`), ser.tex);
-      const res = await svc.compile({
-        userId: "golden",
-        tex: ser.tex,
-        slotRanges: ser.slotRanges,
-        assets: assets.filter((a) => ser.assets.includes(a.name)),
-      });
-      expect(res.usedNetwork).toBe(false);
-      expect(res.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
-      expect(goldenFailures(res.diagnostics)).toEqual([]);
-      expect(res.ok).toBe(true);
-      fs.writeFileSync(path.join(OUT, `${name}.pdf`), res.pdf as Buffer);
-    },
-  );
+  const papers: Record<string, () => unknown> = { ...FIXTURES, ...SEED_PREVIEWS };
+  it.each(Object.keys(papers))("%s compiles with zero warnings", async (name) => {
+    const ser = serializePaper((papers[name] as () => unknown)());
+    if (!ser.ok)
+      throw new Error(ser.issues.map((i) => `${i.slotId ?? ""} ${i.message}`).join("\n"));
+    fs.writeFileSync(path.join(OUT, `${name}.tex`), ser.tex);
+    const res = await svc.compile({
+      userId: "golden",
+      tex: ser.tex,
+      slotRanges: ser.slotRanges,
+      assets: assets.filter((a) => ser.assets.includes(a.name)),
+    });
+    expect(res.usedNetwork).toBe(false);
+    expect(res.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(goldenFailures(res.diagnostics)).toEqual([]);
+    expect(res.ok).toBe(true);
+    fs.writeFileSync(path.join(OUT, `${name}.pdf`), res.pdf as Buffer);
+  });
 });
