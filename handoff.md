@@ -5,70 +5,87 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-03
-- **Current phase:** 1 LaTeX core: done. Next: Phase 2 Data + auth.
-- **Branch:** `main` only (Phase 1 merged with `--no-ff` from `phase/1-latex-core`, tagged `v0.1.0`; the phase branch is deleted locally and on GitHub)
+- **Current phase:** 2 Data + auth: done. Next: Phase 3 Rules + course catalogue.
+- **Branch:** `main` only (Phase 2 merged with `--no-ff` from `phase/2-data-auth`, tagged `v0.2.0`; the phase branch is deleted locally and on GitHub)
 - **Last green commit:** latest `main`
-- **CI:** `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, all green. Each OS job now also installs Tectonic, warms the cache (restored by `actions/cache`) and runs `npm run test:golden`.
+- **CI:** `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, all green. better-sqlite3 builds from source on both runners (install scripts approved); Playwright now runs the auth e2e on both OSes.
 
-## Done this session (Phase 1)
-- Approved deviations D1–D4 logged in `memory.md`: bundle pinned by direct archive URL + digest; pdflatex fallback deferred to Phase 8; gate 5 reference compiled from the original source; visual baselines come from CI ubuntu.
-- `src/lib/paths.ts`: data folder resolved from `DRAFTEX_DATA_DIR` → `draftex.local.json` → `~/DRAFTEX-data`. A configured folder that is missing is an error and nothing gets created. `draftex.local.example.json` added. 100% covered.
-- `src/lib/latex/`:
-  - `pins.ts`: Tectonic 0.17.0 assets + SHA-256; bundle URL and digest.
-  - `tectonic.ts`: download, verify and install (system tar; `System32\tar.exe` on Windows); install marker; upstream bundle digest read by HTTP range request; offline cache check.
-  - `engine.ts`: `execFile` with `--untrusted --keep-logs --bundle <pin> [--only-cached]`, minimal environment.
-  - `compile.ts`: temp folder per job under `os.tmpdir()/DRAFTEX/<user>/<job>`, FIFO queue (2 at a time), per-user rate limit, 20 s and 20 MB limits, cleanup in `finally` plus `sweep()`. Compiles offline first and retry online once on a cache miss. `supersedeKey` lets a newer compile cancel a queued older one; diagnostics map to slots by line.
-  - `log.ts`: parses stderr (`file:line`, `caused by:`) and the .log (LaTeX/package warnings, missing characters). `goldenFailures` allows only overfull boxes of 1 pt or less.
-  - `sanitize.ts`: allow-list for maths and Advanced LaTeX (gate 7).
-  - `escape.ts` + `serialize.ts`: paper JSON → house-style LaTeX (single `questions` env, `\dxGroupHead`/`\dxGroupHeadAt`, `\dxQOffset`, `%% DX-SLOT` markers, parts, KSV/KBIPER headers, logo, CO tags and marks via `\dxTail`).
-  - `warmup.ts`: warm-up documents (packages, fancyhdr in article, every font size, papers for every class size).
-- `src/lib/paper/schema.ts`: Zod schemas for template structure/header/style and TipTap-shaped slot content. Phase 4/5 should reuse them.
-- `scripts/setup-tectonic.ts` (`npm run setup:tectonic [-- --skip-remote-check]`): installs into `<dataDir>/tools`, checks the bundle digest, warms online, verifies the cache came from the pinned bundle, recompiles offline. Already run on the owner's Mac (`/Volumes/DRAFTEX/DRAFTEX-data/tools`).
-- Tests: 246 unit tests (src/lib/latex 99.6% lines / ~96.6% branches). `npm run test:golden` covers:
-  - gate 3: 7 compiles with zero warnings, offline;
-  - gate 4: baselines in `tests/golden/baselines/`, compared on Linux only;
-  - phase exit check: regenerated vs hand-written reference at 0.139% / 0.259% (limit 0.5%);
-  - gate 6: fuzz, 809 compiled + 191 refused out of 1,000, plus a self-check of the detector;
-  - gate 5: local only.
-- Gate 5 (local, `tests/golden/house-style.test.ts`): BP702T re-encoded into the legacy layout differs from the original by **2.11% / 1.42% / 0.78%** (limit 3%). Paper text is read at test time only; renders go to `$TMPDIR/draftex-gate5`. Verified that no paper text is in any tracked file.
-- Serialiser bugs found and fixed while tuning against the real paper:
-  - group headings could be orphaned at the bottom of a page;
-  - space before a heading survived at the top of a page;
-  - lengths were rounded to 2 decimals;
-  - part titles were not centred;
-  - a logo header touched the date row;
-  - a long group heading ran into its marks.
-- Visual baselines (13 pages, 1.8 MB) rendered by CI ubuntu run 41582044094 and reviewed before commit. Final CI run 41582467802 is green on all three jobs, and the ubuntu baseline comparisons ran (not skipped).
+## Done this session (Phase 2)
+- Approved deviations, logged in `memory.md`:
+  - D5: hand-rolled sessions (Lucia pattern), no Better Auth.
+  - D6: gate 8 covers the data layer now; route-level tests come in phases 4–6.
+  - D7: auth screens skip the `/apple-design` and `/break-ui` reviews until Phase 4.
+  - Asset primary key is (ownerId, sha256).
+- Dependencies (pinned, see memory.md): Prisma 7.10.1 with the better-sqlite3 12.11.1 adapter, @node-rs/argon2 2.2.2. `allowScripts` approves install scripts for better-sqlite3, prisma and @prisma/engines only.
+- `prisma/schema.prisma`: SPEC §6 models with these additions:
+  - `User`: `failedLogins`, `lockedUntil`, `mustChangePassword`.
+  - `InviteCode`: hashed id, role, expiry, used/revoked fields.
+  - `Template.builtIn`; `Asset` keyed by (ownerId, sha256).
+  - `CompileJob.id` is an autoincrement integer.
+  - One migration, `prisma/migrations/*_init`.
+  - `prisma.config.ts` reads the database path from the data folder and never creates anything.
+  - `npm run db:migrate` (`scripts/db-migrate.ts`) applies migrations.
+- `src/lib/db/client.ts`: `openDatabase(file)` turns on WAL and foreign keys, and opens with `fileMustExist`. `getDb()` is the process-wide client.
+- `src/lib/data/`: the one data-access layer.
+  - `templates`, `papers` (slots, compile history capped at 20), `assets`, `users` (admin only, keeps at least one active admin), `auth-store` (sessions, lockout counters, first-run admin, invites), `audit`.
+  - Every scoped call takes an `Actor`. Other people's private records come back "not found".
+  - ESLint `no-restricted-imports` blocks the Prisma client outside `src/lib/data` and `src/lib/db`.
+- `src/lib/auth/`:
+  - argon2id (19 MiB, t=2, p=1) with a dummy hash for unknown emails; passwords 10–256 characters.
+  - 160-bit session tokens, stored as SHA-256; 7-day idle expiry, slid at most once an hour.
+  - 5 failures → 15-minute lockout; 20 sign-ins and 10 invite attempts per address per 15 minutes.
+  - Invite codes: 60 bits, Crockford base32, `XXXX-XXXX-XXXX`, single use, 7 days, stored hashed.
+  - First-run admin only in `local` mode, inside one transaction.
+- `src/lib/config.ts`: reads `mode` from `<dataDir>/config.json` (default `local`).
+- `src/server/`:
+  - `auth.ts`: session for the request; `requireSession`, `requireUser` and `requireAdmin` (404 for faculty).
+  - `cookie.ts`, `actions.ts` (server actions), `startup.ts`, `compile.ts` (the app's `CompileService`).
+  - `src/proxy.ts` re-sends the cookie on GET page loads.
+  - `src/instrumentation.ts` runs the startup checks: data folder, config, database present, compile temp sweep, expired-session prune.
+- Screens: `/setup`, `/login`, `/join`, `/change-password`, `/` (placeholder home), `/admin/users` ("People": add person, set password, unlock, role, deactivate, invite codes). Shared form parts are in `src/components/form.tsx`.
+- Tests: 355 unit tests.
+  - Gate 8: `tests/unit/data/authorization.test.ts`, 54 cases with guessed IDs for another faculty member and for an admin. A mutation check (loosening the ownership filters) made 20 of them fail.
+  - Coverage: `src/lib/auth` 100% lines / 98.4% branches; `src/lib/data` 99.5% / 97% (a threshold now applies to it too).
+  - E2E: `tests/e2e/auth.spec.ts` covers the admin bootstrap end to end, 8 tests, plus 2 smoke tests. It runs the built app on port 3211 against a throwaway data folder.
+- Gates run locally: lint, typecheck, format, unit + coverage, build (no warnings), golden (11 passed, 7 Linux-only skipped), e2e 10/10. CI green on both OSes.
 
 ## In progress
 - Nothing half-done.
 
-## Next steps (Phase 2, Data + auth; follow SPEC §13 and memory.md)
-1. Session start per the operating rules; branch `phase/2-data-auth` from `main`.
-2. Re-verify the planned versions (prisma/@prisma/client 7.10.1, never the `latest` tag, which points at 8.0.0-rc; adapter-better-sqlite3; better-sqlite3 12.x; better-auth; @node-rs/argon2). npm 11.19 blocks install scripts: run `npm install-scripts approve <pkg>` for native deps and confirm it works in CI on both OSes first.
-3. Prisma schema per SPEC §6 (SQLite, WAL), the database at `dataPaths(getDataDir()).database`; migrations; one data-access layer that enforces ownership; gate 8 authorization tests; first-run admin; invites; sessions; rate limits; admin bootstrap e2e.
-4. The paper editor's slot content must keep validating with `docSchema` / `validateSlotContent` from Phase 1. Store `templateSnapshot` using `templateSchema`.
-5. When the app starts (Phase 2+), call `CompileService.sweep()` once, and treat `DataDirError` as a plain-English startup failure.
+## Next steps (Phase 3, Rules + course catalogue; follow SPEC §13)
+1. Session start per the operating rules; branch `phase/3-rules-catalogue` from `main`.
+2. Load `docs/pci-rules.json` into `src/lib/rules/` with Zod. The checker needs 100% branch coverage (gate 2).
+3. Parse the B.Pharm syllabus PDF into a seed: courses, credits, L-T-P, COs, units with hours. Verify it against Tables X-a…X-h. `Course`, `CourseOutcome` and `CourseUnit` already exist in the schema.
+4. Add read functions for courses to `src/lib/data` (any signed-in user), with gate 8-style tests if anything there is ever scoped.
+5. A seed script goes through `src/lib/data` or a system-only module in it. Never import the Prisma client elsewhere; lint will reject it.
 
 ## Failing tests
 - None.
 
 ## Blockers / risks
-- Bundle host: if `data1b.fullyjustified.net` disappears, fresh installs cannot warm up (installed machines keep working offline). Open question for Phase 8: self-host a minimal bundle.
-- Times font (newtx) is not offered; two reference sources use it. Needs a warning-free XeTeX setup later.
-- `--untrusted` still allows `\input` of absolute paths: never add a code path where user text skips `sanitizeLatex`/`escapeText`.
-- Upload re-encoding (Phase 5) must strip EXIF resolution data and ICC v4 profiles, or xdvipdfmx warns.
-- First warm-up downloads for about 3 minutes (the fonts document is about 60 s). The Phase 8 installer must run `npm run setup:tectonic` and must show progress.
-- Carried over: npm install-script approvals for native deps; Prisma `latest` tag is an RC; ESLint 10 `overrides` for three plugins; `ubuntu-latest` moving to Ubuntu 26; `next telemetry disable` in the installer.
-- A visual baseline changes only in a commit that says why. Get new ones from the `golden-ubuntu-latest` artifact (rendered automatically when the Linux golden step fails) and review them before committing.
+- **LAN mode (Phase 7):** Next 16 trusts a client-sent `x-forwarded-for`, so the per-address limits can be dodged on a LAN. Per-account lockout still works. Fix this before LAN mode ships, for example with a custom server that reads the socket address.
+- **CSRF:** this relies on Next.js's built-in Origin check for server actions. Phase 7 should add an explicit test that a forged Origin is refused, and reconsider when `server` mode sits behind a proxy (`serverActions.allowedOrigins`).
+- **Lockout as denial of service:** anyone who knows an email can lock that account for 15 minutes. An admin can unlock it on the People page. This is accepted for v1 (SPEC §11.3).
+- **Lockout reveals accounts:** the "locked" message shows that an account exists after 5 failures. Accepted; the per-address limit slows enumeration.
+- **No route tests yet:** gate 8 has no route-level tests because no template, paper or asset routes exist. Phases 4–6 must add them as those routes appear (D6).
+- Carried over:
+  - Bundle host `data1b.fullyjustified.net`.
+  - Times font not offered.
+  - `--untrusted` still allows `\input` of absolute paths (always sanitise).
+  - EXIF and ICC stripping in Phase 5.
+  - First warm-up takes about 3 minutes.
+  - ESLint 10 overrides.
+  - `ubuntu-latest` will move to Ubuntu 26.
+  - `next telemetry disable` in the installer.
+- The installer (Phase 8) must run `npm run db:migrate` after `npm ci`. The app refuses to start without a database.
 
 ## Decisions made (copied to memory.md)
-- D1–D4 as above; Tectonic is XeTeX + Latin Modern, with the Unicode policy recorded in memory.md; Times dropped for now; fancyhdr warmed in an article document; warm-up covers every font design size; headings keep with the next question; per-group spacing and `ownLeading` header lines; scripts are TypeScript run with Node type stripping.
+- D5–D7, the Asset key, the first-run admin rule, the Prisma generate/migrate layout, `fileMustExist`, force-dynamic pages, the integer `CompileJob.id`, the cookie refresh in the proxy, the x-forwarded-for finding, must-change-password for admin-set passwords, read-only built-ins, 404 for admin pages, and the e2e server on port 3211.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). It now holds `tools/tectonic/` and `tools/tectonic-cache/` (about 60 MB).
-- Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands.
-- `npm run test:golden` needs `npm run setup:tectonic` to have run once.
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). It holds `tools/` (Tectonic) and now `data.db` (migrated, no users yet). The first visit to http://127.0.0.1:3210 after `npm run build && npm run start` shows the first-run setup.
+- Node 24: run `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands.
+- `.claude/launch.json` (git-ignored) has a `draftex-e2e` preview on port 3212 with a throwaway data folder.
 
 ## Questions for owner
 - None blocking. Later: should the app offer Times at all (two of your papers use it), given that it needs extra work to compile without warnings?
@@ -76,7 +93,7 @@ no chat history must be able to continue from this file alone.
 ## Phase checklist
 - [x] 0 Bootstrap
 - [x] 1 LaTeX core
-- [ ] 2 Data + auth
+- [x] 2 Data + auth
 - [ ] 3 Rules + course catalogue
 - [ ] 4 Template library + builder
 - [ ] 5 Paper editor

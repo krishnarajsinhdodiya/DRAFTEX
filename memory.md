@@ -73,6 +73,16 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Phase 2 auth screens follow SPEC §12 rules but skip the /apple-design and /break-ui reviews; the first full review is Phase 4 (D7) · five small forms; owner approved
 - 2026-11-03 · First-run admin is allowed only when no user exists and the network mode is `local`; the check and insert run in one transaction · stops a LAN client from claiming admin first
 - 2026-11-03 · Asset primary key is (ownerId, sha256), not sha256 alone; files on disk stay `assets/<sha256>.<ext>`, stored once · a shared sha256 key lets one teacher's upload collide with or reveal another's (gate 8); owner approved
+- 2026-11-03 · Prisma client is generated to `src/generated/prisma` (git-ignored) by `postinstall`; `prisma.config.ts` resolves the database with `peekDataDir()` (never creates a folder); `npm run db:migrate` creates the default data folder, then runs `migrate deploy`; CI sets `CHECKPOINT_DISABLE=1` · no stray folders or files from `prisma generate`; no CLI telemetry
+- 2026-11-03 · The database is opened with `fileMustExist`; only migrations create it, and startup refuses to run without it (plain-English message) · a build once created an empty data.db in the owner's data folder before this was added
+- 2026-11-03 · Every page renders per request (`dynamic = "force-dynamic"` in the root layout) · pages depend on the signed-in user; prerendering touched the database at build time
+- 2026-11-03 · `CompileJob.id` is an autoincrement integer · "keep newest 20" was wrong when two jobs shared a millisecond (found by test)
+- 2026-11-03 · Session cookie `draftex_session` (httpOnly, SameSite=Lax, Secure in server mode, Max-Age 7 d) is re-sent by `src/proxy.ts` on GET page loads; the database row is the authority on idle expiry · server components cannot set cookies
+- 2026-11-03 · Next 16 fills `x-forwarded-for` from the socket only when the client sent none (`??=` in base-server.js), so the per-address sign-in/invite limits trust a client header; harmless while only local mode exists, Phase 7 must fix it before LAN mode ships · verified in node_modules/next
+- 2026-11-03 · Admin-created accounts and admin password resets set `mustChangePassword`; the user is sent to /change-password until they choose their own · the admin knows the temporary password
+- 2026-11-03 · Built-in templates cannot be edited, toggled or deleted through the data layer, by anyone; Phase 4 seeds them directly · SPEC §7 "read-only"
+- 2026-11-03 · Admin pages answer 404 to faculty; private records of others answer "not found" to everyone, admins included · SPEC §7 (404 not 403)
+- 2026-11-03 · E2E runs the built app on port 3211 with a throwaway data folder (`scripts/e2e-server.ts`), one worker, serial · never touches the real data folder or a running copy on 3210
 
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
@@ -84,7 +94,8 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - vitest 5.1.0 · @vitest/coverage-v8 5.1.0 · @playwright/test 1.64.1 (Chromium headless shell 156.0.8078.4)
 - actions/checkout v7.0.1 (3d3c42e5) · actions/setup-node v7.1.0 (949feb24) · actions/upload-artifact v7.0.2 (cf430e03)
 - Phase 1 (installed): zod 4.6.7 · pdfjs-dist 6.5.438 (dev for now; preview needs it in Phase 5) · @napi-rs/canvas 1.1.0 · pixelmatch 8.0.0 · pngjs 7.0.0 · @types/pngjs 6.0.5 · actions/cache v6.1.0 (55cc8345)
-- Planned, re-verify at phase start: @prisma/client + prisma 7.10.1 (CLI `latest` tag points at 8.0.0-rc.29: do not use) · @prisma/adapter-better-sqlite3 7.10.1 · better-sqlite3 12.11.1 (adapter needs ^12) · better-auth 1.7.15 · @node-rs/argon2 2.2.2 · @tiptap/* 3.32.2 · mathlive 0.111.4 · sharp 0.35.5 · @resvg/resvg-js 2.6.2 · lucide-react 1.66.0 · shadcn 4.23.0
+- Phase 2 (installed, verified 2026-11-03): @prisma/client 7.10.1 · prisma 7.10.1 (CLI `latest` tag points at 8.0.0-rc.29: do not use) · @prisma/adapter-better-sqlite3 7.10.1 · better-sqlite3 12.11.1 (not 13.x: the adapter needs ^12.6) · @types/better-sqlite3 9.6.0 · @node-rs/argon2 2.2.2 · install scripts approved in package.json `allowScripts` for better-sqlite3, prisma, @prisma/engines only
+- Planned, re-verify at phase start: @tiptap/* 3.32.2 · mathlive 0.111.4 · sharp 0.35.5 · @resvg/resvg-js 2.6.2 · lucide-react 1.66.0 · shadcn 4.23.0
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
