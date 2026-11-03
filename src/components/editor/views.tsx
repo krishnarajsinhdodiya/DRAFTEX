@@ -2,7 +2,12 @@
 // How each special node looks and is edited inside a question. Popovers are
 // Radix (keyboard, focus return, Escape) styled with DRAFTEX tokens.
 import * as Popover from "@radix-ui/react-popover";
-import { type NodeViewProps, NodeViewContent, NodeViewWrapper } from "@tiptap/react";
+import {
+  type NodeViewProps,
+  NodeViewContent,
+  NodeViewWrapper,
+  useEditorState,
+} from "@tiptap/react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { loadPdfJs } from "@/components/pdf-view";
 import { buttonStyles, inputStyles } from "@/components/styles";
@@ -460,18 +465,28 @@ function ChoicesView({ node, updateAttributes, editor, getPos }: NodeViewProps) 
 
 /** One option: its letter, a radio that marks it correct, and its text. */
 function ChoiceView({ editor, getPos }: NodeViewProps) {
-  const pos = getPos();
-  const $pos = typeof pos === "number" ? editor.state.doc.resolve(pos) : null;
-  const parent = $pos?.parent;
-  const index = $pos ? $pos.index() : 0;
-  const correct = parent?.attrs.correct as number | null | undefined;
-  const parentPos = $pos ? $pos.before() : null;
+  // The answer lives on the parent choices node; follow it as it changes.
+  const { index, correct, parentPos } = useEditorState({
+    editor,
+    selector: ({ editor: e }) => {
+      const pos = getPos();
+      if (typeof pos !== "number") return { index: 0, correct: null, parentPos: null };
+      const $pos = e.state.doc.resolve(pos);
+      return {
+        index: $pos.index(),
+        correct: ($pos.parent.attrs.correct as number | null) ?? null,
+        parentPos: $pos.depth > 0 ? $pos.before() : null,
+      };
+    },
+  });
   const name = useId();
   const mark = () => {
-    if (parentPos === null || !parent) return;
+    if (parentPos === null) return;
     editor
       .chain()
       .command(({ tr }) => {
+        const parent = tr.doc.nodeAt(parentPos);
+        if (!parent) return false;
         tr.setNodeMarkup(parentPos, undefined, { ...parent.attrs, correct: index });
         return true;
       })

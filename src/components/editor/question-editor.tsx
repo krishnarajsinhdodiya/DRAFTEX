@@ -228,7 +228,7 @@ function Toolbar({
     <div
       role="toolbar"
       aria-label="Question formatting"
-      className="flex flex-wrap items-center gap-0.5 border-b border-rule px-1 py-1"
+      className="invisible flex flex-wrap items-center gap-0.5 border-b border-rule px-1 py-1 group-focus-within/slot:visible"
     >
       <ToolButton label="Bold (Ctrl+B)" active={s.bold} onClick={() => c().toggleBold().run()}>
         <Bold size={16} aria-hidden />

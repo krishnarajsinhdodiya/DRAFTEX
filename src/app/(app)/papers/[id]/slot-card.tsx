@@ -152,6 +152,7 @@ export const SlotCard = memo(function SlotCard({
               {coOptions.length ? (
                 <select
                   id={coId}
+                  aria-label={`CO tag for ${name}`}
                   value={state.coTag ?? ""}
                   onChange={(e) => onChange(slotKey, { coTag: e.target.value || null })}
                   className={`${inputStyles} h-7 max-w-48 px-1 text-caption`}
@@ -166,6 +167,7 @@ export const SlotCard = memo(function SlotCard({
               ) : (
                 <input
                   id={coId}
+                  aria-label={`CO tag for ${name}`}
                   value={state.coTag ?? ""}
                   placeholder="none"
                   pattern="[A-Za-z0-9.]{1,20}"
@@ -184,6 +186,7 @@ export const SlotCard = memo(function SlotCard({
             Bloom
             <select
               id={bloomId}
+              aria-label={`Bloom level for ${name}`}
               value={state.bloomLevel ?? ""}
               onChange={(e) =>
                 onChange(slotKey, { bloomLevel: (e.target.value || null) as BloomLevel | null })
