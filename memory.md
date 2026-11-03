@@ -153,6 +153,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-04 · Backups, staging and cancelling a restore are written to AuditLog (`data.audit.record`) · admin actions on all users' data
 - 2026-11-04 · The editor placeholder needs `.dx-question p.is-editor-empty:first-child::before` in globals.css; QuestionEditor takes a `placeholder` prop · the hint never showed in Phase 5 (found by the Phase 6 review)
 - 2026-11-04 · The restore e2e starts a second built server on port 3214 from an empty folder holding only `restore-pending.zip`, and runs `npm run restore` into a third folder · covers both restore paths (D28, D35) on macOS and Windows CI
+- 2026-11-04 · Delete backups: each row on the Backups screen has Delete (inline confirm, Cancel focused, extra warning for the only backup); any kind may be deleted; automatic pruning stays as D31 (daily only, newest 14) · owner chose a Delete button over pruning "before update" backups
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -175,7 +176,7 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
 - Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable.
 - How are COs of elective options tagged on real papers? Default `BP607TAEC1.01` (see `coTag`).
-- Backups made by hand, before an update or before a restore are never pruned (D31) and the Backups screen has no Delete; each update adds one. Keep that, prune "before-update" to the newest 5, or add a Delete button?
+- Backups made by hand, before an update or before a restore are never pruned (D31) and the Backups screen has no Delete; each update adds one. Keep that, prune "before-update" to the newest 5, or add a Delete button? [ANSWERED 2026-11-04 → see "Delete backups"]
 - Pharm.D (and other) papers number each question (Q.1 … Q.10); templates number groups. Should Phase 5 add "number each question" to a group? [ANSWERED 2026-11-03 → yes, see "Per-question numbering"]
 - shadcn/ui: keep the direct Radix + own-styles approach, or adopt the shadcn CLI components? [ANSWERED 2026-11-03]
 - "New template" creates an Untitled copy at once; is that acceptable, or should it ask for a title first? [ANSWERED 2026-11-03]
