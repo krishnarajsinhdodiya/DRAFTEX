@@ -40,7 +40,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Tectonic bundle pinned by explicit URL + checksum or a vendored copy (Phase 1) · default relay URL can change contents and break visual baselines [SUPERSEDED 2026-11-03 → see "Bundle pin (D1)"]
 - 2026-11-03 · Visual regression compares PNGs on ubuntu only; windows verifies clean compile · PDF rasterising differs by OS
 - 2026-11-03 · Serialiser fuzz compiles ~50 strings per document and bisects on failure · 1,000 separate compiles is too slow for CI
-- 2026-11-03 · Password hashing: argon2id via @node-rs/argon2 plugged into Better Auth · Better Auth defaults to scrypt; @node-rs ships prebuilt binaries (no node-gyp on Windows)
+- 2026-11-03 · Password hashing: argon2id via @node-rs/argon2 plugged into Better Auth · Better Auth defaults to scrypt; @node-rs ships prebuilt binaries (no node-gyp on Windows) [SUPERSEDED 2026-11-03 → see "Auth (D5)"]
 - 2026-11-03 · Reference template date is the placeholder DD/MM/YYYY · the previous value was a real upcoming exam date
 - 2026-11-03 · TypeScript 6.0.3, not 7 · typescript-eslint 8.72.1 requires TypeScript < 6.1
 - 2026-11-03 · ESLint 10 with npm `overrides` for eslint-plugin-react, -jsx-a11y, -import · ESLint 9 is out of support; the three plugins were verified to run on 10 though their peer range says <= 9
@@ -68,6 +68,11 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Templates may set per-group spaceBefore/spaceAfterHead, negative spacing and header lines whose leading follows their size (ownLeading) · the hand-written papers space long/short groups differently and use unbraced \large
 - 2026-11-03 · Gate 5 passes locally: BP702T re-encoded into the legacy layout differs from the original by 2.11% / 1.42% / 0.78% (limit 3%); tuned values live in tests/golden/house-style.test.ts (layout only, no paper text); the original's fancyhdr lines are stripped before compiling it (they print nothing under \pagestyle{empty}) · owner approval of the fixture 2026-11-03
 - 2026-11-03 · Setup and other Node scripts are TypeScript run with Node 24 type stripping (`node scripts/x.ts`); modules they import use relative `.ts` imports, no `@/` alias, erasable syntax only (tsconfig allowImportingTsExtensions + erasableSyntaxOnly) · no tsx dependency
+- 2026-11-03 · Auth (D5): hand-rolled sessions on the Lucia pattern (random 20-byte token in the cookie, SHA-256 of it as `Session.id`, 7-day idle sliding expiry), argon2id via @node-rs/argon2 (m=19456 KiB, t=2, p=1), `User.passwordHash` as SPEC §6 says; no Better Auth · Better Auth lacks per-account lockout, invites and first-run admin, keeps passwords on its own Account table and pulls telemetry and unused adapters; owner approved
+- 2026-11-03 · Gate 8 scope (D6): Phase 2 tests every data-access function with guessed IDs; phases 4–6 add route-level gate 8 tests as template/paper/asset/compile/export routes appear · those routes do not exist in Phase 2; owner approved
+- 2026-11-03 · Phase 2 auth screens follow SPEC §12 rules but skip the /apple-design and /break-ui reviews; the first full review is Phase 4 (D7) · five small forms; owner approved
+- 2026-11-03 · First-run admin is allowed only when no user exists and the network mode is `local`; the check and insert run in one transaction · stops a LAN client from claiming admin first
+- 2026-11-03 · Asset primary key is (ownerId, sha256), not sha256 alone; files on disk stay `assets/<sha256>.<ext>`, stored once · a shared sha256 key lets one teacher's upload collide with or reveal another's (gate 8); owner approved
 
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.

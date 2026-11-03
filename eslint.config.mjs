@@ -20,6 +20,7 @@ const config = [
       "test-results/**",
       "next-env.d.ts",
       "reference_papers/**",
+      "src/generated/**",
     ],
   },
 ];
