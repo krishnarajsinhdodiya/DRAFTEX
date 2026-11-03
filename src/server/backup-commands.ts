@@ -29,6 +29,14 @@ export function backupCommands(data: Pick<DataLayer, "audit">, ctx: BackupContex
   const audit = (action: string, entityId: string | null) =>
     data.audit.record({ actorId: actor.userId, action, entity: "Backup", entityId });
 
+  /** Only names DRAFTEX made, only from the backups folder. */
+  const fileOf = (name: string): string => {
+    admin();
+    const file = path.join(ctx.paths.backups, name);
+    if (!parseBackupName(name) || !fs.existsSync(file)) throw new NotFoundError("Backup");
+    return file;
+  };
+
   return {
     list(): { rows: BackupRow[]; pending: boolean; folder: string } {
       admin();
@@ -52,11 +60,13 @@ export function backupCommands(data: Pick<DataLayer, "audit">, ctx: BackupContex
     },
 
     /** The file to send for a download; only names DRAFTEX made, only from the backups folder. */
-    file(name: string): string {
-      admin();
-      const file = path.join(ctx.paths.backups, name);
-      if (!parseBackupName(name) || !fs.existsSync(file)) throw new NotFoundError("Backup");
-      return file;
+    file: fileOf,
+
+    /** Deletes one backup for good (a choice the Backups screen confirms first). */
+    async remove(name: string): Promise<void> {
+      const file = fileOf(name);
+      fs.rmSync(file, { force: true });
+      await audit("delete-backup", name);
     },
 
     async stage(

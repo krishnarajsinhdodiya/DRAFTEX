@@ -2,7 +2,7 @@
 // Backups screen actions. Next.js checks the Origin of every server action.
 import { revalidatePath } from "next/cache";
 import { actorOf } from "@/lib/auth/service";
-import { getData } from "@/lib/data";
+import { NotFoundError, getData } from "@/lib/data";
 import { requireAdmin } from "./auth";
 import { backupCommands } from "./backup-commands";
 import { backupContext } from "./backups";
@@ -29,4 +29,18 @@ export async function backupNowAction(): Promise<
 export async function cancelRestoreAction(): Promise<void> {
   await (await commands()).cancel();
   revalidatePath("/admin/backups");
+}
+
+export async function deleteBackupAction(
+  name: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const c = await commands();
+  try {
+    await c.remove(name);
+  } catch (e) {
+    if (e instanceof NotFoundError) return { ok: false, message: "That backup is already gone." };
+    throw e;
+  }
+  revalidatePath("/admin/backups");
+  return { ok: true };
 }

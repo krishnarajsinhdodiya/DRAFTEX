@@ -14,7 +14,8 @@ import { type APIRequestContext, type Page, expect, request, test } from "@playw
 import { diffPages, renderPdf } from "../support/pdf";
 import { ADMIN, FACULTY, asUser, signIn } from "./support";
 
-test.describe.configure({ mode: "serial" });
+// Starting a second server and compiling twice takes longer than the 30 s default.
+test.describe.configure({ mode: "serial", timeout: 120_000 });
 
 const TITLE = "Invented Pharmacology Paper";
 const PORT = 3214;
@@ -122,6 +123,24 @@ test("an administrator backs up from the Backups screen", async ({ browser }) =>
   await expect(page.getByText("A restore is waiting.")).toBeVisible();
   await page.getByRole("button", { name: "Cancel the restore" }).click();
   await expect(page.getByText("A restore is waiting.")).toHaveCount(0);
+
+  // A backup can be deleted, after saying so; Cancel keeps it.
+  await page.getByRole("button", { name: "Back up now" }).click();
+  await expect(page.getByRole("cell", { name: "Made by hand" })).toHaveCount(2, {
+    timeout: 30_000,
+  });
+  const del = page.getByRole("button", { name: /^Delete the backup made/ }).first();
+  await del.click();
+  await expect(page.getByText("Delete for good?")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "Made by hand" })).toHaveCount(2);
+  await del.click();
+  await page
+    .getByRole("group", { name: /^Delete the backup made/ })
+    .getByRole("button", { name: "Delete" })
+    .click();
+  await expect(page.getByRole("cell", { name: "Made by hand" })).toHaveCount(1);
 
   // A file that is not a backup is refused before anything is kept.
   const junk = path.join(os.tmpdir(), "not-a-backup.zip");

@@ -1,8 +1,8 @@
 "use client";
-import { useId, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { FormAlert } from "@/components/form";
 import { buttonStyles, inputStyles } from "@/components/styles";
-import { backupNowAction, cancelRestoreAction } from "@/server/backup-actions";
+import { backupNowAction, cancelRestoreAction, deleteBackupAction } from "@/server/backup-actions";
 
 const UNREACHABLE = "DRAFTEX is not reachable. Check that it is still running, then try again.";
 
@@ -177,5 +177,80 @@ export function RestoreForm({ disabled }: { disabled: boolean }) {
       ) : null}
       {error ? <FormAlert kind="error">{error}</FormAlert> : null}
     </form>
+  );
+}
+
+/** Delete for one backup; asks in the row first, because it cannot be undone. */
+export function DeleteBackupButton({
+  name,
+  label,
+  only,
+}: {
+  name: string;
+  /** "the backup made 4 Nov 2026, 00:50", for screen readers. */
+  label: string;
+  /** The last backup there is: say so before it goes. */
+  only: boolean;
+}) {
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (asking) cancelRef.current?.focus();
+  }, [asking]);
+
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        className={buttonStyles.danger}
+        aria-label={`Delete ${label}`}
+        onClick={() => {
+          setError(null);
+          setAsking(true);
+        }}
+      >
+        Delete
+      </button>
+    );
+  }
+  return (
+    <span
+      role="group"
+      aria-label={`Delete ${label}?`}
+      className="inline-flex flex-wrap items-center justify-end gap-2"
+    >
+      <span className="text-small text-danger">
+        {error ?? (only ? "This is your only backup. Delete it for good?" : "Delete for good?")}
+      </span>
+      <button
+        ref={cancelRef}
+        type="button"
+        className={buttonStyles.quiet}
+        disabled={pending}
+        onClick={() => setAsking(false)}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        className={`${buttonStyles.danger} border border-danger`}
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            try {
+              const r = await deleteBackupAction(name);
+              if (!r.ok) setError(r.message);
+            } catch (e) {
+              if (e && typeof e === "object" && "digest" in e) throw e;
+              setError(UNREACHABLE);
+            }
+          })
+        }
+      >
+        {pending ? "Deleting…" : "Delete"}
+      </button>
+    </span>
   );
 }

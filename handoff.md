@@ -6,7 +6,7 @@ no chat history must be able to continue from this file alone.
 ## Status
 - **Date:** 2026-11-04
 - **Current phase:** 6 Answer keys + exports + files: done. Next: Phase 7 Network modes + hardening.
-- **Branch:** `main` only (Phase 6 merged with `--no-ff` from `phase/6-keys-exports`, tagged `v0.6.0`; the phase branch is deleted locally and on GitHub)
+- **Branch:** `main` only (Phase 6 merged with `--no-ff` from `phase/6-keys-exports`, tagged `v0.6.0`; then `chore/delete-backups` merged with `--no-ff`; both branches deleted locally and on GitHub)
 - **Last green commit:** latest `main`
 - **CI:** `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, green on the phase branch before the merge.
 
@@ -21,6 +21,7 @@ no chat history must be able to continue from this file alone.
 - fflate 0.8.3 added (only new dependency).
 - Tests: unit 710 (was 650), golden 40 + 22 visual on ubuntu (was 36 + 19), e2e 30 (was 22). Gate 9 complete: backup → restore on an empty data folder (both paths) → exported paper.tex/key.tex byte-identical, every PDF page 0 changed pixels. Gate 8 for key preview, export, duplicate and every backup route. Fuzz covers the key. Exported zip compiles standalone (golden).
 - `/apple-design` review and `/break-ui` pass on the new screens; findings fixed (see "Review findings").
+- After the phase (owner choice, `chore/delete-backups`): Delete on each backup row, with an inline confirm; admin-only, audited. Unit 712, e2e 30. Two Windows-only e2e timing races fixed at the cause (a template test checked a badge before navigation finished; compile-heavy specs had waits longer than their 30 s budget).
 
 ## Review findings (all fixed unless marked)
 - Editor placeholder never rendered (no CSS) → fixed; the answer editor has its own hint.
@@ -28,7 +29,7 @@ no chat history must be able to continue from this file alone.
 - Key summary counted blank rows; long criteria hidden in a one-line field; silent limit at 20 rows → fixed.
 - Export success was an information-only modal → inline notice; "Go back" → "Cancel"; failed export lists only the errors.
 - Export folder names cut mid-word; two papers with the same title overwrote each other's folder → word-boundary cut; "(2)" folders via `.draftex-paper`.
-- Backups: caution style for the confidentiality warning; page promised a Delete it does not have (copy fixed, behaviour is an open question); dates/sizes wrapped on a phone; first daily backup only an hour after setup → now right after setup.
+- Backups: caution style for the confidentiality warning; page promised a Delete it did not have (Delete added after the phase, owner choice); dates/sizes wrapped on a phone; first daily backup only an hour after setup → now right after setup.
 - Logged, not fixed: the Backups list is unpaginated (40 rows tested fine); the restore upload reads the whole file into memory (cap 2 GB).
 
 ## In progress
@@ -52,7 +53,7 @@ no chat history must be able to continue from this file alone.
 - Carried over: long chemical names in 2/4-column choices overflow; phone layout of the editor is cramped; same question in two windows is last-write-wins; Wi-Fi demo is a throwaway copy only; client-sent `x-forwarded-for` (Phase 7); lockout can be used for denial of service; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); first warm-up about 3 minutes; ESLint 10 overrides; `ubuntu-latest` moves to Ubuntu 26; `next telemetry disable` and `npm run db:migrate` in the installer.
 
 ## Decisions made (copied to memory.md)
-- D28–D35; About page and version rule; export compaction; key saves with the question; split-up rows only for non-objective questions; separate preview queues; `.draftex-paper` folder owner; `draftex.lock`; backup module lint exemption; daily backup timing; audit of backup actions; editor placeholder CSS; restore e2e on port 3214; fflate pinned.
+- D28–D35; Delete backups (owner choice); About page and version rule; export compaction; key saves with the question; split-up rows only for non-objective questions; separate preview queues; `.draftex-paper` folder owner; `draftex.lock`; backup module lint exemption; daily backup timing; audit of backup actions; editor placeholder CSS; restore e2e on port 3214; fflate pinned.
 
 ## Machine setup (owner's Mac)
 - Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). No new migration this phase. Backups go to `DRAFTEX-data/backups/`, exports to `DRAFTEX-data/exports/`; the first daily backup is made the next time the app starts.
@@ -60,7 +61,6 @@ no chat history must be able to continue from this file alone.
 - `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (0.0.0.0:3215), `draftex-dev-throwaway` (3216, Next dev mode). All use throwaway data folders. The restore e2e uses 3214 for its second server.
 
 ## Questions for owner
-- Backups made by hand / before an update / before a restore are never pruned and there is no Delete button: keep, prune "before update" to the newest 5, or add Delete?
 - Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`?
 - How does your father tag COs of elective options? The default is `BP607TAEC1.01`.
 - Later: should the app offer Times at all?

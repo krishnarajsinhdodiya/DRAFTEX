@@ -11,7 +11,8 @@ import { unzipSync } from "fflate";
 import { type Page, expect, test } from "@playwright/test";
 import { ADMIN, FACULTY, asUser } from "./support";
 
-test.describe.configure({ mode: "serial" });
+// These tests include real LaTeX compiles; on the Windows runner one takes up to ~25 s.
+test.describe.configure({ mode: "serial", timeout: 120_000 });
 
 const TITLE = "Invented Pharmacology Paper";
 let paperUrl = "";
@@ -218,6 +219,8 @@ test("export asks about gaps, then saves the paper and key as a zip", async ({ b
 test("a paper is duplicated with its questions and key for the ATKT exam", async ({ browser }) => {
   const page = await asUser(browser, FACULTY, FACULTY.own);
   await page.goto(paperUrl);
+  // The editor is ready (and its buttons work) once the first preview is in.
+  await expect(page.getByRole("img", { name: /page 1 of/ })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Duplicate", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Duplicate paper" });
   await expect(dialog.getByLabel("Exam", { exact: true })).toHaveValue("SUPPLEMENTARY_ATKT");
