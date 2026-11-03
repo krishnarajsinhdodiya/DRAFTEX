@@ -1,7 +1,7 @@
 // Built-in templates (SPEC §7 "Seed templates"). Global, read-only, owned by
 // the first administrator, synced at startup by seedKey. Layout values follow
 // the house style of the reference sources; no paper text comes from them.
-import type { TemplateFields } from "@/lib/data/templates";
+import type { TemplateFields } from "./fields";
 import type { Group, TemplateInput } from "@/lib/paper/schema";
 import { logoRef } from "./logos";
 

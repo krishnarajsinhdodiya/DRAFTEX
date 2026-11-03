@@ -2,15 +2,16 @@
 // GLOBAL ones are visible to everyone, PRIVATE ones to their owner only
 // (others get "not found"). Only the owner edits in place; anyone who can
 // see a template may save a copy. Admins may unpublish and delete GLOBAL ones.
-import { z } from "zod";
+import type { z } from "zod";
 import type { Visibility } from "@/generated/prisma/enums";
-import { CourseKind, ExamKind, Program } from "@/generated/prisma/enums";
+import type { CourseKind, ExamKind, Program } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 import type { Db } from "@/lib/db/client";
-import { headerSchema, structureSchema, styleSchema } from "@/lib/paper/schema";
+import { type TemplateFields, templateFieldsSchema } from "@/lib/templates/fields";
 import { checkTemplateFields, ruleSetIdFor } from "@/lib/templates/check";
 import type { Actor } from "./actor";
 import { writeAudit } from "./audit";
+import { parsePatch } from "./patch";
 import {
   ConflictError,
   ForbiddenError,
@@ -21,20 +22,8 @@ import {
 
 const WHAT = "Template";
 
-export const templateFieldsSchema = z.object({
-  title: z.string().trim().min(1, "Give the template a title.").max(200),
-  description: z.string().trim().max(2000).default(""),
-  program: z.enum(Program),
-  examKind: z.enum(ExamKind),
-  courseKind: z.enum(CourseKind),
-  creditTier: z.number().int().min(0).max(10).nullable().default(null),
-  durationMinutes: z.number().int().min(1).max(600),
-  maxMarks: z.number().positive().max(1000),
-  structure: structureSchema,
-  style: styleSchema,
-  header: headerSchema,
-});
-export type TemplateFields = z.input<typeof templateFieldsSchema>;
+export { templateFieldsSchema };
+export type { TemplateFields };
 
 export const templatePatchSchema = templateFieldsSchema.partial();
 export type TemplatePatch = z.input<typeof templatePatchSchema>;
@@ -186,7 +175,7 @@ export function templates(db: Db) {
       if (t.ownerId !== actor.userId) {
         throw new ForbiddenError("Only the owner can edit this template. Save a copy instead.");
       }
-      const fields = templatePatchSchema.parse(patch);
+      const fields = parsePatch(templatePatchSchema, patch);
       assertValid({ ...storedFields(t), ...fields });
       const { count } = await db.template.updateMany({
         where: { id, ownerId: actor.userId, version, deletedAt: null },
@@ -200,7 +189,7 @@ export function templates(db: Db) {
     /** "Save as new": a PRIVATE copy owned by the actor, linked to its source. */
     async saveAsNew(actor: Actor, id: string, overrides: TemplatePatch = {}) {
       const src = await findVisible(actor, id);
-      const merged = { ...storedFields(src), ...templatePatchSchema.parse(overrides) };
+      const merged = { ...storedFields(src), ...parsePatch(templatePatchSchema, overrides) };
       assertValid(merged);
       const copy = await db.template.create({
         data: {

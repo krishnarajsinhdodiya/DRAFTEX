@@ -8,6 +8,7 @@ import type { Db } from "@/lib/db/client";
 import { docSchema } from "@/lib/paper/schema";
 import type { Actor } from "./actor";
 import { writeAudit } from "./audit";
+import { parsePatch } from "./patch";
 import { ConflictError, NotFoundError, STALE_VERSION } from "./errors";
 
 const WHAT = "Paper";
@@ -135,7 +136,7 @@ export function papers(db: Db) {
 
     async update(actor: Actor, id: string, version: number, patch: PaperPatch) {
       await findOwn(actor, id);
-      const m = paperPatchSchema.parse(patch);
+      const m = parsePatch(paperPatchSchema, patch);
       await checkCourse(m.courseId);
       const { instructionsOverride, ...rest } = m;
       const { count } = await db.paper.updateMany({

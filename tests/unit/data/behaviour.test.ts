@@ -105,6 +105,17 @@ describe("templates", () => {
     expect(await ids({ search: "finder", examKind: "SESSIONAL_1" })).toEqual([]);
   });
 
+  it("leave fields a patch does not name untouched (Zod fills defaults inside partial)", async () => {
+    const tpl = await t.data.templates.create(faculty, {
+      ...templateFields("Keep"),
+      description: "kept",
+    });
+    const edited = await t.data.templates.update(faculty, tpl.id, 1, { title: "Keep 2" });
+    expect(edited).toMatchObject({ description: "kept", creditTier: 4 });
+    const copy = await t.data.templates.saveAsNew(faculty, tpl.id, { title: "Keep copy" });
+    expect(copy).toMatchObject({ description: "kept", creditTier: 4 });
+  });
+
   it("copies keep the content, take overrides and link back", async () => {
     const tpl = await t.data.templates.create(faculty, templateFields("C"));
     const copy = await t.data.templates.saveAsNew(faculty, tpl.id, { title: "C copy" });
@@ -160,6 +171,22 @@ describe("templates", () => {
 });
 
 describe("papers", () => {
+  it("keep the course, year and status when a patch names only the title", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("Patch"));
+    const p = await t.data.papers.create(
+      faculty,
+      tpl.id,
+      paperMeta({ courseCode: "XX202T", academicYear: "2026-27", status: "FINAL" }),
+    );
+    const v2 = await t.data.papers.update(faculty, p.id, 1, { title: "Renamed" });
+    expect(v2).toMatchObject({
+      title: "Renamed",
+      courseCode: "XX202T",
+      academicYear: "2026-27",
+      status: "FINAL",
+    });
+  });
+
   it("check the course, the version and the instructions", async () => {
     const tpl = await t.data.templates.create(faculty, templateFields("P"));
     await expect(
