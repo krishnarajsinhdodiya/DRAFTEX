@@ -622,3 +622,31 @@ describe("serializePaper: question details found by the editor fuzz", () => {
     expect(t.tex).toMatch(/^\\RequirePackage\{fix-cm\}$/m);
   });
 });
+
+describe("serializePaper: empty header values", () => {
+  it("drops the brackets around an empty value and keeps filled ones", () => {
+    const tpl = withTemplate((t) => {
+      t.header.lines = [
+        {
+          text: "{{courseTitle}} [{{courseCode}}] ({{date}})",
+          size: "normal",
+          bold: false,
+          ownLeading: false,
+        },
+      ];
+    });
+    const empty = ok(
+      serializePaper(paperWith([p("x")], { template: tpl, meta: { courseTitle: "Pharmacology" } })),
+    );
+    expect(empty.tex).toContain("  Pharmacology\\par");
+    const full = ok(
+      serializePaper(
+        paperWith([p("x")], {
+          template: tpl,
+          meta: { courseTitle: "P", courseCode: "BP604T", date: "1" },
+        }),
+      ),
+    );
+    expect(full.tex).toContain("  P {[}BP604T{]} (1)\\par");
+  });
+});

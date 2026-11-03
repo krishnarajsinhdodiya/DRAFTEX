@@ -86,6 +86,7 @@ describe("paperPreview", () => {
       line: 80,
       slotId: "g2.3",
     };
+    // The second compile (without the refused question) fails too: nothing to show.
     const d = deps(async () => result({ ok: false, pdf: undefined, diagnostics: [diag] }));
     // A fresh edit so the cached PDF does not answer.
     await t.data.papers.saveSlot(me, paperId, testSlot({ groupKey: "g2", position: 3, marks: 3 }));
@@ -95,8 +96,33 @@ describe("paperPreview", () => {
       status: 422,
       problems: [{ level: "error", slotId: "g2.3", message: "Q.2(3) has an unmatched brace." }],
     });
+    expect(d.jobs).toHaveLength(2);
+    expect(d.jobs[1]?.tex).toContain("This question could not be typeset");
+
+    // When the rest compiles, the paper shows with the question left out and still flagged.
+    let n = 0;
+    const second = deps(async () =>
+      n++ === 0 ? result({ ok: false, pdf: undefined, diagnostics: [diag] }) : result(),
+    );
+    await t.data.papers.saveSlot(
+      me,
+      paperId,
+      testSlot({ groupKey: "g2", position: 3, marks: 2.5 }),
+    );
+    expect(await paperPreview(second, me, paperId)).toMatchObject({
+      ok: true,
+      problems: [{ level: "error", slotId: "g2.3" }],
+    });
+    // A paper-wide error (no question to blame) is not retried.
+    const wide = deps(async () =>
+      result({ ok: false, pdf: undefined, diagnostics: [{ ...diag, slotId: undefined }] }),
+    );
+    await t.data.papers.saveSlot(me, paperId, testSlot({ groupKey: "g2", position: 3, marks: 2 }));
+    expect(await paperPreview(wide, me, paperId)).toMatchObject({ ok: false });
+    expect(wide.jobs).toHaveLength(1);
     const history = await t.data.papers.listCompiles(me, paperId);
-    expect(history[0]).toMatchObject({ status: "FAILED", errorSummary: "brace@g2.3:80" });
+    expect(history.map((h) => h.errorSummary)).toContain("brace@g2.3:80");
+    expect(history[0]).toMatchObject({ status: "FAILED", errorSummary: "brace:80" });
   });
 
   it("keeps notes but still returns the PDF", async () => {
@@ -108,7 +134,11 @@ describe("paperPreview", () => {
       slotId: "g2.3",
     };
     const d = deps(async () => result({ diagnostics: [note] }));
-    await t.data.papers.saveSlot(me, paperId, testSlot({ groupKey: "g2", position: 3, marks: 2 }));
+    await t.data.papers.saveSlot(
+      me,
+      paperId,
+      testSlot({ groupKey: "g2", position: 3, marks: 1.5 }),
+    );
     expect(await paperPreview(d, me, paperId)).toMatchObject({
       ok: true,
       problems: [{ level: "note", message: "Q.2(3) has a line that is too wide for the page." }],

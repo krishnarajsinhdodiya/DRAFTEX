@@ -272,7 +272,12 @@ function blocks(nodes: BlockNode[], ctx: BlockContext): string {
 // ---------- document ----------
 
 function fill(template: string, meta: Meta, issues: Issues): string {
-  const parts = template.split(/(\{\{[a-zA-Z]+\}\})/);
+  // An empty value takes the brackets around it along: no "Course Title []".
+  const blank = (k: string) => k in meta && meta[k as keyof Meta].trim() === "";
+  const tidy = template.replace(/\s*[[(]\{\{([a-zA-Z]+)\}\}[\])]/g, (whole, k: string) =>
+    blank(k) ? "" : whole,
+  );
+  const parts = tidy.split(/(\{\{[a-zA-Z]+\}\})/);
   return parts
     .map((p) => {
       const m = /^\{\{([a-zA-Z]+)\}\}$/.exec(p);
