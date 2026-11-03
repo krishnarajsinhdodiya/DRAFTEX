@@ -168,3 +168,13 @@ describe("imageResolver", () => {
     expect(await resolve([`assets/${up}.png`], "u1")).toBe(MISSING_IMAGE);
   });
 });
+
+describe("sameOrigin", () => {
+  const req = (headers: Record<string, string>) => new Request("http://x/", { headers });
+  it("accepts only an Origin that names this host", () => {
+    expect(sameOrigin(req({ origin: "http://127.0.0.1:3210", host: "127.0.0.1:3210" }))).toBe(true);
+    expect(sameOrigin(req({ origin: "http://evil.test", host: "127.0.0.1:3210" }))).toBe(false);
+    expect(sameOrigin(req({ host: "127.0.0.1:3210" }))).toBe(false);
+    expect(sameOrigin(req({ origin: "null", host: "127.0.0.1:3210" }))).toBe(false);
+  });
+});
