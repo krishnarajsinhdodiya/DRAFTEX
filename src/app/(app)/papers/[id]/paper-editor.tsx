@@ -11,7 +11,7 @@ import { PdfView } from "@/components/pdf-view";
 import { buttonStyles, eyebrowStyles, linkStyles } from "@/components/styles";
 import { isEmptyDoc } from "@/lib/editor/convert";
 import { marksLabel } from "@/lib/latex/serialize";
-import { marksText } from "@/lib/templates/labels";
+import { EXAM_KIND_LABEL, marksText } from "@/lib/templates/labels";
 import type { Problem } from "@/lib/paper/problems";
 import type { EditorGroup, PaperEditorView } from "@/server/paper-view";
 import { DetailsButton } from "./details";
@@ -324,7 +324,8 @@ export function PaperEditor({
                 {view.courseTitle || "Course title"} {view.courseCode ? `[${view.courseCode}]` : ""}
               </p>
               <p className="text-caption text-ink-2">
-                {view.templateTitle} · {view.duration} · {view.maxMarksText} marks
+                {EXAM_KIND_LABEL[view.examKind]} · {view.templateTitle} · {view.duration} ·{" "}
+                {view.maxMarksText} marks
                 {view.examDate ? ` · ${view.examDate.split("-").reverse().join("/")}` : ""}
               </p>
               <span className="mt-1">
