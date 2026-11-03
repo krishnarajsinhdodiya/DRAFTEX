@@ -1,10 +1,13 @@
 // Paper editor end to end (SPEC §13 Phase 5, gate 9 editor part, D26):
 // start a 4-credit end-semester paper from the built-in template, write
 // questions with choices, an equation, a table and a picture, see them in the
-// preview, download the PDF. Then gate 8 at the routes: someone else's paper
-// and pictures answer "not found". All question text is invented.
+// preview, download the PDF. Phase 6: write an answer key, export the paper
+// and key as a zip, duplicate the paper for its ATKT exam. Then gate 8 at the
+// routes: someone else's paper, pictures and backups answer "not found".
+// All question text is invented.
 // Runs after auth.spec.ts, which creates the accounts used here.
 import fs from "node:fs";
+import { unzipSync } from "fflate";
 import { type Page, expect, test } from "@playwright/test";
 import { ADMIN, FACULTY, asUser } from "./support";
 
@@ -149,6 +152,86 @@ test("Advanced LaTeX is offered only after an admin allows it", async ({ browser
   await page.keyboard.press("Escape");
 });
 
+test("the answer key is written with the question and previewed", async ({ browser }) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto(paperUrl);
+  const q = question(page, "Q.2(1)");
+  await q.getByRole("button", { name: /^Answer key/ }).click();
+  await q.getByRole("textbox", { name: "Model answer for Q.2(1)" }).click();
+  await page.keyboard.type("Expand the square, then add one.");
+  await q.getByRole("button", { name: "Add a row" }).click();
+  await q.getByLabel("What earns marks, row 1").fill("Correct working");
+  await q.getByLabel("Marks for row 1").fill("2");
+  await expect(
+    q.getByText(/The split-up marks add up to 2, but the question is worth/),
+  ).toBeVisible();
+  // The MCQ's key comes from its ticked option.
+  await expect(
+    question(page, "Q.1(1)").getByRole("button", { name: /Answer key · correct: A/ }),
+  ).toBeVisible();
+  await saved(page);
+
+  await page.getByRole("button", { name: "Answer key", exact: true, pressed: false }).click();
+  await expect(page.getByRole("img", { name: /Answer key of .* page 1 of/ })).toBeVisible({
+    timeout: 30_000,
+  });
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download key" }).click();
+  expect((await download).suggestedFilename()).toMatch(/ key\.pdf$/);
+
+  await page.reload();
+  await expect(
+    question(page, "Q.2(1)").getByRole("button", { name: /model answer written · 1 split-up row/ }),
+  ).toBeVisible();
+});
+
+test("export asks about gaps, then saves the paper and key as a zip", async ({ browser }) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto(paperUrl);
+  await page.getByRole("button", { name: "Export" }).click();
+  const ask = page.getByRole("dialog", { name: "Export with these gaps?" });
+  await expect(ask.getByText(/26 empty questions are left out/)).toBeVisible({ timeout: 30_000 });
+  await expect(ask.getByText("Q.2(2) has no answer in the key.")).toBeVisible();
+  const download = page.waitForEvent("download");
+  await ask.getByRole("button", { name: "Export anyway" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^\d{4}-\d{2}-\d{2} Invented Pharmacology Paper\.zip$/);
+  const done = page.getByRole("dialog", { name: "Exported" });
+  await expect(done.getByText(/B\.Pharm.BP604T/)).toBeVisible({ timeout: 60_000 });
+  const names = Object.keys(unzipSync(fs.readFileSync(await file.path())))
+    .map((n) => n.split("/").slice(1).join("/"))
+    .sort();
+  expect(names.filter((n) => !n.startsWith("assets/"))).toEqual([
+    "README.txt",
+    "key.pdf",
+    "key.tex",
+    "paper.pdf",
+    "paper.tex",
+  ]);
+  expect(names.filter((n) => n.startsWith("assets/"))).toHaveLength(1);
+  await done.getByRole("button", { name: "Done" }).click();
+});
+
+test("a paper is duplicated with its questions and key for the ATKT exam", async ({ browser }) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto(paperUrl);
+  await page.getByRole("button", { name: "Duplicate", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Duplicate paper" });
+  await expect(dialog.getByLabel("Exam", { exact: true })).toHaveValue("SUPPLEMENTARY_ATKT");
+  await expect(dialog.getByLabel("Title of the copy")).toHaveValue(`${TITLE} (ATKT)`);
+  await dialog.getByRole("button", { name: "Make the copy" }).click();
+  await expect(page).not.toHaveURL(paperUrl);
+  await expect(page).toHaveURL(/\/papers\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { level: 1, name: `${TITLE} (ATKT)` })).toBeVisible();
+  await expect(question(page, "Q.1(1)").getByText("Inventolol")).toBeVisible();
+  await expect(
+    question(page, "Q.2(1)").getByRole("button", { name: /model answer written/ }),
+  ).toBeVisible();
+  await expect(page.getByText(/^Supplementary \(ATKT\) · /)).toBeVisible();
+  await page.goto("/papers");
+  await expect(page.getByText(`${TITLE} (ATKT)`)).toBeVisible();
+});
+
 test("someone else's paper and pictures do not exist for them, by any route", async ({
   browser,
 }) => {
@@ -157,14 +240,44 @@ test("someone else's paper and pictures do not exist for them, by any route", as
   expect((await page.goto(`/papers/${id}`))?.status()).toBe(404);
   await page.goto("/papers");
   await expect(page.getByText(TITLE)).toHaveCount(0);
-  for (const url of [`/api/papers/${id}/preview`, pictureUrl, "/api/papers/not-an-id/preview"]) {
+  for (const url of [
+    `/api/papers/${id}/preview`,
+    `/api/papers/${id}/preview?kind=key`,
+    pictureUrl,
+    "/api/papers/not-an-id/preview",
+  ]) {
     expect((await page.request.get(url)).status(), url).toBe(404);
   }
+  const origin = { Origin: new URL(paperUrl).origin };
+  const exported = await page.request.post(`/api/papers/${id}/export`, {
+    headers: origin,
+    data: { confirmed: true },
+  });
+  expect(exported.status()).toBe(404);
+  // Exports, like uploads, need this app's own pages behind them.
+  expect((await page.request.post(`/api/papers/${id}/export`, { data: {} })).status()).toBe(403);
   // Uploads need this app's own pages behind them, and a signed-in user.
   const upload = await page.request.post("/api/assets", {
     multipart: { file: { name: "x.png", mimeType: "image/png", buffer: Buffer.from("x") } },
   });
   expect(upload.status()).toBe(403);
+  // Backups are for administrators: faculty find nothing there.
+  const faculty = await asUser(browser, FACULTY, FACULTY.own);
+  expect((await faculty.goto("/admin/backups"))?.status()).toBe(404);
+  expect(
+    (
+      await faculty.request.get("/api/admin/backups/DRAFTEX-backup-2026-01-01_000000-auto.zip")
+    ).status(),
+  ).toBe(404);
+  expect(
+    (
+      await faculty.request.post("/api/admin/restore", {
+        headers: { ...origin, "Content-Type": "application/zip" },
+        data: Buffer.from("PK"),
+      })
+    ).status(),
+  ).toBe(404);
+  await faculty.context().close();
   const anonymous = await browser.newContext();
   expect((await anonymous.request.get(`/api/papers/${id}/preview`)).status()).toBe(401);
   expect((await anonymous.request.get(pictureUrl)).status()).toBe(401);
