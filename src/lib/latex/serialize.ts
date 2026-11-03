@@ -329,7 +329,7 @@ function preamble(w: Writer, style: Style, header: Header): void {
     "\\makeatletter\\newcommand{\\dxKeepWithNext}{\\ifnum\\value{question}>0 \\@nobreaktrue\\fi}\\makeatother",
   );
   w.line(
-    "\\newcommand{\\dxGroupHeadAt}[4]{\\par\\vspace{#1}\\uplevel{\\vspace{0pt}\\noindent\\textbf{#3}\\hfill\\textbf{#4}\\par\\vspace{#2}}\\global\\dxQOffset=\\value{question}\\relax\\dxKeepWithNext}",
+    "\\newcommand{\\dxGroupHeadAt}[4]{\\par\\vspace{#1}\\uplevel{\\vspace{0pt}\\noindent\\textbf{#3}\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil\\textbf{#4}\\parfillskip=0pt\\finalhyphendemerits=0\\par\\vspace{#2}}\\global\\dxQOffset=\\value{question}\\relax\\dxKeepWithNext}",
   );
   w.line(
     `\\newcommand{\\dxGroupHead}[2]{\\dxGroupHeadAt{${inch(s.beforeGroup)}}{${inch(s.afterGroupHead)}}{#1}{#2}}`,
