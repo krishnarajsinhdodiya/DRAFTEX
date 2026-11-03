@@ -567,3 +567,48 @@ describe("validateSlotContent", () => {
     expect(validateSlotContent({ type: "nope" }).length).toBeGreaterThan(0);
   });
 });
+
+describe("serializePaper: question details found by the editor fuzz", () => {
+  const sub = (...texts: string[]): BlockNode => ({
+    type: "subParts",
+    content: texts.map((x) => ({ type: "subPart", content: [p(x)] })),
+  });
+
+  it("drops line breaks that would end no line", () => {
+    const r = ok(
+      serializePaper(
+        paperWith([
+          {
+            type: "paragraph",
+            content: [
+              { type: "hardBreak" },
+              { type: "text", text: "a" },
+              { type: "hardBreak" },
+              { type: "hardBreak" },
+              { type: "text", text: "b" },
+              { type: "hardBreak" },
+            ],
+          },
+        ]),
+      ),
+    );
+    expect(r.tex).toContain("\\question a\\newline{}b\n");
+  });
+
+  it("letters a second sub-parts list on from the first and fills one-column tables", () => {
+    const r = ok(serializePaper(paperWith([sub("x", "y"), p("between"), sub("z")])));
+    expect(r.tex).toContain("\\begin{parts}\n  \\setcounter{partno}{2}\n    \\part z");
+    const t = ok(
+      serializePaper(
+        paperWith([
+          {
+            type: "table",
+            content: [{ type: "tableRow", content: [{ type: "tableCell", content: [p("only")] }] }],
+          },
+        ]),
+      ),
+    );
+    expect(t.tex).toContain("{@{}X@{}}");
+    expect(t.tex).toMatch(/^\\RequirePackage\{fix-cm\}$/m);
+  });
+});

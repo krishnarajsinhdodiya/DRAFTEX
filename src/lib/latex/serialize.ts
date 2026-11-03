@@ -97,10 +97,24 @@ function snippet(src: string, mode: SanitizeMode, issues: Issues, what: string):
   return "";
 }
 
+/**
+ * A line break can only end a line that has something on it: leading,
+ * repeated and trailing breaks are dropped ("There's no line here to end").
+ */
+function usefulBreaks(nodes: InlineNode[]): InlineNode[] {
+  const out: InlineNode[] = [];
+  for (const n of nodes) {
+    if (n.type === "hardBreak" && (out.length === 0 || out.at(-1)?.type === "hardBreak")) continue;
+    out.push(n);
+  }
+  while (out.at(-1)?.type === "hardBreak") out.pop();
+  return out;
+}
+
 function inline(nodes: InlineNode[] | undefined, issues: Issues): string {
   const quotes: QuoteState = { doubleOpen: false };
   let out = "";
-  for (const n of nodes ?? []) {
+  for (const n of usefulBreaks(nodes ?? [])) {
     switch (n.type) {
       case "text": {
         let t = text(n.text, issues, quotes);
@@ -144,13 +158,16 @@ interface BlockContext {
   assets: Set<string>;
   defaultColumns: 1 | 2 | 4;
   beforeChoices: number;
+  /** Sub-parts already lettered in this question: a second list carries on (c), (d). */
+  partsSoFar?: number;
 }
 
 function table(t: TableNode, ctx: BlockContext): string {
   const headerRow = t.attrs?.headerRow ?? true;
   const width = (t.attrs?.widthPercent ?? 80) / 100;
   const cols = Math.max(...t.content.map((r) => r.content.length));
-  const spec = `@{}l${"X".repeat(cols - 1)}@{}`;
+  // A one-column table still fills its width, so it needs a stretchable column.
+  const spec = cols === 1 ? "@{}X@{}" : `@{}l${"X".repeat(cols - 1)}@{}`;
   const rows = t.content.map((row) => {
     const cells = row.content.map((c) =>
       (c.content ?? []).map((p) => paragraph(p, ctx.issues)).join(" "),
@@ -220,18 +237,23 @@ const guardBracket = (s: string) => (s.startsWith("[") ? `{}${s}` : s);
  * Joins blocks the way the hand-written papers do: display maths stays inside
  * its paragraph (no \par around \[ \]), other blocks start a new paragraph.
  */
+function subParts(b: Extract<BlockNode, { type: "subParts" }>, ctx: BlockContext): string {
+  const before = ctx.partsSoFar ?? 0;
+  ctx.partsSoFar = before + b.content.length;
+  return [
+    "\\begin{parts}",
+    // exam.cls restarts lettering (and its labels) in every parts list.
+    ...(before > 0 ? [`\\setcounter{partno}{${before}}`] : []),
+    ...b.content.map((p) => `  \\part ${guardBracket(blocks(p.content, ctx))}`),
+    "\\end{parts}",
+  ].join("\n");
+}
+
 function blocks(nodes: BlockNode[], ctx: BlockContext): string {
   const out: string[] = [];
   let prev: BlockNode["type"] | undefined;
   for (const b of nodes) {
-    const s =
-      b.type === "subParts"
-        ? [
-            "\\begin{parts}",
-            ...b.content.map((p) => `  \\part ${guardBracket(blocks(p.content, ctx))}`),
-            "\\end{parts}",
-          ].join("\n")
-        : leaf(b, ctx);
+    const s = b.type === "subParts" ? subParts(b, ctx) : leaf(b, ctx);
     if (b.type === "paragraph" && s === "") continue;
     const joinTight =
       prev === undefined ||
@@ -276,6 +298,8 @@ const CANDIDATE: Record<Header["candidateField"], string> = {
 function preamble(w: Writer, style: Style, header: Header, widestOwnLabel?: string): void {
   const numberEach = widestOwnLabel !== undefined;
   const g = style.geometry;
+  // Scalable Computer Modern: maths inside subscript text needs sizes below 5 pt.
+  w.line("\\RequirePackage{fix-cm}");
   w.line(`\\documentclass[${style.classSize}pt, a4paper]{exam}`);
   w.line(
     `\\usepackage[left=${inch(g.left)}, top=${inch(g.top)}, total={${inch(g.width)},${inch(g.height)}}]{geometry}`,
@@ -566,6 +590,7 @@ function serializeParsed(paper: Paper): SerializeResult {
         const hasContent = slot && slot.content.content.length > 0;
         if (!hasContent && paper.emptySlots === "OMIT") continue;
         issues.slotId = slotId;
+        ctx.partsSoFar = 0;
         const start = w.next;
         w.line(`  %% DX-SLOT ${slotId}`);
         if (ownNumbers) w.line(`  \\dxOwnLabel{${text(num.printed[pos - 1] as string, issues)}}`);

@@ -71,7 +71,7 @@ const MATH_COMMANDS = new Set([
   hline cline
   begin end
   SI si num qty unit ang degree celsius percent per square cubic
-  centi milli micro nano kilo mega gram litre liter metre meter mole molar second minute hour
+  centi milli micro nano kilo mega gram litre liter metre meter mole second minute hour
   kelvin pascal joule watt volt ampere hertz newton`),
 ]);
 

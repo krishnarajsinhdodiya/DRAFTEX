@@ -4,7 +4,8 @@
 import type { PaperInput, TemplateInput } from "../paper/schema.ts";
 
 /** Loads every package SPEC §9 lists, including ones only Advanced users reach. */
-export const PACKAGES_DOCUMENT = String.raw`\documentclass[11pt, a4paper]{exam}
+export const PACKAGES_DOCUMENT = String.raw`\RequirePackage{fix-cm}
+\documentclass[11pt, a4paper]{exam}
 \usepackage{geometry}
 \usepackage{graphicx}
 \usepackage{multicol}
