@@ -115,6 +115,7 @@ describe("exportPaper", () => {
     expect(d.jobs[1]?.tex).toContain("MARKING SCHEME");
     const folder = path.join(dir, ...FOLDER);
     expect(fs.readdirSync(folder).sort()).toEqual([
+      ".draftex-paper",
       "README.txt",
       "key.pdf",
       "key.tex",
@@ -141,6 +142,24 @@ describe("exportPaper", () => {
     expect(r.ok).toBe(true);
     expect(fs.existsSync(path.join(folder, "stale.txt"))).toBe(false);
     expect(fs.readdirSync(path.dirname(folder)).filter((n) => n.startsWith("."))).toEqual([]);
+  });
+
+  it("gives another paper with the same title its own folder", async () => {
+    const tpl = await t.data.templates.create(me, templateFields("Twin"));
+    const twin = await t.data.papers.create(me, tpl.id, paperMeta({ title: "Mid: term/1" }));
+    await t.data.papers.saveSlot(me, twin.id, testSlot({ answerKey: testSlot().content }));
+    const r = await exportPaper(deps(), me, twin.id, { confirmed: true });
+    if (!r.ok) throw new Error(r.message);
+    expect(r.folder).toBe(path.join("exports", "B.Pharm", "XX101T", `${FOLDER[2]} (2)`));
+    // The first paper still owns, and replaces, its own folder.
+    const again = await exportPaper(deps(), me, paperId, { confirmed: true });
+    expect(again.ok && again.folder).toBe(path.join("exports", ...FOLDER));
+    expect(
+      Object.keys(unzipSync(again.ok ? again.zip : new Uint8Array())).some((n) =>
+        n.endsWith(".draftex-paper"),
+      ),
+    ).toBe(false);
+    await t.data.papers.remove(me, twin.id);
   });
 
   it("copies the pictures the files use into assets/", async () => {

@@ -88,6 +88,7 @@ export function PaperEditor({
   const [active, setActive] = useState<Set<string>>(new Set());
   const [focused, setFocused] = useState<EditorHandle | null>(null);
   const [showPreview, setShowPreview] = useState(true);
+  const [exported, setExported] = useState<string | null>(null);
   const [previewWidth, setPreviewWidth] = useStoredWidth();
   const dragging = useRef<{ x: number; w: number } | null>(null);
 
@@ -192,7 +193,7 @@ export function PaperEditor({
         </button>
         <DetailsButton view={view} />
         <DuplicateButton paperId={view.id} title={view.title} examKind={view.examKind} />
-        <ExportButton paperId={view.id} flush={paper.flushAll} />
+        <ExportButton paperId={view.id} flush={paper.flushAll} onExported={setExported} />
         <button
           type="button"
           className={buttonStyles.quiet}
@@ -228,6 +229,26 @@ export function PaperEditor({
             {paper.restored === 1
               ? "1 question had changes kept on this computer that had not reached DRAFTEX. They are being saved now."
               : `${paper.restored} questions had changes kept on this computer that had not reached DRAFTEX. They are being saved now.`}
+          </FormAlert>
+        </div>
+      ) : null}
+      {exported ? (
+        <div className="px-4 pt-3">
+          <FormAlert kind="notice">
+            <span className="flex flex-wrap items-baseline gap-x-3">
+              <span className="min-w-0 flex-1">
+                Exported to <span className="font-medium break-all">{exported}</span> in your data
+                folder; a zip of the same files is downloading. These are unreleased exam papers:
+                keep them out of shared and cloud-synced folders.
+              </span>
+              <button
+                type="button"
+                onClick={() => setExported(null)}
+                className="font-medium underline underline-offset-2"
+              >
+                Dismiss
+              </button>
+            </span>
           </FormAlert>
         </div>
       ) : null}

@@ -13,8 +13,7 @@ import { duplicatePaperAction } from "@/server/paper-actions";
 type ExportState =
   | { step: "idle" | "working" }
   | { step: "confirm"; problems: Problem[] }
-  | { step: "failed"; message: string; problems: Problem[] }
-  | { step: "done"; folder: string };
+  | { step: "failed"; message: string; problems: Problem[] };
 
 const UNREACHABLE = "DRAFTEX is not reachable. Check that it is still running, then try again.";
 
@@ -36,10 +35,13 @@ function fileNameOf(header: string | null): string {
 export function ExportButton({
   paperId,
   flush,
+  onExported,
 }: {
   paperId: string;
   /** Waits for every question to reach the server; false when some could not be saved. */
   flush: () => Promise<boolean>;
+  /** The folder it went to, inside the data folder; shown in the editor, not in a dialog. */
+  onExported: (folder: string) => void;
 }) {
   const [state, setState] = useState<ExportState>({ step: "idle" });
 
@@ -66,10 +68,8 @@ export function ExportButton({
     }
     if (res.ok) {
       save(await res.blob(), fileNameOf(res.headers.get("Content-Disposition")));
-      setState({
-        step: "done",
-        folder: decodeURIComponent(res.headers.get("X-DX-Folder") ?? ""),
-      });
+      setState({ step: "idle" });
+      onExported(decodeURIComponent(res.headers.get("X-DX-Folder") ?? ""));
       return;
     }
     const body = (await res.json().catch(() => ({}))) as {
@@ -87,7 +87,7 @@ export function ExportButton({
     });
   };
 
-  const open = state.step === "confirm" || state.step === "failed" || state.step === "done";
+  const open = state.step === "confirm" || state.step === "failed";
   return (
     <>
       <button
@@ -116,7 +116,7 @@ export function ExportButton({
                 </div>
                 <ProblemList problems={state.problems} />
                 <div className="flex justify-end gap-2">
-                  <Dialog.Close className={buttonStyles.secondary}>Go back</Dialog.Close>
+                  <Dialog.Close className={buttonStyles.secondary}>Cancel</Dialog.Close>
                   <button
                     type="button"
                     className={buttonStyles.primary}
@@ -139,21 +139,6 @@ export function ExportButton({
                 <ProblemList problems={state.problems} />
                 <div className="flex justify-end">
                   <Dialog.Close className={buttonStyles.secondary}>Close</Dialog.Close>
-                </div>
-              </>
-            ) : state.step === "done" ? (
-              <>
-                <Dialog.Title className="font-paper text-title font-semibold">
-                  Exported
-                </Dialog.Title>
-                <Dialog.Description className="text-small text-ink-2">
-                  The paper, its answer key and their LaTeX are in your data folder under{" "}
-                  <span className="font-medium break-words text-ink">{state.folder}</span>, and a
-                  zip of the same files is downloading. These are unreleased exam papers: keep them
-                  out of shared and cloud-synced folders.
-                </Dialog.Description>
-                <div className="flex justify-end">
-                  <Dialog.Close className={buttonStyles.primary}>Done</Dialog.Close>
                 </div>
               </>
             ) : null}

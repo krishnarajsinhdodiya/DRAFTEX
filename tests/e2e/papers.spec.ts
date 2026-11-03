@@ -196,8 +196,11 @@ test("export asks about gaps, then saves the paper and key as a zip", async ({ b
   await ask.getByRole("button", { name: "Export anyway" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/^\d{4}-\d{2}-\d{2} Invented Pharmacology Paper\.zip$/);
-  const done = page.getByRole("dialog", { name: "Exported" });
-  await expect(done.getByText(/B\.Pharm.BP604T/)).toBeVisible({ timeout: 60_000 });
+  await expect(
+    page.getByRole("status").filter({ hasText: /Exported to .*B\.Pharm.BP604T/ }),
+  ).toBeVisible({
+    timeout: 60_000,
+  });
   const names = Object.keys(unzipSync(fs.readFileSync(await file.path())))
     .map((n) => n.split("/").slice(1).join("/"))
     .sort();
@@ -209,7 +212,7 @@ test("export asks about gaps, then saves the paper and key as a zip", async ({ b
     "paper.tex",
   ]);
   expect(names.filter((n) => n.startsWith("assets/"))).toHaveLength(1);
-  await done.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Dismiss" }).click();
 });
 
 test("a paper is duplicated with its questions and key for the ATKT exam", async ({ browser }) => {

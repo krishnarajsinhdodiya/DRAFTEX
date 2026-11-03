@@ -76,7 +76,13 @@ export function safeName(s: string, fallback: string, max = 60): string {
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-")
     .replace(/\s+/g, " ")
     .trim();
-  out = [...out].slice(0, max).join("");
+  const chars = [...out];
+  if (chars.length > max) {
+    // Cut at the last space when that keeps most of the name, so no word is split.
+    const cut = chars.slice(0, max).join("");
+    const space = cut.lastIndexOf(" ");
+    out = space >= max * 0.6 ? cut.slice(0, space) : cut;
+  }
   out = out.replace(/[. ]+$/, "").trim();
   if (out === "" || /^-+$/.test(out)) return fallback;
   return RESERVED.test(out) ? `_${out}` : out;

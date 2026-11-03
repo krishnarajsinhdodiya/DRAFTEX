@@ -55,7 +55,12 @@ describe("safe names", () => {
     expect(safeName("", "fallback")).toBe("fallback");
     expect(safeName("a\u0001b\tc  d", "x")).toBe("a-b-c d");
     expect(safeName("x".repeat(100), "x")).toHaveLength(60);
-    expect(safeName("Pharmacognosy ".repeat(10), "x", 20)).toBe("Pharmacognosy Pharma");
+    // A cut lands on a word boundary when that keeps most of the name.
+    expect(safeName("Pharmacognosy ".repeat(10), "x", 20)).toBe("Pharmacognosy");
+    expect(
+      safeName("Pharmaceutical Organic Chemistry II End-Semester Supplementary", "x", 60),
+    ).toBe("Pharmaceutical Organic Chemistry II End-Semester");
+    expect(safeName("A Pharmacokineticsandbiopharmaceutics", "x", 20)).toBe("A Pharmacokineticsan");
   });
 
   it("build exports/<Program>/<CourseCode>/<date> <title>", () => {

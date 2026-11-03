@@ -19,6 +19,9 @@ import { PROGRAM_LABEL } from "@/lib/templates/labels";
 import type { ResolveImages } from "./images";
 import { keySlots } from "./paper-preview";
 
+/** Names the paper a folder belongs to; hidden, and left out of the zip. */
+const OWNER_FILE = ".draftex-paper";
+
 export interface ExportDeps {
   data: Pick<DataLayer, "papers">;
   compile: Pick<CompileService, "compile">;
@@ -176,6 +179,8 @@ export async function exportPaper(
       numbers,
     );
     if (!res.ok || !res.pdf) {
+      // The errors are why it failed; layout notes would bury them.
+      const errors = found.filter((p) => p.level === "error");
       return {
         ok: false,
         status: 422,
@@ -184,7 +189,7 @@ export async function exportPaper(
           : d.kind === "KEY"
             ? "The answer key could not be made. Open the preview's Answer key view to see why."
             : "The paper could not be made. Open the preview to see which question needs a change.",
-        problems: found,
+        problems: errors.length ? errors : found,
       };
     }
     problems.push(...found);
@@ -200,11 +205,21 @@ export async function exportPaper(
     title: paper.title,
     date: (deps.now ?? (() => new Date()))(),
   });
+  // This paper's folder for the day is replaced (D32); another paper with the same
+  // title gets a folder of its own instead of overwriting it.
+  const base = segments[2];
+  for (let n = 2; ; n++) {
+    const owner = path.join(deps.exportsDir, ...segments, OWNER_FILE);
+    if (!fs.existsSync(owner) || fs.readFileSync(owner, "utf8") === paperId) break;
+    segments[2] = `${base} (${n})`;
+  }
+  files[OWNER_FILE] = paperId;
   writeFolder(path.join(deps.exportsDir, ...segments), files);
 
   const top = segments[2];
   const zippable: Zippable = {};
   for (const [rel, body] of Object.entries(files).sort(([a], [b]) => a.localeCompare(b))) {
+    if (rel === OWNER_FILE) continue;
     const bytes = typeof body === "string" ? new TextEncoder().encode(body) : body;
     // PDFs and pictures are compressed already.
     zippable[`${top}/${rel}`] = [bytes, { level: /\.(pdf|png|jpg)$/.test(rel) ? 0 : 6 }];
