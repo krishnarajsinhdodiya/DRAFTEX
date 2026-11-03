@@ -12,6 +12,7 @@ import { buttonStyles, eyebrowStyles, linkStyles } from "@/components/styles";
 import { isEmptyDoc } from "@/lib/editor/convert";
 import { marksLabel } from "@/lib/latex/serialize";
 import { marksText } from "@/lib/templates/labels";
+import type { Problem } from "@/lib/paper/problems";
 import type { EditorGroup, PaperEditorView } from "@/server/paper-view";
 import { DetailsButton } from "./details";
 import { SlotCard } from "./slot-card";
@@ -37,6 +38,15 @@ const upload: Uploader = async (file) => {
   }
   return { sha256: json.sha256, ext: json.ext, width: json.width ?? 600 };
 };
+
+function bySlot(problems: Problem[]): Map<string, Problem[]> {
+  const m = new Map<string, Problem[]>();
+  for (const p of problems) {
+    if (!p.slotId) continue;
+    m.set(p.slotId, [...(m.get(p.slotId) ?? []), p]);
+  }
+  return m;
+}
 
 const PREVIEW_MIN = 320;
 const PREVIEW_MAX = 900;
@@ -84,16 +94,10 @@ export function PaperEditor({
     setActive((s) => (s.has(key) ? s : new Set(s).add(key)));
   }, []);
 
-  const problems = paper.preview.problems;
-  const problemsBySlot = useMemo(() => {
-    const m = new Map<string, typeof problems>();
-    for (const p of problems) {
-      if (!p.slotId) continue;
-      m.set(p.slotId, [...(m.get(p.slotId) ?? []), p]);
-    }
-    return m;
-  }, [problems]);
-  const paperProblems = problems.filter((p) => !p.slotId);
+  const problemsBySlot = useMemo(() => bySlot(paper.paperProblems), [paper.paperProblems]);
+  const keyProblemsBySlot = useMemo(() => bySlot(paper.keyProblems), [paper.keyProblems]);
+  const paperProblems = paper.preview.problems.filter((p) => !p.slotId);
+  const showingKey = paper.previewKind === "KEY";
 
   const moveBy = useCallback(
     (key: string, by: -1 | 1) => {
@@ -147,7 +151,7 @@ export function PaperEditor({
     const url = URL.createObjectURL(new Blob([pdf as BlobPart], { type: "application/pdf" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(view.courseCode || "paper").replace(/[^\w.-]+/g, "_")} ${view.title.replace(/[^\w .-]+/g, "_")}.pdf`;
+    a.download = `${(view.courseCode || "paper").replace(/[^\w.-]+/g, "_")} ${view.title.replace(/[^\w .-]+/g, "_")}${showingKey ? " key" : ""}.pdf`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
@@ -384,6 +388,7 @@ export function PaperEditor({
                               position={i + 1}
                               state={state}
                               problems={problemsBySlot.get(k) ?? []}
+                              keyProblems={keyProblemsBySlot.get(k) ?? []}
                               coOptions={view.coOptions}
                               allowAdvanced={allowAdvanced}
                               upload={upload}
@@ -438,8 +443,35 @@ export function PaperEditor({
               onPointerUp={() => (dragging.current = null)}
               className="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize hover:bg-accent/20 focus-visible:bg-accent/30 focus-visible:outline-none lg:block"
             />
-            <div className="flex items-center gap-2 px-4 py-2">
-              <h2 className={eyebrowStyles}>Preview</h2>
+            <div className="flex flex-wrap items-center gap-2 px-4 py-2">
+              <h2 className="sr-only">Preview</h2>
+              <div
+                role="group"
+                aria-label="Show in the preview"
+                className="inline-flex rounded-md border border-rule-strong p-0.5"
+              >
+                {(
+                  [
+                    ["PAPER", "Paper"],
+                    ["KEY", "Answer key"],
+                  ] as const
+                ).map(([k, l]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={paper.previewKind === k}
+                    onClick={() => paper.showKind(k)}
+                    className={
+                      "h-7 rounded px-2.5 text-small font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-accent " +
+                      (paper.previewKind === k
+                        ? "bg-accent-soft text-accent"
+                        : "text-ink-2 hover:text-ink")
+                    }
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
               <span className="ml-auto" />
               <button type="button" className={buttonStyles.quiet} onClick={paper.recompile}>
                 <RefreshCw size={14} aria-hidden /> Recompile
@@ -450,7 +482,7 @@ export function PaperEditor({
                 onClick={download}
                 disabled={!paper.preview.pdf}
               >
-                <Download size={14} aria-hidden /> Download PDF
+                <Download size={14} aria-hidden /> {showingKey ? "Download key" : "Download PDF"}
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
@@ -463,7 +495,11 @@ export function PaperEditor({
                   ))}
                 </ul>
               ) : null}
-              <PdfView state={paper.preview} label={view.title} />
+              <PdfView
+                key={paper.previewKind}
+                state={paper.preview}
+                label={showingKey ? `Answer key of ${view.title}` : view.title}
+              />
             </div>
           </aside>
         ) : null}

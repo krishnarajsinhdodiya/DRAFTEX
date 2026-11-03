@@ -70,7 +70,7 @@ describe("paperPreview", () => {
     expect(await paperPreview(d, me, paperId)).toMatchObject({ ok: true, cached: true });
     expect(d.jobs).toHaveLength(1);
     const job = d.jobs[0] as CompileJob;
-    expect(job.supersedeKey).toBe(`paper-preview:${me.userId}:${paperId}`);
+    expect(job.supersedeKey).toBe(`paper-preview:PAPER:${me.userId}:${paperId}`);
     expect(job.tex).toContain("Date: 03/11/2026");
     expect(job.tex).toContain("B.Pharm Semester I");
     expect(job.slotRanges?.map((r) => r.slotId)).toContain("g2.3");
@@ -123,6 +123,64 @@ describe("paperPreview", () => {
     const history = await t.data.papers.listCompiles(me, paperId);
     expect(history.map((h) => h.errorSummary)).toContain("brace@g2.3:80");
     expect(history[0]).toMatchObject({ status: "FAILED", errorSummary: "brace:80" });
+  });
+
+  it("makes the answer key on its own queue and records it as a key", async () => {
+    await t.data.papers.saveSlot(
+      me,
+      paperId,
+      testSlot({
+        groupKey: "g2",
+        position: 3,
+        marks: 4,
+        answerKey: testSlot().content,
+        keyCriteria: [{ text: "Definition", marks: 4 }],
+      }),
+    );
+    const d = deps(async () => result());
+    expect(await paperPreview(d, me, paperId, "KEY")).toMatchObject({ ok: true, cached: false });
+    const job = d.jobs[0] as CompileJob;
+    expect(job.supersedeKey).toBe(`paper-preview:KEY:${me.userId}:${paperId}`);
+    expect(job.tex).toContain("MARKING SCHEME / MODEL ANSWERS");
+    expect(job.tex).toContain("\\textbf{Total} & \\textbf{4}");
+    const history = await t.data.papers.listCompiles(me, paperId);
+    expect(history[0]).toMatchObject({ kind: "KEY", status: "SUCCEEDED" });
+  });
+
+  it("leaves out only the refused answer of a key", async () => {
+    const diag: Diagnostic = {
+      severity: "error",
+      kind: "error",
+      message: "Missing } inserted.",
+      line: 40,
+      slotId: "g2.3",
+    };
+    let n = 0;
+    const d = deps(async () =>
+      n++ === 0 ? result({ ok: false, pdf: undefined, diagnostics: [diag] }) : result(),
+    );
+    await t.data.papers.saveSlot(
+      me,
+      paperId,
+      testSlot({ groupKey: "g2", position: 3, marks: 4, answerKey: testSlot().content }),
+    );
+    expect(await paperPreview(d, me, paperId, "KEY")).toMatchObject({
+      ok: true,
+      problems: [{ level: "error", slotId: "g2.3" }],
+    });
+    expect(d.jobs[1]?.tex).toContain("This question could not be typeset");
+    expect(d.jobs[1]?.tex).not.toContain("\\textbf{Criteria}");
+
+    const fails = deps(async () => result({ ok: false, pdf: undefined, diagnostics: [diag] }));
+    await t.data.papers.saveSlot(
+      me,
+      paperId,
+      testSlot({ groupKey: "g2", position: 3, marks: 3, answerKey: testSlot().content }),
+    );
+    expect(await paperPreview(fails, me, paperId, "KEY")).toMatchObject({
+      ok: false,
+      message: "The answer key could not be made. The answers marked below need a change.",
+    });
   });
 
   it("keeps notes but still returns the PDF", async () => {

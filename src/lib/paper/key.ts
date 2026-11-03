@@ -1,7 +1,7 @@
 // Answer keys (SPEC §8, D24, D33): each question may carry a model answer
 // (rich content) and split-up marks. Pure and client-safe.
 import { z } from "zod";
-import type { Doc } from "./schema";
+import type { BlockNode, ChoicesNode, Doc } from "./schema.ts";
 
 export const keyCriterionSchema = z.object({
   text: z.string().trim().min(1, "Describe what earns these marks.").max(300),
@@ -35,4 +35,23 @@ export function criteriaNote(criteria: readonly KeyCriterion[], marks: number): 
 /** True when a doc has anything in it. */
 export function hasContent(doc: Doc | null | undefined): doc is Doc {
   return !!doc && doc.content.length > 0;
+}
+
+/** Every choices block of a question, in order (sub-parts included). */
+export function choiceBlocks(nodes: BlockNode[]): ChoicesNode[] {
+  return nodes.flatMap((b) =>
+    b.type === "choices"
+      ? [b]
+      : b.type === "subParts"
+        ? b.content.flatMap((p) => choiceBlocks(p.content))
+        : [],
+  );
+}
+
+/** The correct letter ("B") of each choices block, or null where none is chosen. */
+export function choiceAnswers(doc: Doc): (string | null)[] {
+  return choiceBlocks(doc.content).map((c) => {
+    const n = c.attrs?.correct;
+    return n === undefined || n >= c.content.length ? null : String.fromCharCode(65 + n);
+  });
 }

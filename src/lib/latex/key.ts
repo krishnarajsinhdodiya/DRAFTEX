@@ -5,11 +5,9 @@
 // No. | Answer | Marks table, other questions as model answer plus split-up
 // marks. Question text is not reprinted.
 import { z } from "zod";
-import { type KeyCriterion, criteriaTotal, keyCriteriaSchema } from "../paper/key.ts";
+import { type KeyCriterion, choiceBlocks, criteriaTotal, keyCriteriaSchema } from "../paper/key.ts";
 import { type GroupNumbers, questionNumbers } from "../paper/numbering.ts";
 import {
-  type BlockNode,
-  type ChoicesNode,
   type Doc,
   type Group,
   type Paper,
@@ -52,17 +50,6 @@ export function groupMarksText(g: Pick<Group, "slots" | "attempt" | "marksEach">
 }
 
 const marksWord = (n: number) => `${formatMarks(n)} ${n === 1 ? "Mark" : "Marks"}`;
-
-/** Every choices block of a question, in order (sub-parts included). */
-function choiceBlocks(nodes: BlockNode[]): ChoicesNode[] {
-  return nodes.flatMap((b) =>
-    b.type === "choices"
-      ? [b]
-      : b.type === "subParts"
-        ? b.content.flatMap((p) => choiceBlocks(p.content))
-        : [],
-  );
-}
 
 /** "B. text" for each choices block with a correct answer; "" when none is set. */
 function correctChoices(content: Doc, issues: Issues): string {
