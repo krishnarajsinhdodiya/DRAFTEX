@@ -13,8 +13,10 @@ const config = [
   },
   {
     // SPEC §11.4: one data-access layer. Only src/lib/data and src/lib/db touch the database.
+    // src/lib/backup copies and checks the database file as a whole (no records); the
+    // Backups screen that calls it is for administrators only (src/server/backup-commands.ts).
     files: ["**/*.ts", "**/*.tsx"],
-    ignores: ["src/lib/data/**", "src/lib/db/**", "tests/**"],
+    ignores: ["src/lib/data/**", "src/lib/db/**", "src/lib/backup/**", "tests/**"],
     rules: {
       "no-restricted-imports": [
         "error",

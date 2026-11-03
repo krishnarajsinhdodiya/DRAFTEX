@@ -16,6 +16,7 @@ import { isEmptyDoc } from "@/lib/editor/convert";
 import type { Problem } from "@/lib/paper/problems";
 import { marksText } from "@/lib/templates/labels";
 import type { EditorGroup } from "@/server/paper-view";
+import { KeyPanel } from "./key-panel";
 import type { SlotState, SlotValue } from "./use-paper";
 
 export const BLOOM_LABEL: Record<BloomLevel, string> = {
@@ -43,6 +44,7 @@ export const SlotCard = memo(function SlotCard({
   position,
   state,
   problems,
+  keyProblems,
   coOptions,
   allowAdvanced,
   upload,
@@ -61,6 +63,7 @@ export const SlotCard = memo(function SlotCard({
   position: number;
   state: SlotState;
   problems: Problem[];
+  keyProblems: Problem[];
   coOptions: { value: string; label: string }[];
   allowAdvanced: boolean;
   upload: Uploader;
@@ -297,6 +300,18 @@ export const SlotCard = memo(function SlotCard({
             </li>
           ))}
         </ul>
+      ) : null}
+      {!empty ? (
+        <KeyPanel
+          name={name}
+          state={state}
+          splitUp={!(group.type === "OBJECTIVE" && group.numbering === "GROUP")}
+          problems={keyProblems}
+          allowAdvanced={allowAdvanced}
+          upload={upload}
+          onChange={(patch) => onChange(slotKey, patch)}
+          onEditorFocus={onEditorFocus}
+        />
       ) : null}
     </li>
   );

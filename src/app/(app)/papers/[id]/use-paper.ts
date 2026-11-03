@@ -7,6 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { BloomLevel } from "@/generated/prisma/enums";
 import { draftsFor, dropDraft, putDraft } from "@/lib/editor/drafts";
 import { isEmptyDoc } from "@/lib/editor/convert";
+import type { KeyCriterion } from "@/lib/paper/key";
 import type { Problem } from "@/lib/paper/problems";
 import type { Doc } from "@/lib/paper/schema";
 import {
@@ -26,6 +27,9 @@ export interface SlotValue {
   marks: number;
   coTag: string | null;
   bloomLevel: BloomLevel | null;
+  /** The answer key (D24) saves with the question, so moves and undo carry it. */
+  answerKey: Doc | null;
+  keyCriteria: KeyCriterion[];
 }
 
 export type SaveStatus = "saved" | "pending" | "saving" | "error";
@@ -49,6 +53,16 @@ export const slotKey = (groupKey: string, position: number) => `${groupKey}.${po
 
 const EMPTY_DOC: Doc = { type: "doc", content: [] };
 
+export type PreviewKind = "PAPER" | "KEY";
+
+const EMPTY_PREVIEW: PreviewState = {
+  pdf: null,
+  busy: false,
+  error: null,
+  problems: [],
+  compiledAt: null,
+};
+
 function initialSlots(view: PaperEditorView): Map<string, SlotState> {
   const m = new Map<string, SlotState>();
   for (const g of view.groups) {
@@ -58,6 +72,8 @@ function initialSlots(view: PaperEditorView): Map<string, SlotState> {
         marks: g.marksEach,
         coTag: null,
         bloomLevel: null,
+        answerKey: null,
+        keyCriteria: [],
         status: "saved",
         rev: 0,
       });
@@ -73,6 +89,8 @@ function initialSlots(view: PaperEditorView): Map<string, SlotState> {
         marks: s.marks,
         coTag: s.coTag,
         bloomLevel: s.bloomLevel,
+        answerKey: s.answerKey,
+        keyCriteria: s.keyCriteria,
       });
   }
   return m;
@@ -83,9 +101,20 @@ interface UndoEntry {
   run: () => Promise<void>;
 }
 
+const valueOf = (s: SlotValue): SlotValue => ({
+  doc: s.doc,
+  marks: s.marks,
+  coTag: s.coTag,
+  bloomLevel: s.bloomLevel,
+  answerKey: s.answerKey ?? null,
+  keyCriteria: s.keyCriteria ?? [],
+});
+
 const same = (a: SlotValue, b: SlotValue) =>
-  JSON.stringify([a.doc, a.marks, a.coTag, a.bloomLevel]) ===
-  JSON.stringify([b.doc, b.marks, b.coTag, b.bloomLevel]);
+  JSON.stringify(valueOf(a)) === JSON.stringify(valueOf(b));
+
+/** Criteria rows still being typed (no text yet) are not sent. */
+const finished = (c: KeyCriterion[]) => c.filter((x) => x.text.trim() !== "");
 
 function decodeProblems(header: string | null): Problem[] {
   if (!header) return [];
@@ -118,16 +147,17 @@ export function usePaper(view: PaperEditorView) {
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [opError, setOpError] = useState<string | null>(null);
   const lastEdit = useRef(0);
-  const [preview, setPreview] = useState<PreviewState>({
-    pdf: null,
-    busy: false,
-    error: null,
-    problems: [],
-    compiledAt: null,
+  const [previews, setPreviews] = useState<Record<PreviewKind, PreviewState>>({
+    PAPER: EMPTY_PREVIEW,
+    KEY: EMPTY_PREVIEW,
   });
+  const [kind, setKind] = useState<PreviewKind>("PAPER");
+  const kindRef = useRef<PreviewKind>("PAPER");
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previewAbort = useRef<AbortController | null>(null);
-  const previewSeq = useRef(0);
+  const previewAbort = useRef<Partial<Record<PreviewKind, AbortController>>>({});
+  const previewSeq = useRef<Record<PreviewKind, number>>({ PAPER: 0, KEY: 0 });
+  /** When each kind last started compiling; older than the last edit means stale. */
+  const startedAt = useRef<Record<PreviewKind, number>>({ PAPER: 0, KEY: 0 });
 
   const patchSlot = useCallback(
     (key: string, patch: Partial<SlotState>) => {
@@ -142,51 +172,73 @@ export function usePaper(view: PaperEditorView) {
 
   // ---------- preview ----------
 
-  const compileNow = useCallback(async () => {
-    if (previewTimer.current) clearTimeout(previewTimer.current);
-    previewAbort.current?.abort();
-    const ctrl = new AbortController();
-    previewAbort.current = ctrl;
-    const seq = ++previewSeq.current;
-    setPreview((p) => ({ ...p, busy: true }));
-    let res: Response;
-    try {
-      res = await fetch(`/api/papers/${view.id}/preview?n=${seq}`, {
-        signal: ctrl.signal,
-        cache: "no-store",
-      });
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      setPreview((p) => ({
+  const compileNow = useCallback(
+    async (which: PreviewKind = kindRef.current) => {
+      if (previewTimer.current) clearTimeout(previewTimer.current);
+      previewAbort.current[which]?.abort();
+      const ctrl = new AbortController();
+      previewAbort.current[which] = ctrl;
+      const seq = ++previewSeq.current[which];
+      startedAt.current[which] = Date.now();
+      const set = (f: (p: PreviewState) => PreviewState) =>
+        setPreviews((all) => ({ ...all, [which]: f(all[which]) }));
+      set((p) => ({ ...p, busy: true }));
+      const current = () => seq === previewSeq.current[which];
+      let res: Response;
+      try {
+        res = await fetch(
+          `/api/papers/${view.id}/preview?n=${seq}${which === "KEY" ? "&kind=key" : ""}`,
+          { signal: ctrl.signal, cache: "no-store" },
+        );
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        set((p) => ({
+          ...p,
+          busy: false,
+          error: { message: "DRAFTEX is not reachable. Your questions are kept on this computer." },
+        }));
+        return;
+      }
+      if (!current()) return;
+      if (res.ok) {
+        const pdf = new Uint8Array(await res.arrayBuffer());
+        if (!current()) return;
+        set(() => ({
+          pdf,
+          busy: false,
+          error: null,
+          problems: decodeProblems(res.headers.get("X-DX-Problems")),
+          compiledAt: Date.now(),
+        }));
+        return;
+      }
+      if (res.status === 409) return; // a newer preview replaced this one
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        problems?: Problem[];
+      };
+      if (!current()) return;
+      set((p) => ({
         ...p,
         busy: false,
-        error: { message: "DRAFTEX is not reachable. Your questions are kept on this computer." },
+        error: { message: body.message ?? "The preview could not be made." },
+        problems: body.problems ?? [],
       }));
-      return;
-    }
-    if (seq !== previewSeq.current) return;
-    if (res.ok) {
-      const pdf = new Uint8Array(await res.arrayBuffer());
-      if (seq !== previewSeq.current) return;
-      setPreview({
-        pdf,
-        busy: false,
-        error: null,
-        problems: decodeProblems(res.headers.get("X-DX-Problems")),
-        compiledAt: Date.now(),
-      });
-      return;
-    }
-    if (res.status === 409) return; // a newer preview replaced this one
-    const body = (await res.json().catch(() => ({}))) as { message?: string; problems?: Problem[] };
-    if (seq !== previewSeq.current) return;
-    setPreview((p) => ({
-      ...p,
-      busy: false,
-      error: { message: body.message ?? "The preview could not be made." },
-      problems: body.problems ?? [],
-    }));
-  }, [view.id]);
+    },
+    [view.id],
+  );
+
+  /** Shows the paper or its answer key; a stale one compiles at once. */
+  const showKind = useCallback(
+    (which: PreviewKind) => {
+      kindRef.current = which;
+      setKind(which);
+      if (startedAt.current[which] < lastEdit.current || startedAt.current[which] === 0) {
+        void compileNow(which);
+      }
+    },
+    [compileNow],
+  );
 
   /** After the last edit and once every save is in, compile. */
   const schedulePreview = useCallback(() => {
@@ -225,6 +277,8 @@ export function usePaper(view: PaperEditorView) {
               marks: s.marks,
               coTag: s.coTag,
               bloomLevel: s.bloomLevel,
+              answerKey: s.answerKey && !isEmptyDoc(s.answerKey) ? s.answerKey : null,
+              keyCriteria: finished(s.keyCriteria),
             });
       } catch {
         r = {
@@ -263,12 +317,7 @@ export function usePaper(view: PaperEditorView) {
       if (same(prev, next)) return;
       lastEdit.current = Date.now();
       patchSlot(key, { ...patch, status: "pending", rev: prev.rev + 1, error: undefined });
-      void putDraft(view.id, key, {
-        doc: next.doc,
-        marks: next.marks,
-        coTag: next.coTag,
-        bloomLevel: next.bloomLevel,
-      });
+      void putDraft(view.id, key, valueOf(next));
       const t = timers.current.get(key);
       if (t) clearTimeout(t);
       timers.current.set(
@@ -290,8 +339,10 @@ export function usePaper(view: PaperEditorView) {
       let n = 0;
       for (const d of drafts) {
         const prev = slotsRef.current.get(d.slotId);
-        const value = d.value as SlotValue | undefined;
-        if (!prev || !value?.doc) continue;
+        const stored = d.value as Partial<SlotValue> | undefined;
+        if (!prev || !stored?.doc) continue;
+        // Drafts kept before answer keys existed have no key fields.
+        const value = valueOf({ ...prev, ...stored } as SlotValue);
         if (same(prev, value)) {
           void dropDraft(view.id, d.slotId);
           continue;
@@ -308,17 +359,19 @@ export function usePaper(view: PaperEditorView) {
 
   // First preview at once; warn before leaving with unsaved questions.
   useEffect(() => {
-    const first = setTimeout(() => void compileNow(), 0);
+    const first = setTimeout(() => void compileNow("PAPER"), 0);
     const unsaved = (e: BeforeUnloadEvent) => {
       if ([...slotsRef.current.values()].some((s) => s.status !== "saved")) e.preventDefault();
     };
     window.addEventListener("beforeunload", unsaved);
     const pending = timers.current;
+    // One object for the hook's lifetime; its entries change, the object does not.
+    const aborts = previewAbort.current;
     return () => {
       window.removeEventListener("beforeunload", unsaved);
       clearTimeout(first);
       pending.forEach(clearTimeout);
-      previewAbort.current?.abort();
+      Object.values(aborts).forEach((c) => c?.abort());
     };
   }, [compileNow]);
 
@@ -340,6 +393,13 @@ export function usePaper(view: PaperEditorView) {
     },
     [saveNow],
   );
+
+  /** Saves every question that has changes; true when all of them reached the server. */
+  const flushAll = useCallback(async () => {
+    const keys = [...slotsRef.current.entries()].filter(([, s]) => s.status !== "saved");
+    await Promise.all(keys.map(([k]) => flush(k)));
+    return [...slotsRef.current.values()].every((s) => s.status === "saved");
+  }, [flush]);
 
   const restore = useCallback(
     async (key: string, value: SlotValue) => {
@@ -367,6 +427,8 @@ export function usePaper(view: PaperEditorView) {
         marks: g.marksEach,
         coTag: null,
         bloomLevel: null,
+        answerKey: null,
+        keyCriteria: [],
         status: "saved",
       });
       void dropDraft(view.id, key);
@@ -430,13 +492,7 @@ export function usePaper(view: PaperEditorView) {
       setOpError(null);
       const src = slotsRef.current.get(key) as SlotState;
       const to = slotKey(r.value.groupKey, r.value.position);
-      patchSlot(to, {
-        doc: src.doc,
-        marks: src.marks,
-        coTag: src.coTag,
-        bloomLevel: src.bloomLevel,
-        status: "saved",
-      });
+      patchSlot(to, { ...valueOf(src), status: "saved" });
       const g = groups.get(place(key).groupKey) as EditorGroup;
       pushUndo({
         label: `Duplicate ${label(g, key)}`,
@@ -448,6 +504,8 @@ export function usePaper(view: PaperEditorView) {
             marks: tg.marksEach,
             coTag: null,
             bloomLevel: null,
+            answerKey: null,
+            keyCriteria: [],
             status: "saved",
           });
         },
@@ -498,13 +556,19 @@ export function usePaper(view: PaperEditorView) {
     move,
     duplicate,
     undo,
+    flushAll,
     undoLabel: undoStack.at(-1)?.label ?? null,
     opError,
     dismissOpError: () => setOpError(null),
     restored,
     saving,
     failed,
-    preview,
+    preview: previews[kind],
+    /** Problems of each kind, so a key problem shows on its question even while the paper shows. */
+    paperProblems: previews.PAPER.problems,
+    keyProblems: previews.KEY.problems,
+    previewKind: kind,
+    showKind,
     recompile: () => void compileNow(),
   };
 }

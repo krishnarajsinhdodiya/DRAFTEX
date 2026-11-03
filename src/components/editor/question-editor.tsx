@@ -158,16 +158,21 @@ function SlashMenu({ store }: { store: SlashStore }) {
 
 // ---------- the editor ----------
 
-function extensions(store: SlashStore, allowAdvanced: () => boolean, onFile: () => void) {
+const QUESTION_PLACEHOLDER = "Type the question. Press / to insert an equation, table or picture.";
+
+function extensions(
+  store: SlashStore,
+  allowAdvanced: () => boolean,
+  onFile: () => void,
+  placeholder: string,
+) {
   return [
     ...questionSchemaExtensions().map((ext) => {
       const view = VIEWS[ext.name as keyof typeof VIEWS];
       return view ? ext.extend({ addNodeView: () => ReactNodeViewRenderer(view) }) : ext;
     }),
     UndoRedo.configure({ depth: 100, newGroupDelay: 600 }),
-    Placeholder.configure({
-      placeholder: "Type the question. Press / to insert an equation, table or picture.",
-    }),
+    Placeholder.configure({ placeholder }),
     slashExtension(store, allowAdvanced, onFile),
   ];
 }
@@ -343,6 +348,7 @@ function editorOptions(
   ref: { current: Bridge },
   initial: Doc,
   label: string,
+  placeholder: string,
 ): Parameters<typeof useEditor>[0] {
   return {
     // Rendered only in the browser, after a click: create the editor at once so
@@ -352,6 +358,7 @@ function editorOptions(
       store,
       () => ref.current.allowAdvanced,
       () => ref.current.pickFile(),
+      placeholder,
     ),
     content: fromStored(initial),
     editorProps: {
@@ -394,9 +401,12 @@ export function QuestionEditor({
   upload,
   allowAdvanced,
   label,
+  placeholder = QUESTION_PLACEHOLDER,
   onFocus,
 }: {
   initial: Doc;
+  /** Shown while the editor is empty. */
+  placeholder?: string;
   onChange: (doc: Doc) => void;
   /** This editor took the focus; the paper's toolbar follows it. */
   onFocus?: (handle: EditorHandle) => void;
@@ -426,7 +436,7 @@ export function QuestionEditor({
   // TipTap calls these only from editor events, never while rendering; the
   // compiler cannot see that, so the one place that hands over the ref says so.
   // eslint-disable-next-line react-hooks/refs
-  const editor = useEditor(editorOptions(store, bridgeRef, initial, label));
+  const editor = useEditor(editorOptions(store, bridgeRef, initial, label, placeholder));
   useEffect(() => {
     bridgeRef.current.editor = editor;
   }, [editor]);

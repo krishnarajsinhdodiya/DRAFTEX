@@ -39,6 +39,17 @@ export async function saveSlotAction(id: string, input: unknown): Promise<Comman
   return (await commands()).saveSlot(id, input);
 }
 
+/** Copies the paper (e.g. into its ATKT version) and opens the copy. */
+export async function duplicatePaperAction(
+  id: string,
+  input: unknown,
+): Promise<CommandResult<string>> {
+  const r = await (await commands()).duplicate(id, input);
+  if (!r.ok) return r;
+  revalidatePath("/papers");
+  redirect(`/papers/${r.value}`);
+}
+
 export async function clearSlotAction(id: string, place: unknown): Promise<CommandResult> {
   return (await commands()).clearSlot(id, place);
 }

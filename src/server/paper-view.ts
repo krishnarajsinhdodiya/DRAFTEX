@@ -2,7 +2,8 @@
 import type { BloomLevel, ExamKind, PaperStatus, Program } from "@/generated/prisma/enums";
 import type { Actor, DataLayer } from "@/lib/data";
 import { questionNumbers } from "@/lib/paper/numbering";
-import type { Doc, Group } from "@/lib/paper/schema";
+import { type KeyCriterion, keyCriteriaSchema } from "@/lib/paper/key";
+import { type Doc, type Group, docSchema } from "@/lib/paper/schema";
 import type { Issue, PciStatus } from "@/lib/rules";
 import { checkTemplateFields } from "@/lib/templates/check";
 import { durationText, marksText } from "@/lib/templates/labels";
@@ -35,6 +36,8 @@ export interface EditorSlot {
   marks: number;
   coTag: string | null;
   bloomLevel: BloomLevel | null;
+  answerKey: Doc | null;
+  keyCriteria: KeyCriterion[];
 }
 
 export interface PaperEditorView {
@@ -122,6 +125,8 @@ export async function paperEditorView(
       marks: x.marks,
       coTag: x.coTag,
       bloomLevel: x.bloomLevel,
+      answerKey: x.answerKey === null ? null : (docSchema.parse(x.answerKey) as Doc),
+      keyCriteria: x.keyCriteria === null ? [] : keyCriteriaSchema.parse(x.keyCriteria),
     })),
     coOptions: course ? coOptions(course) : [],
     pci: {

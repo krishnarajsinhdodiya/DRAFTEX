@@ -1,9 +1,12 @@
 // Gate 6: 1,000 random strings (every special character, mapped symbols,
 // accents, emoji, control and zero-width characters) either compile cleanly
 // or are refused with a validation error. Batches of 50 per document
-// (memory.md), splitting a failing batch until the culprit is found.
+// (memory.md), splitting a failing batch until the culprit is found. The
+// accepted strings also go through the answer key (D33): table cells, model
+// answers with sub-parts, and split-up rows.
 import { beforeAll, describe, expect, it } from "vitest";
 import type { CompileService } from "@/lib/latex/compile";
+import { type KeySlot, serializeKey } from "@/lib/latex/key";
 import { serializePaper, validateSlotContent } from "@/lib/latex/serialize";
 import type { BlockNode, PaperInput } from "@/lib/paper/schema";
 import { realCompileService } from "../support/engine";
@@ -118,6 +121,69 @@ function paperFor(strings: string[], offset: number): PaperInput {
   };
 }
 
+/** The same strings as an answer key: half objective (table), half written answers. */
+function keyFor(strings: string[], offset: number): { paper: PaperInput; keys: KeySlot[] } {
+  const base = paperFor(strings, offset);
+  const half = Math.ceil(strings.length / 2);
+  const group = base.template.structure.parts[0]
+    ?.groups[0] as PaperInput["template"]["structure"]["parts"][number]["groups"][number];
+  const paper: PaperInput = {
+    ...base,
+    template: {
+      ...base.template,
+      structure: {
+        ...base.template.structure,
+        parts: [
+          {
+            key: "p",
+            groups: [
+              { ...group, key: "o", type: "OBJECTIVE", slots: half, attempt: half },
+              { ...group, slots: strings.length - half || 1, attempt: strings.length - half || 1 },
+            ],
+          },
+        ],
+      },
+    },
+    slots: strings.map((s, i) => ({
+      groupKey: i < half ? "o" : "f",
+      position: i < half ? i + 1 : i - half + 1,
+      content: {
+        type: "doc",
+        content:
+          i < half
+            ? [
+                { type: "paragraph", content: [{ type: "text", text: "Pick." }] },
+                {
+                  type: "choices",
+                  attrs: { correct: 0 },
+                  content: [
+                    { type: "choice", content: [{ type: "text", text: s }] },
+                    { type: "choice" },
+                  ],
+                },
+              ]
+            : [{ type: "paragraph", content: [{ type: "text", text: "Write." }] }],
+      },
+    })),
+  };
+  const keys: KeySlot[] = strings.map((s, i) => {
+    const para = { type: "paragraph" as const, content: [{ type: "text" as const, text: s }] };
+    return {
+      groupKey: i < half ? "o" : "f",
+      position: i < half ? i + 1 : i - half + 1,
+      answerKey: {
+        type: "doc",
+        content:
+          (offset + i) % 3 === 0
+            ? [para, { type: "subParts", content: [{ type: "subPart", content: [para] }] }]
+            : [para],
+      },
+      keyCriteria: i < half ? [] : [{ text: s.trim() === "" ? "x" : s, marks: 1 }],
+    };
+  });
+  return { paper, keys };
+}
+
 let svc: CompileService;
 beforeAll(() => {
   svc = realCompileService();
@@ -133,12 +199,28 @@ async function compileBatch(strings: string[], offset: number): Promise<string |
   return bad.map((d) => d.message).join("; ") || "no PDF";
 }
 
-async function findCulprit(strings: string[], offset: number): Promise<string> {
+async function compileKeyBatch(strings: string[], offset: number): Promise<string | null> {
+  const { paper, keys } = keyFor(strings, offset);
+  const ser = serializeKey(paper, keys);
+  if (!ser.ok) return `key serialiser refused accepted strings: ${ser.issues[0]?.message}`;
+  const res = await svc.compile({ userId: "fuzz", tex: ser.tex });
+  const bad = res.diagnostics.filter((d) => d.severity === "error" || d.kind === "missing-char");
+  if (res.ok && bad.length === 0) return null;
+  return bad.map((d) => d.message).join("; ") || "no PDF";
+}
+
+type Batch = (strings: string[], offset: number) => Promise<string | null>;
+
+async function findCulprit(
+  strings: string[],
+  offset: number,
+  run: Batch = compileBatch,
+): Promise<string> {
   if (strings.length === 1) return JSON.stringify(strings[0]);
   const mid = Math.floor(strings.length / 2);
   const left = strings.slice(0, mid);
-  if (await compileBatch(left, offset)) return findCulprit(left, offset);
-  return findCulprit(strings.slice(mid), offset + mid);
+  if (await run(left, offset)) return findCulprit(left, offset, run);
+  return findCulprit(strings.slice(mid), offset + mid, run);
 }
 
 describe("serialiser fuzz", () => {
@@ -170,11 +252,16 @@ describe("serialiser fuzz", () => {
     const jobs: Array<Promise<void>> = [];
     for (let i = 0; i < accepted.length; i += BATCH) {
       const batch = accepted.slice(i, i + BATCH);
-      jobs.push(
-        compileBatch(batch, i).then(async (why) => {
-          if (why) failures.push(`${await findCulprit(batch, i)} → ${why}`);
-        }),
-      );
+      for (const [what, run] of [
+        ["paper", compileBatch],
+        ["key", compileKeyBatch],
+      ] as const) {
+        jobs.push(
+          run(batch, i).then(async (why) => {
+            if (why) failures.push(`${what}: ${await findCulprit(batch, i, run)} → ${why}`);
+          }),
+        );
+      }
     }
     await Promise.all(jobs);
     expect(failures).toEqual([]);

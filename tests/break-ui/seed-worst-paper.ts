@@ -3,6 +3,7 @@
 // names are public chemistry. Never run it on a real data folder.
 // Usage: node tests/break-ui/seed-worst-paper.ts <data.db>
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
@@ -130,5 +131,50 @@ db.transaction(() => {
     null,
   );
 })();
+// Phase 6: worst-case answer keys. The longest split-up row the schema takes (300),
+// all 20 rows, quarter marks, and a total that does not match the question.
+const LONG_ROW =
+  "Correct structure of propranolol hydrochloride with the naphthyloxy ring, the secondary alcohol on the side chain and the isopropylamino group drawn and labelled, the salt form named, and the mechanism of non-selective β-adrenergic blockade explained with one clinical use".slice(
+    0,
+    300,
+  );
+const key = db.prepare(
+  "UPDATE Slot SET answerKey = ?, keyCriteria = ? WHERE paperId = ? AND groupKey = ? AND position = ?",
+);
+key.run(
+  JSON.stringify(
+    doc(
+      para(
+        text("Methylenedioxymethamphetaminehydrochloridemonohydrate is the full name expected."),
+      ),
+    ),
+  ),
+  JSON.stringify(
+    Array.from({ length: 20 }, (_, i) => ({
+      text: i === 0 ? LONG_ROW : i === 1 ? "Jo" : `Point ${i + 1} of the expected answer`,
+      marks: i % 4 === 0 ? 0.25 : 0.5,
+    })),
+  ),
+  worst,
+  "g2",
+  3,
+);
+key.run(null, JSON.stringify([{ text: "Definition", marks: 1 }]), worst, "g2", 1);
+
+// Phase 6: a backups folder after months of use: 14 daily, many by hand (never pruned).
+const backups = path.join(path.dirname(file), "backups");
+fs.mkdirSync(backups, { recursive: true });
+const stamp = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}0000`;
+for (let i = 0; i < 40; i++) {
+  const d = new Date(2026, 9, 31 - (i % 30), 9 + (i % 10));
+  const kind =
+    i < 14 ? "auto" : i % 3 === 0 ? "before-update" : i % 3 === 1 ? "before-restore" : "manual";
+  // Sparse: the listed size is real, the disk space is not used.
+  const f = path.join(backups, `DRAFTEX-backup-${stamp(d)}-${kind}.zip`);
+  fs.writeFileSync(f, "");
+  fs.truncateSync(f, i === 0 ? 900 : 1024 * 1024 * (1 + i));
+}
+
 const empty = insertPaper("Jo", "", "");
 console.log(`worst=${worst}\nempty=${empty}`);

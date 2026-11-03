@@ -7,6 +7,7 @@ import { Prisma } from "@/generated/prisma/client";
 import type { Db } from "@/lib/db/client";
 import { advancedSnippets, imageShas, onlyKnownSnippets } from "@/lib/paper/content";
 import { questionNumbers } from "@/lib/paper/numbering";
+import { keyCriteriaSchema } from "@/lib/paper/key";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { type PaperSnapshot, paperSnapshotSchema } from "@/lib/paper/snapshot";
 import type { Actor } from "./actor";
@@ -61,9 +62,19 @@ export const slotInputSchema = z.object({
     .nullable()
     .default(null),
   bloomLevel: z.enum(BloomLevel).nullable().default(null),
-  answerKey: docSchema.nullable().default(null),
+  /** The answer key (D24); left as it is when not sent. */
+  answerKey: docSchema.nullable().optional(),
+  keyCriteria: keyCriteriaSchema.nullable().optional(),
 });
 export type SlotInput = z.input<typeof slotInputSchema>;
+
+/** "Duplicate paper": a new title, and the exam it is for (ATKT copies, SPEC §1). */
+export const duplicateInputSchema = z.object({
+  title: z.string().trim().min(1, "Give the copy a title.").max(200),
+  examKind: z.enum(ExamKind),
+  examDate: z.date().nullable().default(null),
+});
+export type DuplicateInput = z.input<typeof duplicateInputSchema>;
 
 export interface CompileRecord {
   kind: CompileKind;
@@ -135,6 +146,27 @@ export function papers(db: Db) {
     ) {
       throw new NotFoundError("Course");
     }
+  }
+
+  /**
+   * Advanced LaTeX needs the admin's permission; a user whose permission was
+   * turned off may keep, but not add, blocks.
+   */
+  async function checkAdvanced(actor: Actor, next: Doc[], prev: Doc[]) {
+    const snippets = next.flatMap(advancedSnippets);
+    if (snippets.length === 0) return;
+    const user = await db.user.findUnique({
+      where: { id: actor.userId },
+      select: { allowAdvancedLatex: true },
+    });
+    if (user?.allowAdvancedLatex) return;
+    if (!onlyKnownSnippets(snippets, prev.flatMap(advancedSnippets))) {
+      throw new ForbiddenError(ADVANCED_NOT_ALLOWED);
+    }
+  }
+
+  function storedDoc(value: unknown): Doc[] {
+    return value === null || value === undefined ? [] : [docSchema.parse(value) as Doc];
   }
 
   return {
@@ -234,24 +266,21 @@ export function papers(db: Db) {
         ...imageShas(s.content),
         ...(s.answerKey ? imageShas(s.answerKey) : []),
       ]);
-      const snippets = advancedSnippets(s.content);
-      if (snippets.length > 0) {
-        const user = await db.user.findUnique({
-          where: { id: actor.userId },
-          select: { allowAdvancedLatex: true },
-        });
-        if (!user?.allowAdvancedLatex) {
-          const prev = await slotAt(paperId, { partKey, ...s });
-          const before = prev ? advancedSnippets(docSchema.parse(prev.content)) : [];
-          if (!onlyKnownSnippets(snippets, before)) throw new ForbiddenError(ADVANCED_NOT_ALLOWED);
-        }
-      }
+      const prev = await slotAt(paperId, { ...s, partKey });
+      await checkAdvanced(
+        actor,
+        [s.content, ...(s.answerKey ? [s.answerKey] : [])],
+        prev ? [...storedDoc(prev.content), ...storedDoc(prev.answerKey)] : [],
+      );
       const data = {
         content: json(s.content),
         marks: s.marks,
         coTag: s.coTag,
         bloomLevel: s.bloomLevel,
-        answerKey: nullableJson(s.answerKey),
+        ...(s.answerKey !== undefined && { answerKey: nullableJson(s.answerKey) }),
+        ...(s.keyCriteria !== undefined && {
+          keyCriteria: nullableJson(s.keyCriteria?.length ? s.keyCriteria : null),
+        }),
       };
       const slot = await db.slot.upsert({
         where: {
@@ -267,6 +296,62 @@ export function papers(db: Db) {
       });
       await touch(paperId);
       return slot;
+    },
+
+    /**
+     * Copies one of the actor's papers with every question and key, e.g. a
+     * regular paper into its ATKT version. The copy is a draft with no date.
+     */
+    async duplicate(actor: Actor, id: string, input: DuplicateInput) {
+      const src = await db.paper.findFirst({
+        where: { id, ownerId: actor.userId },
+        include: { slots: true },
+      });
+      if (!src) throw new NotFoundError(WHAT);
+      const d = duplicateInputSchema.parse(input);
+      const copy = await db.$transaction(async (tx) => {
+        const p = await tx.paper.create({
+          data: {
+            ownerId: actor.userId,
+            templateId: src.templateId,
+            templateSnapshot: json(src.templateSnapshot),
+            title: d.title,
+            courseId: src.courseId,
+            courseCode: src.courseCode,
+            courseTitle: src.courseTitle,
+            program: src.program,
+            semesterOrYear: src.semesterOrYear,
+            examKind: d.examKind,
+            academicYear: src.academicYear,
+            examDate: d.examDate,
+            instructionsOverride: nullableJson(src.instructionsOverride),
+            status: "DRAFT",
+            derivedFromPaperId: src.id,
+          },
+        });
+        await tx.slot.createMany({
+          data: src.slots.map((x) => ({
+            paperId: p.id,
+            partKey: x.partKey,
+            groupKey: x.groupKey,
+            position: x.position,
+            content: json(x.content),
+            marks: x.marks,
+            coTag: x.coTag,
+            bloomLevel: x.bloomLevel,
+            answerKey: nullableJson(x.answerKey),
+            keyCriteria: nullableJson(x.keyCriteria),
+          })),
+        });
+        return p;
+      });
+      await writeAudit(db, {
+        actorId: actor.userId,
+        action: "duplicate",
+        entity: WHAT,
+        entityId: copy.id,
+      });
+      return copy;
     },
 
     /** Empties the question at (group, position). Clearing an empty one is fine. */

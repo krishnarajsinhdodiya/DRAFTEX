@@ -163,3 +163,12 @@
     scale: 0.97;
   }
 }
+
+/* An empty editor shows its hint (TipTap marks the first empty paragraph). */
+.dx-question p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: inline-start;
+  height: 0;
+  color: var(--dx-ink-3);
+  pointer-events: none;
+}

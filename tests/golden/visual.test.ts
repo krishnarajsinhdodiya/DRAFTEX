@@ -5,9 +5,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { CompileService } from "@/lib/latex/compile";
+import { serializeKey } from "@/lib/latex/key";
 import { serializePaper } from "@/lib/latex/serialize";
 import { realCompileService } from "../support/engine";
 import { diffPages, pngBytes, readPng, renderPdf } from "../support/pdf";
+import { KEY_FIXTURES } from "../fixtures/papers/keys";
 import { ALL_ASSETS, FIXTURES, SEED_PREVIEWS } from "../fixtures/papers/papers";
 
 const OUT = path.resolve("test-results/golden");
@@ -31,6 +33,19 @@ const PAPERS: Record<string, () => unknown> = { ...FIXTURES, ...SEED_PREVIEWS };
 
 async function compileFixture(name: string): Promise<Buffer> {
   const ser = serializePaper((PAPERS[name] as () => unknown)());
+  if (!ser.ok) throw new Error(ser.issues.map((i) => i.message).join("\n"));
+  const res = await svc.compile({
+    userId: "visual",
+    tex: ser.tex,
+    assets: assets.filter((a) => ser.assets.includes(a.name)),
+  });
+  if (!res.pdf) throw new Error(`${name} did not compile`);
+  return res.pdf;
+}
+
+async function compileKey(name: keyof typeof KEY_FIXTURES): Promise<Buffer> {
+  const f = KEY_FIXTURES[name]();
+  const ser = serializeKey(f.paper, f.keys);
   if (!ser.ok) throw new Error(ser.issues.map((i) => i.message).join("\n"));
   const res = await svc.compile({
     userId: "visual",
@@ -72,6 +87,9 @@ const targets: Array<[string, () => Promise<Buffer>]> = [
   ["handwritten-reference", compileHandwritten],
   ...Object.keys(PAPERS).map(
     (n) => [n, () => compileFixture(n)] as [string, () => Promise<Buffer>],
+  ),
+  ...(Object.keys(KEY_FIXTURES) as (keyof typeof KEY_FIXTURES)[]).map(
+    (n) => [n, () => compileKey(n)] as [string, () => Promise<Buffer>],
   ),
 ];
 

@@ -38,7 +38,7 @@ export interface SerializeOutput {
 export type SerializeResult =
   ({ ok: true } & SerializeOutput) | { ok: false; issues: SerializeIssue[] };
 
-class Issues {
+export class Issues {
   readonly list: SerializeIssue[] = [];
   slotId: string | undefined;
   add(message: string): void {
@@ -59,9 +59,9 @@ export function marksLabel(style: Structure["marksStyle"], marks: number): strin
 }
 
 /** Lengths keep three decimals: hand-written papers use values like 0.125in. */
-const inch = (n: number) => `${Number(n.toFixed(3))}in`;
+export const inch = (n: number) => `${Number(n.toFixed(3))}in`;
 
-class Writer {
+export class Writer {
   private readonly lines: string[] = [];
   line(s = ""): void {
     this.lines.push(...s.split("\n"));
@@ -77,7 +77,7 @@ class Writer {
 
 // ---------- inline ----------
 
-function text(s: string, issues: Issues, quotes?: QuoteState): string {
+export function text(s: string, issues: Issues, quotes?: QuoteState): string {
   const r = escapeText(s, quotes);
   if (r.ok) return r.value;
   const chars = [...new Set(r.bad.map((b) => describeChar(b.char)))].join(", ");
@@ -111,7 +111,7 @@ function usefulBreaks(nodes: InlineNode[]): InlineNode[] {
   return out;
 }
 
-function inline(nodes: InlineNode[] | undefined, issues: Issues): string {
+export function inline(nodes: InlineNode[] | undefined, issues: Issues): string {
   const quotes: QuoteState = { doubleOpen: false };
   let out = "";
   for (const n of usefulBreaks(nodes ?? [])) {
@@ -153,13 +153,15 @@ const paragraph = (p: ParagraphNode, issues: Issues) => inline(p.content, issues
 
 // ---------- blocks ----------
 
-interface BlockContext {
+export interface BlockContext {
   issues: Issues;
   assets: Set<string>;
   defaultColumns: 1 | 2 | 4;
   beforeChoices: number;
   /** Sub-parts already lettered in this question: a second list carries on (c), (d). */
   partsSoFar?: number;
+  /** Answer keys are `article` documents: choices and sub-parts become enumerate lists. */
+  keyMode?: boolean;
 }
 
 function table(t: TableNode, ctx: BlockContext): string {
@@ -190,6 +192,10 @@ function table(t: TableNode, ctx: BlockContext): string {
 }
 
 function choices(c: ChoicesNode, ctx: BlockContext): string {
+  if (ctx.keyMode) {
+    const items = c.content.map((ch) => `  \\item ${inline(ch.content, ctx.issues)}`);
+    return ["\\begin{enumerate}[label=\\Alph*., nosep]", ...items, "\\end{enumerate}"].join("\n");
+  }
   const columns = c.attrs?.columns ?? ctx.defaultColumns;
   const items = c.content.map((ch) => `\\choice ${inline(ch.content, ctx.issues)}`).join(" ");
   const list = `\\begin{choices}\n  ${items}\n\\end{choices}`;
@@ -240,6 +246,13 @@ const guardBracket = (s: string) => (s.startsWith("[") ? `{}${s}` : s);
 function subParts(b: Extract<BlockNode, { type: "subParts" }>, ctx: BlockContext): string {
   const before = ctx.partsSoFar ?? 0;
   ctx.partsSoFar = before + b.content.length;
+  if (ctx.keyMode) {
+    return [
+      `\\begin{enumerate}[label=(\\alph*), start=${before + 1}]`,
+      ...b.content.map((p) => `  \\item ${blocks(p.content, ctx)}`),
+      "\\end{enumerate}",
+    ].join("\n");
+  }
   return [
     "\\begin{parts}",
     // exam.cls restarts lettering (and its labels) in every parts list.
@@ -249,7 +262,7 @@ function subParts(b: Extract<BlockNode, { type: "subParts" }>, ctx: BlockContext
   ].join("\n");
 }
 
-function blocks(nodes: BlockNode[], ctx: BlockContext): string {
+export function blocks(nodes: BlockNode[], ctx: BlockContext): string {
   const out: string[] = [];
   let prev: BlockNode["type"] | undefined;
   for (const b of nodes) {
@@ -271,7 +284,7 @@ function blocks(nodes: BlockNode[], ctx: BlockContext): string {
 
 // ---------- document ----------
 
-function fill(template: string, meta: Meta, issues: Issues): string {
+export function fill(template: string, meta: Meta, issues: Issues): string {
   // An empty value takes the brackets around it along: no "Course Title []".
   const blank = (k: string) => k in meta && meta[k as keyof Meta].trim() === "";
   const tidy = template.replace(/\s*[[(]\{\{([a-zA-Z]+)\}\}[\])]/g, (whole, k: string) =>

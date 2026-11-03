@@ -103,11 +103,20 @@ export function SubmitButton({
   );
 }
 
-export function FormAlert({ kind, children }: { kind: "error" | "notice"; children: ReactNode }) {
+export function FormAlert({
+  kind,
+  children,
+}: {
+  /** notice = something went well; caution = read this before you go on. */
+  kind: "error" | "notice" | "caution";
+  children: ReactNode;
+}) {
   const styles =
     kind === "error"
       ? "border-danger/25 bg-danger-soft text-danger"
-      : "border-positive/25 bg-positive-soft text-positive";
+      : kind === "caution"
+        ? "border-caution/40 bg-caution-soft text-ink"
+        : "border-positive/25 bg-positive-soft text-positive";
   return (
     <div
       role={kind === "error" ? "alert" : "status"}

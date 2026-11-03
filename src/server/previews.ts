@@ -2,6 +2,7 @@
 import { getData } from "@/lib/data";
 import { dataPaths, defaultDeps, getDataDir } from "@/lib/paths";
 import { getCompileService } from "./compile";
+import type { ExportDeps } from "./export";
 import { type ResolveImages, imageResolver } from "./images";
 import { type PaperPreviewDeps, paperPreviewCache } from "./paper-preview";
 import { PreviewCache, type PreviewDeps } from "./template-preview";
@@ -28,6 +29,15 @@ export async function paperPreviewDeps(): Promise<PaperPreviewDeps> {
     compile: getCompileService(),
     images: appImages(),
     cache: globalForPreview.draftexPaperCache,
+  };
+}
+
+export async function exportDeps(): Promise<ExportDeps> {
+  return {
+    data: await getData(),
+    compile: getCompileService(),
+    images: appImages(),
+    exportsDir: dataPaths(getDataDir()).exports,
   };
 }
 
