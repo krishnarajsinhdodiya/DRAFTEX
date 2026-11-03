@@ -30,10 +30,27 @@ export function applyMigrations(file: string): void {
   }
 }
 
+/** One migrated database per test worker; each test database is a copy of it. */
+let migrated: string | undefined;
+function migratedTemplate(): string {
+  if (migrated && fs.existsSync(migrated)) return migrated;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "draftex-db-template-"));
+  const file = path.join(dir, "data.db");
+  applyMigrations(file);
+  // Fold any journal into the main file so a plain copy is complete.
+  const db = new Database(file);
+  db.pragma("journal_mode = DELETE");
+  db.close();
+  process.once("exit", () => fs.rmSync(dir, { recursive: true, force: true }));
+  migrated = file;
+  return file;
+}
+
 export async function createTestDb(): Promise<TestDb> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "draftex-db-"));
   const file = path.join(dir, "data.db");
-  applyMigrations(file);
+  // Replaying every migration per test took over 10 s on the Windows runner; a copy does not.
+  fs.copyFileSync(migratedTemplate(), file);
   const db = await openDatabase(file);
   return {
     db,
