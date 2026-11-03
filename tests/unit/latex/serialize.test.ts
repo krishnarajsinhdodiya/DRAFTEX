@@ -603,7 +603,17 @@ describe("serializePaper: question details found by the editor fuzz", () => {
         paperWith([
           {
             type: "table",
-            content: [{ type: "tableRow", content: [{ type: "tableCell", content: [p("only")] }] }],
+            content: [
+              {
+                type: "tableRow",
+                content: [
+                  {
+                    type: "tableCell",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "only" }] }],
+                  },
+                ],
+              },
+            ],
           },
         ]),
       ),
