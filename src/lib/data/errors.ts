@@ -19,3 +19,13 @@ export class ConflictError extends Error {
 
 export const STALE_VERSION =
   "Someone saved this in another window after you opened it. Reload to see the latest version, then make your change again.";
+
+/** A template the checker rejects (SPEC §7 level 1). Routes answer 422 and list the issues. */
+export class InvalidTemplateError extends Error {
+  override name = "InvalidTemplateError";
+  readonly issues: { code: string; message: string; path?: string }[];
+  constructor(issues: { code: string; message: string; path?: string }[]) {
+    super(issues.map((i) => i.message).join(" "));
+    this.issues = issues;
+  }
+}

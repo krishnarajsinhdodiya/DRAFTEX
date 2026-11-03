@@ -198,6 +198,8 @@ model Template {
   visibility      Visibility @default(PRIVATE)
   /// Seed templates: global, read-only, shown as "Built-in".
   builtIn         Boolean    @default(false)
+  /// Stable id of a built-in in src/lib/templates/seeds; null for user templates.
+  seedKey         String?    @unique
   program         Program
   examKind        ExamKind
   courseKind      CourseKind

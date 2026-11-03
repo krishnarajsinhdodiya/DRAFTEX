@@ -8,9 +8,16 @@ import { CourseKind, ExamKind, Program } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 import type { Db } from "@/lib/db/client";
 import { headerSchema, structureSchema, styleSchema } from "@/lib/paper/schema";
+import { checkTemplateFields, ruleSetIdFor } from "@/lib/templates/check";
 import type { Actor } from "./actor";
 import { writeAudit } from "./audit";
-import { ConflictError, ForbiddenError, NotFoundError, STALE_VERSION } from "./errors";
+import {
+  ConflictError,
+  ForbiddenError,
+  InvalidTemplateError,
+  NotFoundError,
+  STALE_VERSION,
+} from "./errors";
 
 const WHAT = "Template";
 
@@ -21,7 +28,6 @@ export const templateFieldsSchema = z.object({
   examKind: z.enum(ExamKind),
   courseKind: z.enum(CourseKind),
   creditTier: z.number().int().min(0).max(10).nullable().default(null),
-  ruleSetId: z.string().max(100).nullable().default(null),
   durationMinutes: z.number().int().min(1).max(600),
   maxMarks: z.number().positive().max(1000),
   structure: structureSchema,
@@ -33,14 +39,63 @@ export type TemplateFields = z.input<typeof templateFieldsSchema>;
 export const templatePatchSchema = templateFieldsSchema.partial();
 export type TemplatePatch = z.input<typeof templatePatchSchema>;
 
+type ParsedFields = z.output<typeof templateFieldsSchema>;
+
+/** Level-1 checker errors block the save; warnings never do (SPEC §7). */
+function assertValid(fields: ParsedFields): void {
+  const { errors } = checkTemplateFields(fields);
+  if (errors.length > 0) throw new InvalidTemplateError(errors);
+}
+
+/** A stored row as checked fields (rows are validated on the way in, so this only fails on corruption). */
+export function storedFields(t: {
+  title: string;
+  description: string;
+  program: Program;
+  examKind: ExamKind;
+  courseKind: CourseKind;
+  creditTier: number | null;
+  durationMinutes: number;
+  maxMarks: number;
+  structure: unknown;
+  style: unknown;
+  header: unknown;
+}): ParsedFields {
+  return templateFieldsSchema.parse({
+    title: t.title,
+    description: t.description,
+    program: t.program,
+    examKind: t.examKind,
+    courseKind: t.courseKind,
+    creditTier: t.creditTier,
+    durationMinutes: t.durationMinutes,
+    maxMarks: t.maxMarks,
+    structure: t.structure,
+    style: t.style,
+    header: t.header,
+  });
+}
+
 function json(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
 
-function toData(fields: Partial<z.output<typeof templateFieldsSchema>>) {
+function createData(fields: ParsedFields) {
   const { structure, style, header, ...rest } = fields;
   return {
     ...rest,
+    ruleSetId: ruleSetIdFor(rest.program),
+    structure: json(structure),
+    style: json(style),
+    header: json(header),
+  };
+}
+
+function toData(fields: Partial<ParsedFields>) {
+  const { structure, style, header, ...rest } = fields;
+  return {
+    ...rest,
+    ...(rest.program !== undefined && { ruleSetId: ruleSetIdFor(rest.program) }),
     ...(structure !== undefined && { structure: json(structure) }),
     ...(style !== undefined && { style: json(style) }),
     ...(header !== undefined && { header: json(header) }),
@@ -52,6 +107,30 @@ function visibleTo(actor: Actor): Prisma.TemplateWhereInput {
   return { deletedAt: null, OR: [{ visibility: "GLOBAL" }, { ownerId: actor.userId }] };
 }
 
+export type TemplateScope = "ALL" | "MINE" | "SHARED" | "BUILT_IN";
+
+export type TemplateFilter = {
+  program?: Program;
+  examKind?: ExamKind;
+  /** MINE = owned by the actor; SHARED = other people's global ones; BUILT_IN = seeds. */
+  scope?: TemplateScope;
+  /** Matches title or description. */
+  search?: string;
+};
+
+function scopeWhere(actor: Actor, scope: TemplateScope): Prisma.TemplateWhereInput {
+  switch (scope) {
+    case "MINE":
+      return { ownerId: actor.userId, builtIn: false };
+    case "SHARED":
+      return { ownerId: { not: actor.userId }, builtIn: false };
+    case "BUILT_IN":
+      return { builtIn: true };
+    default:
+      return {};
+  }
+}
+
 export function templates(db: Db) {
   async function findVisible(actor: Actor, id: string) {
     const t = await db.template.findFirst({ where: { id, ...visibleTo(actor) } });
@@ -60,23 +139,32 @@ export function templates(db: Db) {
   }
 
   return {
-    list(actor: Actor, filter: { program?: Program; examKind?: ExamKind } = {}) {
+    list(actor: Actor, filter: TemplateFilter = {}) {
+      const search = filter.search?.trim();
       return db.template.findMany({
-        where: { ...visibleTo(actor), ...filter },
-        orderBy: [{ builtIn: "desc" }, { updatedAt: "desc" }],
+        where: {
+          AND: [
+            visibleTo(actor),
+            scopeWhere(actor, filter.scope ?? "ALL"),
+            { program: filter.program, examKind: filter.examKind },
+            search
+              ? { OR: [{ title: { contains: search } }, { description: { contains: search } }] }
+              : {},
+          ],
+        },
+        include: { owner: { select: { name: true } } },
+        orderBy: [{ builtIn: "desc" }, { updatedAt: "desc" }, { id: "asc" }],
       });
     },
 
     get: findVisible,
 
     async create(actor: Actor, input: TemplateFields) {
-      const { structure, style, header, ...fields } = templateFieldsSchema.parse(input);
+      const fields = templateFieldsSchema.parse(input);
+      assertValid(fields);
       const t = await db.template.create({
         data: {
-          ...fields,
-          structure: json(structure),
-          style: json(style),
-          header: json(header),
+          ...createData(fields),
           ownerId: actor.userId,
           visibility: "PRIVATE",
         },
@@ -99,6 +187,7 @@ export function templates(db: Db) {
         throw new ForbiddenError("Only the owner can edit this template. Save a copy instead.");
       }
       const fields = templatePatchSchema.parse(patch);
+      assertValid({ ...storedFields(t), ...fields });
       const { count } = await db.template.updateMany({
         where: { id, ownerId: actor.userId, version, deletedAt: null },
         data: { ...toData(fields), version: { increment: 1 } },
@@ -111,22 +200,11 @@ export function templates(db: Db) {
     /** "Save as new": a PRIVATE copy owned by the actor, linked to its source. */
     async saveAsNew(actor: Actor, id: string, overrides: TemplatePatch = {}) {
       const src = await findVisible(actor, id);
-      const fields = templatePatchSchema.parse(overrides);
+      const merged = { ...storedFields(src), ...templatePatchSchema.parse(overrides) };
+      assertValid(merged);
       const copy = await db.template.create({
         data: {
-          title: src.title,
-          description: src.description,
-          program: src.program,
-          examKind: src.examKind,
-          courseKind: src.courseKind,
-          creditTier: src.creditTier,
-          ruleSetId: src.ruleSetId,
-          durationMinutes: src.durationMinutes,
-          maxMarks: src.maxMarks,
-          structure: json(src.structure),
-          style: json(src.style),
-          header: json(src.header),
-          ...toData(fields),
+          ...createData(merged),
           ownerId: actor.userId,
           visibility: "PRIVATE",
           derivedFromId: src.id,

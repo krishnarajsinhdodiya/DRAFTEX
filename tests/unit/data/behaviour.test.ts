@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type Actor, ConflictError, ForbiddenError, NotFoundError } from "@/lib/data";
+import {
+  type Actor,
+  ConflictError,
+  ForbiddenError,
+  InvalidTemplateError,
+  NotFoundError,
+} from "@/lib/data";
 import { COMPILE_HISTORY } from "@/lib/data/papers";
 import { createTestDb, type TestDb } from "../../support/db";
 import { paperMeta, templateFields, testSlot } from "./fixtures";
@@ -54,10 +60,55 @@ describe("templates", () => {
     expect(v3.version).toBe(3);
   });
 
+  it("refuse a save the checker calls broken, on create, edit and copy", async () => {
+    const base = templateFields("Broken");
+    await expect(t.data.templates.create(faculty, { ...base, maxMarks: 75 })).rejects.toMatchObject(
+      {
+        name: "InvalidTemplateError",
+        issues: [expect.objectContaining({ code: "TOTAL_MISMATCH" })],
+      },
+    );
+    const tpl = await t.data.templates.create(faculty, base);
+    await expect(
+      t.data.templates.update(faculty, tpl.id, 1, { maxMarks: 50 }),
+    ).rejects.toBeInstanceOf(InvalidTemplateError);
+    await expect(
+      t.data.templates.saveAsNew(faculty, tpl.id, { maxMarks: 50 }),
+    ).rejects.toBeInstanceOf(InvalidTemplateError);
+    expect((await t.data.templates.get(faculty, tpl.id)).version).toBe(1);
+  });
+
+  it("save Non-PCI templates and set the rule set from the program", async () => {
+    const legacy = await t.data.templates.create(faculty, {
+      ...templateFields("Legacy-ish"),
+      durationMinutes: 150,
+    });
+    expect(legacy.ruleSetId).toBe("PCI_2026_BPHARM");
+    const mpharm = await t.data.templates.update(faculty, legacy.id, 1, { program: "M_PHARM" });
+    expect(mpharm.ruleSetId).toBeNull();
+  });
+
+  it("filter by search text and scope", async () => {
+    const mine = await t.data.templates.create(faculty, {
+      ...templateFields("Pharmacology finder"),
+      description: "zebra",
+    });
+    const theirs = await t.data.templates.create(admin, templateFields("Admin finder"));
+    await t.data.templates.setVisibility(admin, theirs.id, "GLOBAL");
+    const ids = async (f: Parameters<typeof t.data.templates.list>[1]) =>
+      (await t.data.templates.list(faculty, f)).map((x) => x.id);
+    expect(await ids({ search: "finder" })).toEqual(expect.arrayContaining([mine.id, theirs.id]));
+    expect(await ids({ search: "zebra" })).toEqual([mine.id]);
+    expect(await ids({ search: "finder", scope: "MINE" })).toEqual([mine.id]);
+    expect(await ids({ search: "finder", scope: "SHARED" })).toEqual([theirs.id]);
+    expect(await ids({ search: "finder", scope: "BUILT_IN" })).toEqual([]);
+    expect(await ids({ search: "finder", examKind: "SESSIONAL_1" })).toEqual([]);
+  });
+
   it("copies keep the content, take overrides and link back", async () => {
     const tpl = await t.data.templates.create(faculty, templateFields("C"));
     const copy = await t.data.templates.saveAsNew(faculty, tpl.id, { title: "C copy" });
-    expect(copy).toMatchObject({ title: "C copy", derivedFromId: tpl.id, maxMarks: 75 });
+    expect(copy).toMatchObject({ title: "C copy", derivedFromId: tpl.id, maxMarks: 60 });
     expect(copy.structure).toEqual(tpl.structure);
   });
 

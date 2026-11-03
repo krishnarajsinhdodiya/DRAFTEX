@@ -11,7 +11,7 @@ import { users } from "./users";
 
 export type { Actor } from "./actor";
 export type { CourseFilter, SyncResult } from "./courses";
-export { ConflictError, ForbiddenError, NotFoundError } from "./errors";
+export { ConflictError, ForbiddenError, InvalidTemplateError, NotFoundError } from "./errors";
 export type { Role } from "@/generated/prisma/enums";
 
 export function dataLayer(db: Db) {
