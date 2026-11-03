@@ -34,7 +34,7 @@ export function imageResolver(src: ImageSource): ResolveImages {
         continue;
       }
       const row = await src.ownAsset(ownerId, sha);
-      const file = path.join(src.assetsDir, `${sha}.${ext}`);
+      const file = path.join(/* turbopackIgnore: true */ src.assetsDir, `${sha}.${ext}`);
       if (row?.mime !== MIME[ext] || !fs.existsSync(file)) return MISSING_IMAGE;
       out.push({ name, sourcePath: file });
     }

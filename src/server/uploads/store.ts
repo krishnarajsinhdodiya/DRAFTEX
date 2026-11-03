@@ -21,7 +21,7 @@ export interface UploadedImage {
 }
 
 export function assetFile(assetsDir: string, sha256: string, ext: string): string {
-  return path.join(assetsDir, `${sha256}.${ext}`);
+  return path.join(/* turbopackIgnore: true */ assetsDir, `${sha256}.${ext}`);
 }
 
 /** Writes beside the target, then renames, so a crash never leaves half a file under its hash. */
