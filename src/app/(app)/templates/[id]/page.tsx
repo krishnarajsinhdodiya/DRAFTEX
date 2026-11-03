@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, PciBadge } from "@/components/badge";
 import { SavedPreview } from "@/components/saved-preview";
+import { eyebrowStyles, linkStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
 import { actorOf } from "@/lib/auth/service";
 import { NotFoundError, getData } from "@/lib/data";
 import { GROUP_TYPE_LABEL, marksText } from "@/lib/templates/labels";
@@ -28,28 +29,21 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
     <div className="grid flex-1 gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
       <div className="flex min-w-0 flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <Link
-            href="/templates"
-            className="text-sm text-blue-700 hover:underline dark:text-blue-400"
-          >
+          <Link href="/templates" className={`${linkStyles} self-start text-small`}>
             ← Templates
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight break-words [overflow-wrap:anywhere]">
-            {t.title}
-          </h1>
+          <h1 className={`${pageTitleStyles} break-words [overflow-wrap:anywhere]`}>{t.title}</h1>
           <div className="flex flex-wrap gap-2">
             {t.builtIn ? <Badge tone="blue">Built-in</Badge> : null}
             {!t.builtIn ? <Badge>{t.visibility === "GLOBAL" ? "Global" : "Only you"}</Badge> : null}
             <PciBadge status={t.pci} />
           </div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {t.facts.join(" · ")}
+          <p className="text-small text-ink-2">
+            {[...t.facts, t.marks, t.duration].join(" · ")}
             {!t.mine && !t.builtIn && t.ownerName ? ` · by ${t.ownerName}` : null}
           </p>
           {t.description ? (
-            <p className="max-w-prose break-words text-neutral-800 dark:text-neutral-200">
-              {t.description}
-            </p>
+            <p className="max-w-prose break-words text-ink">{t.description}</p>
           ) : null}
         </div>
 
@@ -61,32 +55,33 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
           editHref={`/templates/${t.id}/edit`}
         />
         {t.builtIn ? (
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="text-small text-ink-2">
             Built-in templates cannot be changed. Make a copy to change one.
           </p>
         ) : null}
 
         <section aria-labelledby="pci" className="flex flex-col gap-2">
-          <h2 id="pci" className="text-base font-semibold">
+          <h2 id="pci" className={eyebrowStyles}>
             PCI 2026 check
           </h2>
           {t.pci === "COMPLIANT" ? (
-            <p className="text-sm">Follows the PCI 2026 pattern.</p>
+            <p className="text-small">Follows the PCI 2026 pattern.</p>
           ) : t.pci === "NO_RULE_SET" ? (
-            <p className="text-sm text-neutral-700 dark:text-neutral-300">{t.notice}</p>
+            <p className="text-small text-ink-2">{t.notice}</p>
           ) : (
             <>
-              <p className="text-sm">
+              <p className="text-small">
                 This template can be used, but it differs from the PCI 2026 pattern:
               </p>
-              <ul className="flex flex-col gap-1.5 text-sm">
+              <ul className="flex flex-col gap-1.5 text-small">
                 {t.warnings.map((w, i) => (
-                  <li key={i} className="rounded-md bg-amber-50 px-3 py-2 dark:bg-amber-950">
+                  <li
+                    key={i}
+                    className="rounded-md border-l-2 border-caution bg-caution-soft px-3 py-2"
+                  >
                     {w.message}
                     {pageCite(w.page) ? (
-                      <span className="block text-xs text-neutral-600 dark:text-neutral-400">
-                        {pageCite(w.page)}
-                      </span>
+                      <span className="block text-caption text-ink-2">{pageCite(w.page)}</span>
                     ) : null}
                   </li>
                 ))}
@@ -96,27 +91,31 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
         </section>
 
         <section aria-labelledby="layout" className="flex flex-col gap-3">
-          <h2 id="layout" className="text-base font-semibold">
+          <h2 id="layout" className={eyebrowStyles}>
             Questions
           </h2>
           {structure.parts.map((part) => (
             <div key={part.key} className="flex flex-col gap-2">
-              {part.title ? <h3 className="text-sm font-semibold">{part.title}</h3> : null}
-              <ol className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+              {part.title ? (
+                <h3 className="font-paper text-body font-semibold tracking-[0.04em]">
+                  {part.title}
+                </h3>
+              ) : null}
+              <ol className={`${sheetStyles} flex flex-col divide-y divide-rule text-small`}>
                 {part.groups.map((g) => (
-                  <li
-                    key={g.key}
-                    className="flex flex-wrap items-baseline justify-between gap-2 px-3 py-2"
-                  >
-                    <span className="min-w-0 break-words">
-                      <span className="text-neutral-600 dark:text-neutral-400">
-                        {GROUP_TYPE_LABEL[g.type]}:{" "}
-                      </span>
+                  <li key={g.key} className="flex items-stretch justify-between gap-4 px-4 py-2.5">
+                    <span className="min-w-0 self-center break-words">
+                      <span className="text-ink-2">{GROUP_TYPE_LABEL[g.type]}: </span>
                       {g.heading}
                     </span>
-                    <span className="shrink-0 text-neutral-700 tabular-nums dark:text-neutral-300">
-                      {g.attempt === g.slots ? `${g.slots}` : `any ${g.attempt} of ${g.slots}`} ×{" "}
-                      {marksText(g.marksEach)} = {marksText(g.attempt * g.marksEach)}
+                    <span className="dx-margin flex w-32 shrink-0 flex-col justify-center">
+                      <span className="font-semibold text-ink">
+                        {marksText(g.attempt * g.marksEach)}
+                      </span>
+                      <span className="text-caption text-ink-2">
+                        {g.attempt === g.slots ? `${g.slots}` : `any ${g.attempt} of ${g.slots}`} ×{" "}
+                        {marksText(g.marksEach)}
+                      </span>
                     </span>
                   </li>
                 ))}

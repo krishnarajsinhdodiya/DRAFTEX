@@ -15,8 +15,8 @@ export default async function HomePage({
       {password === "changed" ? (
         <FormAlert kind="notice">Your password has been changed.</FormAlert>
       ) : null}
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome, {user.name}</h1>
-      <p className="max-w-prose text-neutral-700 dark:text-neutral-300">
+      <h1 className="font-paper text-display font-semibold">Welcome, {user.name}</h1>
+      <p className="max-w-prose text-ink-2">
         Start from a template: the built-in ones follow the PCI 2026 and KSV patterns. Make a copy
         to change one. Papers come in the next update.
       </p>

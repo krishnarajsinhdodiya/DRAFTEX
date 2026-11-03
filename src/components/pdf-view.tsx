@@ -63,7 +63,7 @@ export function PdfView({ state, label }: { state: PreviewState; label: string }
           canvas.width = Math.floor(viewport.width);
           canvas.height = Math.floor(viewport.height);
           canvas.style.width = "100%";
-          canvas.className = "block bg-white shadow-sm ring-1 ring-black/10";
+          canvas.className = "block bg-white shadow-sheet";
           canvas.setAttribute("role", "img");
           canvas.setAttribute("aria-label", `${label}, page ${n} of ${doc.numPages}`);
           await page.render({ canvas, viewport }).promise;
@@ -86,15 +86,13 @@ export function PdfView({ state, label }: { state: PreviewState; label: string }
   const error = state.error ?? (renderError ? { message: renderError } : null);
   return (
     <div className="flex min-h-0 flex-col gap-3">
-      <div className="flex min-h-6 items-center gap-2 text-sm" aria-live="polite">
-        {state.busy ? (
-          <span className="text-neutral-600 dark:text-neutral-400">Making the preview…</span>
-        ) : null}
+      <div className="flex min-h-6 items-center gap-2 text-small" aria-live="polite">
+        {state.busy ? <span className="text-ink-2">Making the preview…</span> : null}
       </div>
       {error ? (
         <div
           role="alert"
-          className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+          className="rounded-md border border-caution/30 bg-caution-soft px-3 py-2 text-small text-caution"
         >
           <p>{error.message}</p>
           {error.details?.length ? (
@@ -116,13 +114,10 @@ export function PdfView({ state, label }: { state: PreviewState; label: string }
       />
       {!state.pdf && state.busy ? (
         // An empty A4 sheet holds the place, so the layout does not jump when pages arrive.
-        <div
-          aria-hidden
-          className="aspect-[210/297] w-full bg-white shadow-sm ring-1 ring-black/10 dark:bg-neutral-800"
-        />
+        <div aria-hidden className="aspect-[210/297] w-full bg-surface shadow-sheet" />
       ) : null}
       {!state.pdf && !state.busy && !error ? (
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">No preview yet.</p>
+        <p className="text-small text-ink-2">No preview yet.</p>
       ) : null}
     </div>
   );

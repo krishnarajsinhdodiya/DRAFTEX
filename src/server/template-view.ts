@@ -28,6 +28,9 @@ export interface TemplateSummary {
   title: string;
   description: string;
   facts: string[];
+  /** Shown in the marks margin: "60 marks", "3 hours". */
+  marks: string;
+  duration: string;
   builtIn: boolean;
   visibility: "PRIVATE" | "GLOBAL";
   mine: boolean;
@@ -49,9 +52,9 @@ export function summary(t: Row, actor: Actor): TemplateSummary {
       COURSE_KIND_LABEL[f.courseKind],
       EXAM_KIND_LABEL[f.examKind],
       ...(credits ? [credits] : []),
-      `${marksText(f.maxMarks)} marks`,
-      durationText(f.durationMinutes),
     ],
+    marks: `${marksText(f.maxMarks)} marks`,
+    duration: durationText(f.durationMinutes),
     builtIn: t.builtIn,
     visibility: t.visibility,
     mine: t.ownerId === actor.userId,

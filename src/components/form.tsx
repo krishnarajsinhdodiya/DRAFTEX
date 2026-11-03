@@ -8,10 +8,10 @@ import { buttonStyles } from "./styles";
 export { buttonStyles };
 
 const inputClass =
-  "block h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-[15px] text-neutral-900 " +
-  "placeholder:text-neutral-400 focus-visible:border-blue-600 focus-visible:outline-2 focus-visible:outline-offset-1 " +
-  "focus-visible:outline-blue-600 aria-invalid:border-red-600 dark:border-neutral-700 dark:bg-neutral-900 " +
-  "dark:text-neutral-100 dark:aria-invalid:border-red-400";
+  "block h-10 w-full rounded-md border border-rule-strong bg-surface px-3 text-body text-ink " +
+  "placeholder:text-ink-3 focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-1 " +
+  "focus-visible:outline-accent aria-invalid:border-danger " +
+  "";
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -26,7 +26,7 @@ export function Field({ label, name, error, hint, className, ...input }: FieldPr
   const errorId = error ? `${id}-error` : undefined;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+      <label htmlFor={id} className="text-small font-medium text-ink">
         {label}
       </label>
       <input
@@ -38,12 +38,12 @@ export function Field({ label, name, error, hint, className, ...input }: FieldPr
         {...input}
       />
       {error ? (
-        <p id={errorId} className="text-sm text-red-700 dark:text-red-400">
+        <p id={errorId} className="text-small text-danger">
           {error}
         </p>
       ) : null}
       {hint ? (
-        <p id={hintId} className="text-sm text-neutral-600 dark:text-neutral-400">
+        <p id={hintId} className="text-small text-ink-2">
           {hint}
         </p>
       ) : null}
@@ -62,7 +62,7 @@ export function Select({ label, name, defaultValue, options }: SelectProps) {
   const id = useId();
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+      <label htmlFor={id} className="text-small font-medium text-ink">
         {label}
       </label>
       <select id={id} name={name} defaultValue={defaultValue} className={inputClass}>
@@ -106,12 +106,12 @@ export function SubmitButton({
 export function FormAlert({ kind, children }: { kind: "error" | "notice"; children: ReactNode }) {
   const styles =
     kind === "error"
-      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
-      : "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100";
+      ? "border-danger/25 bg-danger-soft text-danger"
+      : "border-positive/25 bg-positive-soft text-positive";
   return (
     <div
       role={kind === "error" ? "alert" : "status"}
-      className={`rounded-md border px-3 py-2.5 text-sm ${styles}`}
+      className={`rounded-md border px-3 py-2.5 text-small ${styles}`}
     >
       {children}
     </div>

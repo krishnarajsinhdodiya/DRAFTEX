@@ -166,21 +166,18 @@ export function HeaderSection({ f, edit }: { f: Fields; edit: Edit }) {
   const logo = BUILT_IN_LOGOS.find((l) => l.sha256 === h.logoLeft?.sha256)?.id ?? "";
   return (
     <Section title="Header" id="header">
-      <p className="text-xs text-neutral-600 dark:text-neutral-400">
+      <p className="text-caption text-ink-2">
         Header lines may use these fields, filled in on each paper:{" "}
         {PLACEHOLDERS.map((p, i) => (
           <span key={p}>
-            <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">{`{{${p}}}`}</code>
+            <code className="rounded bg-sunk px-1">{`{{${p}}}`}</code>
             {i < PLACEHOLDERS.length - 1 ? " " : ""}
           </span>
         ))}
       </p>
       <ol className="flex flex-col gap-3">
         {h.lines.map((line, i) => (
-          <li
-            key={i}
-            className="flex flex-col gap-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800"
-          >
+          <li key={i} className="flex flex-col gap-2 rounded-lg border border-rule p-3">
             <div className="flex items-end gap-2">
               <TextInput
                 className="flex-1"
@@ -397,11 +394,7 @@ export function QuestionsSection({
       {s.parts.map((part, p) => (
         <div
           key={part.key}
-          className={
-            multi
-              ? "flex flex-col gap-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900/60"
-              : "flex flex-col gap-3"
-          }
+          className={multi ? "flex flex-col gap-3 rounded-xl bg-sunk p-3" : "flex flex-col gap-3"}
         >
           {multi ? (
             <div className="flex items-end gap-2">
@@ -447,13 +440,13 @@ export function QuestionsSection({
               return (
                 <li
                   key={g.key}
-                  className={`flex flex-col gap-3 rounded-lg border bg-white p-3 dark:bg-neutral-950 ${problems.length ? "border-red-400 dark:border-red-700" : "border-neutral-200 dark:border-neutral-800"}`}
+                  className={`flex flex-col gap-3 rounded-lg border bg-surface p-3 ${problems.length ? "border-danger" : "border-rule"}`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">
+                    <span className="text-small font-semibold">
                       {s.numbering.prefix}
                       {number}
-                      <span className="ml-2 font-normal text-neutral-600 tabular-nums dark:text-neutral-400">
+                      <span className="ml-2 font-normal text-ink-2 tabular-nums">
                         {marksText(g.attempt * g.marksEach)} marks
                       </span>
                     </span>
@@ -550,10 +543,7 @@ export function QuestionsSection({
                     ) : null}
                   </div>
                   {problems.length ? (
-                    <ul
-                      className="flex flex-col gap-1 text-sm text-red-700 dark:text-red-400"
-                      role="list"
-                    >
+                    <ul className="flex flex-col gap-1 text-small text-danger" role="list">
                       {problems.map((m, i) => (
                         <li key={i}>{m}</li>
                       ))}
@@ -658,8 +648,8 @@ export function PageSection({ f, edit }: { f: Fields; edit: Edit }) {
           onChange={(v) => edit((d) => void (d.style.coTagStyle = v))}
         />
       </div>
-      <details className="group rounded-lg border border-neutral-200 px-3 py-2 dark:border-neutral-800">
-        <summary className="cursor-pointer text-sm font-medium">Margins and text area</summary>
+      <details className="group rounded-lg border border-rule px-3 py-2">
+        <summary className="cursor-pointer text-small font-medium">Margins and text area</summary>
         <div className="mt-3 grid grid-cols-2 gap-3 pb-1">
           <NumberInput
             label="Left margin (inches)"

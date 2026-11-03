@@ -11,10 +11,10 @@ export default async function SetupPage() {
   if (networkMode() !== "local") {
     return (
       <>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="font-paper text-display font-semibold">
           Set up DRAFTEX on its own computer
         </h1>
-        <p className="text-neutral-700 dark:text-neutral-300">
+        <p className="text-ink-2">
           The first administrator can only be created on the computer that runs DRAFTEX, while it is
           in local mode. Open DRAFTEX there to finish setting it up.
         </p>
@@ -24,8 +24,8 @@ export default async function SetupPage() {
   return (
     <>
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome to DRAFTEX</h1>
-        <p className="text-neutral-700 dark:text-neutral-300">
+        <h1 className="font-paper text-display font-semibold">Welcome to DRAFTEX</h1>
+        <p className="text-ink-2">
           Create the administrator account. You can add colleagues afterwards.
         </p>
       </div>

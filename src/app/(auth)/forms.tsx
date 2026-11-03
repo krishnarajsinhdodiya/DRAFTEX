@@ -35,12 +35,9 @@ export function SignInForm() {
         required
       />
       <SubmitButton pendingText="Signing in…">Sign in</SubmitButton>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-small text-ink-2">
         Have an invite code?{" "}
-        <Link
-          href="/join"
-          className="font-medium text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
-        >
+        <Link href="/join" className="font-medium text-accent underline-offset-2 hover:underline">
           Create your account
         </Link>
       </p>
@@ -147,12 +144,9 @@ export function JoinForm() {
         error={f.confirm}
       />
       <SubmitButton pendingText="Creating…">Create account</SubmitButton>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="text-small text-ink-2">
         Already have an account?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
-        >
+        <Link href="/login" className="font-medium text-accent underline-offset-2 hover:underline">
           Sign in
         </Link>
       </p>

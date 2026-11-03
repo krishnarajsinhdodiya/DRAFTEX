@@ -9,7 +9,7 @@ export default async function JoinPage() {
   if (await getSession()) redirect("/");
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+      <h1 className="font-paper text-display font-semibold">Create your account</h1>
       <JoinForm />
     </>
   );

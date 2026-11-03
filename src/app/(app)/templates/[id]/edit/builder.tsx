@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { PciBadge } from "@/components/badge";
 import { buttonStyles } from "@/components/form";
 import { PdfView, type PreviewState, fetchPdf } from "@/components/pdf-view";
+import { eyebrowStyles, linkStyles } from "@/components/styles";
 import { checkTemplateFields } from "@/lib/templates/check";
 import { templateFieldsSchema } from "@/lib/templates/fields";
 import { saveTemplateAction } from "@/server/template-actions";
@@ -215,17 +216,14 @@ export function Builder({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-3.5rem-1px)] lg:flex-none">
-      <div className="flex flex-wrap items-center gap-3 border-b border-neutral-200 px-6 py-3 dark:border-neutral-800">
-        <Link
-          href={`/templates/${id}`}
-          className="text-sm text-blue-700 hover:underline dark:text-blue-400"
-        >
+      <div className="flex flex-wrap items-center gap-3 border-b border-rule bg-surface px-6 py-3">
+        <Link href={`/templates/${id}`} className={`${linkStyles} text-small`}>
           ← Back to the template
         </Link>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium" title={fields.title}>
+        <span className="min-w-0 flex-1 truncate text-small font-medium" title={fields.title}>
           {fields.title || "Untitled template"}
         </span>
-        <span className="text-sm text-neutral-600 dark:text-neutral-400" role="status">
+        <span className="text-small text-ink-2" role="status">
           {status}
         </span>
         <button
@@ -248,17 +246,17 @@ export function Builder({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-6 py-5 lg:w-[30rem] lg:shrink-0 lg:border-r lg:border-neutral-200 lg:dark:border-neutral-800">
+        <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-6 py-5 lg:w-[30rem] lg:shrink-0 bg-surface lg:border-r lg:border-rule">
           <CheckPanel problems={problems} check={check} saveError={saveError} />
           <AboutSection f={fields} edit={edit} issuesAt={issuesAt} />
           <HeaderSection f={fields} edit={edit} />
           <QuestionsSection f={fields} edit={edit} issuesAt={issuesAt} />
           <PageSection f={fields} edit={edit} />
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto bg-neutral-100 px-6 py-5 dark:bg-neutral-900">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-canvas px-6 py-5">
           <div className="mx-auto flex max-w-[52rem] flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">Preview</h2>
+              <h2 className={eyebrowStyles}>Preview</h2>
               <button
                 type="button"
                 className={buttonStyles.quiet}
@@ -269,7 +267,7 @@ export function Builder({
               </button>
             </div>
             {body === null ? (
-              <p className="text-sm text-neutral-700 dark:text-neutral-300">
+              <p className="text-small text-ink-2">
                 The preview waits until the problems on the left are fixed.
               </p>
             ) : null}
@@ -295,13 +293,13 @@ function CheckPanel({
       {saveError ? (
         <div
           role="alert"
-          className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+          className="rounded-md border border-danger/25 bg-danger-soft px-3 py-2 text-small text-danger"
         >
           {saveError.message}
         </div>
       ) : null}
       {problems.length ? (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100">
+        <div className="rounded-md border border-danger/25 bg-danger-soft px-3 py-2 text-small text-danger">
           <p className="font-medium">
             {problems.length === 1
               ? "1 problem stops saving:"
@@ -315,10 +313,10 @@ function CheckPanel({
         </div>
       ) : null}
       {check ? (
-        <div className="flex flex-col gap-1.5 text-sm">
+        <div className="flex flex-col gap-1.5 text-small">
           <div className="flex items-center gap-2">
             <PciBadge status={check.pci} />
-            <span className="text-neutral-700 dark:text-neutral-300">
+            <span className="text-ink-2">
               {check.pci === "COMPLIANT"
                 ? "Follows the PCI 2026 pattern."
                 : check.pci === "NON_PCI"
@@ -331,7 +329,7 @@ function CheckPanel({
           {check.pci === "NON_PCI" ? (
             check.warnings.length > 3 ? (
               <details>
-                <summary className="cursor-pointer text-neutral-700 dark:text-neutral-300">
+                <summary className="cursor-pointer text-ink-2">
                   Show the {check.warnings.length} differences
                 </summary>
                 <Differences warnings={check.warnings} />
@@ -350,10 +348,10 @@ function Differences({ warnings }: { warnings: { message: string; page?: number 
   return (
     <ul className="mt-1 flex flex-col gap-1">
       {warnings.map((w, i) => (
-        <li key={i} className="rounded-md bg-amber-50 px-2.5 py-1.5 dark:bg-amber-950">
+        <li key={i} className="rounded-md bg-caution-soft px-2.5 py-1.5">
           {w.message}
           {w.page !== undefined ? (
-            <span className="block text-xs text-neutral-600 dark:text-neutral-400">
+            <span className="block text-caption text-ink-2">
               PCI 2026 syllabus, printed page {w.page}
             </span>
           ) : null}

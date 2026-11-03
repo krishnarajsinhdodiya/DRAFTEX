@@ -1,7 +1,127 @@
 @import "tailwindcss";
 
+/*
+ * DRAFTEX design tokens.
+ *
+ * The app is a desk with sheets of paper on it: a warm canvas, white sheets,
+ * ink-coloured text and one fountain-pen blue for actions. Colours are roles,
+ * not hues; each role switches with the colour scheme, so components never
+ * name a dark variant. Contrast (WCAG 2.2, text on canvas / surface / sunk):
+ *   ink      15.9 / 17.6 / 14.9 light · 15.3 / 14.2 / 12.8 dark
+ *   ink-2     6.9 /  7.7 /  6.5 light ·  7.7 /  7.1 /  6.4 dark
+ *   ink-3     5.1 /  5.6 /  4.8 light ·  5.8 /  5.4 /  4.9 dark
+ *   accent    7.7 /  8.6 /  7.3 light ·  8.7 /  8.1 /  7.3 dark
+ *   danger, caution, positive ≥ 5.8 on every surface and ≥ 6.0 on their soft fill
+ *   rule-strong (input borders) ≥ 3.1 against canvas and surface
+ */
 :root {
   color-scheme: light dark;
+
+  --dx-canvas: #f5f3ee;
+  --dx-surface: #ffffff;
+  --dx-sunk: #efece5;
+  --dx-ink: #1a1915;
+  --dx-ink-2: #57534a;
+  --dx-ink-3: #6b675d;
+  --dx-rule: #e1ddd3;
+  --dx-rule-strong: #8f897c;
+  --dx-accent: #2346a0;
+  --dx-accent-hover: #1b3782;
+  --dx-on-accent: #ffffff;
+  --dx-accent-soft: #e9eefa;
+  --dx-danger: #a52a1f;
+  --dx-danger-soft: #fbecea;
+  --dx-caution: #7a4f00;
+  --dx-caution-soft: #fbf1dc;
+  --dx-positive: #2b6639;
+  --dx-positive-soft: #e7f3ea;
+  --dx-scrim: rgb(26 25 21 / 0.32);
+  --dx-sheet-shadow:
+    0 0 0 1px rgb(26 25 21 / 0.06), 0 1px 2px rgb(26 25 21 / 0.06),
+    0 8px 24px -12px rgb(26 25 21 / 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dx-canvas: #141311;
+    --dx-surface: #1c1b18;
+    --dx-sunk: #262420;
+    --dx-ink: #ece9e2;
+    --dx-ink-2: #aba69b;
+    --dx-ink-3: #959084;
+    --dx-rule: #302e29;
+    --dx-rule-strong: #6f6a60;
+    --dx-accent: #97b0f5;
+    --dx-accent-hover: #b4c6f8;
+    --dx-on-accent: #0f1a33;
+    --dx-accent-soft: #1d2747;
+    --dx-danger: #f2978c;
+    --dx-danger-soft: #3a1a16;
+    --dx-caution: #e8b65a;
+    --dx-caution-soft: #33270f;
+    --dx-positive: #84c99a;
+    --dx-positive-soft: #15291b;
+    --dx-scrim: rgb(0 0 0 / 0.55);
+    --dx-sheet-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --dx-rule: var(--dx-rule-strong);
+    --dx-ink-3: var(--dx-ink-2);
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--dx-canvas);
+  --color-surface: var(--dx-surface);
+  --color-sunk: var(--dx-sunk);
+  --color-ink: var(--dx-ink);
+  --color-ink-2: var(--dx-ink-2);
+  --color-ink-3: var(--dx-ink-3);
+  --color-rule: var(--dx-rule);
+  --color-rule-strong: var(--dx-rule-strong);
+  --color-accent: var(--dx-accent);
+  --color-accent-hover: var(--dx-accent-hover);
+  --color-on-accent: var(--dx-on-accent);
+  --color-accent-soft: var(--dx-accent-soft);
+  --color-danger: var(--dx-danger);
+  --color-danger-soft: var(--dx-danger-soft);
+  --color-caution: var(--dx-caution);
+  --color-caution-soft: var(--dx-caution-soft);
+  --color-positive: var(--dx-positive);
+  --color-positive-soft: var(--dx-positive-soft);
+  --color-scrim: var(--dx-scrim);
+  --shadow-sheet: var(--dx-sheet-shadow);
+}
+
+/*
+ * Type: the system face for chrome (SPEC §12); the reader's serif ("paper
+ * voice") only for what is printed on a paper: titles, question numbers and
+ * marks. Tracking tightens as size grows; body stays at 0.
+ */
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-paper: ui-serif, "Iowan Old Style", "Charter", "Cambria", "Georgia", serif;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-caption--letter-spacing: 0.01em;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.125rem;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.375rem;
+  --text-lead: 1.0625rem;
+  --text-lead--line-height: 1.5rem;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.625rem;
+  --text-title--letter-spacing: -0.01em;
+  --text-display: 1.75rem;
+  --text-display--line-height: 2.125rem;
+  --text-display--letter-spacing: -0.018em;
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -13,6 +133,19 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * Signature: the marks margin. Question papers keep marks in a ruled column at
+ * the right edge; DRAFTEX does the same wherever marks or totals appear.
+ */
+.dx-margin {
+  border-inline-start: 1px solid var(--dx-rule);
+  padding-inline-start: 0.75rem;
+  font-family: var(--font-paper);
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: end;
+  white-space: nowrap;
 }
 
 /* Dialog: a short fade and settle from the centre (modals stay centred). */

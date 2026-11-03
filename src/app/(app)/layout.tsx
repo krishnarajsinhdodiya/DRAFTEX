@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { NavLink } from "@/components/nav-link";
 import { buttonStyles } from "@/components/styles";
 import { appInfo } from "@/lib/app-info";
 import { signOutAction } from "@/server/actions";
@@ -9,25 +10,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = await requireUser();
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-neutral-200 dark:border-neutral-800">
-        <div className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2">
-          <Link href="/" className="text-sm font-semibold tracking-wide">
+      <header className="border-b border-rule bg-surface">
+        <div className="flex min-h-14 flex-wrap items-center gap-x-6 px-6">
+          <Link
+            href="/"
+            className="rounded-sm font-paper text-lead font-semibold tracking-[0.08em] text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
             {appInfo.name}
           </Link>
-          <nav aria-label="Main" className="flex items-center gap-1">
-            <Link href="/templates" className={buttonStyles.quiet}>
-              Templates
-            </Link>
-            {user.role === "ADMIN" ? (
-              <Link href="/admin/users" className={buttonStyles.quiet}>
-                People
-              </Link>
-            ) : null}
+          <nav aria-label="Main" className="flex items-center">
+            <NavLink href="/templates">Templates</NavLink>
+            {user.role === "ADMIN" ? <NavLink href="/admin/users">People</NavLink> : null}
           </nav>
           <div className="ml-auto flex items-center gap-1">
-            <span className="mr-2 hidden text-sm text-neutral-600 sm:inline dark:text-neutral-400">
-              {user.name}
-            </span>
+            <span className="mr-2 hidden text-small text-ink-2 sm:inline">{user.name}</span>
             <Link href="/change-password" className={buttonStyles.quiet}>
               Change password
             </Link>
