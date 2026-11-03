@@ -7,6 +7,7 @@ import type { Actor, DataLayer } from "@/lib/data";
 import { ConflictError } from "@/lib/data";
 import { INVITE_INVALID } from "@/lib/data/auth-store";
 import { emailSchema, nameSchema } from "@/lib/data/users";
+import { SESSION_IDLE_MS, SESSION_RENEW_AFTER_MS } from "./constants";
 import { dummyHash, hashPassword, passwordSchema, verifyPassword } from "./password";
 import { createRateLimiter, type RateLimiter } from "./rate-limit";
 import { newInviteCode, newSessionToken, normaliseInviteCode, sha256Hex } from "./tokens";
@@ -14,10 +15,7 @@ import { newInviteCode, newSessionToken, normaliseInviteCode, sha256Hex } from "
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
-/** SPEC §11.3: sessions end after 7 idle days. */
-export const SESSION_IDLE_MS = 7 * DAY;
-/** The expiry moves forward at most once an hour, not on every request. */
-export const SESSION_RENEW_AFTER_MS = 60 * MINUTE;
+export { SESSION_IDLE_MS, SESSION_RENEW_AFTER_MS } from "./constants";
 /** SPEC §11.3: 5 wrong passwords in a row lock the account for 15 minutes. */
 export const LOCKOUT_FAILURES = 5;
 export const LOCKOUT_MS = 15 * MINUTE;
