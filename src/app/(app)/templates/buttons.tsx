@@ -35,23 +35,84 @@ function Failure({ error }: { error: string | null }) {
   ) : null;
 }
 
+/** Asks for the title first, so no "Untitled template" is left behind. */
 export function NewTemplateButton({ blankId }: { blankId: string }) {
   const { pending, error, run } = useCommand();
+  const [title, setTitle] = useState("");
+  const [touched, setTouched] = useState(false);
+  const missing = title.trim() === "";
   return (
-    <>
-      <button
-        type="button"
-        className={buttonStyles.primary}
-        disabled={pending}
-        onClick={() => run(() => copyTemplateAction(blankId, "Untitled template"))}
-      >
-        <Plus aria-hidden size={16} />
-        {pending ? "Creating…" : "New template"}
-      </button>
-      <Failure error={error} />
-    </>
+    <Dialog.Root
+      onOpenChange={(open) => {
+        if (!open) return;
+        setTitle("");
+        setTouched(false);
+      }}
+    >
+      <Dialog.Trigger asChild>
+        <button type="button" className={buttonStyles.primary}>
+          <Plus aria-hidden size={16} />
+          New template
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dx-overlay fixed inset-0 bg-black/30" />
+        <Dialog.Content className={dialogClass}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setTouched(true);
+              if (!missing) run(() => copyTemplateAction(blankId, title.trim()));
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div>
+              <Dialog.Title className="text-lg font-semibold">New template</Dialog.Title>
+              <Dialog.Description className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+                It starts as one group of questions with a plain header; you build it from there. To
+                start from a PCI or KSV pattern instead, open that template and make a copy.
+              </Dialog.Description>
+            </div>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
+              Title
+              <input
+                autoFocus
+                value={title}
+                maxLength={200}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Pharmacology sessional, 2 credits"
+                aria-invalid={touched && missing ? true : undefined}
+                aria-describedby={touched && missing ? "new-title-error" : undefined}
+                className={inputClass}
+              />
+              {touched && missing ? (
+                <span id="new-title-error" className="font-normal text-red-700 dark:text-red-400">
+                  Give the template a title.
+                </span>
+              ) : null}
+            </label>
+            <Failure error={error} />
+            <div className="flex justify-end gap-2">
+              <Dialog.Close className={buttonStyles.secondary}>Cancel</Dialog.Close>
+              <button type="submit" className={buttonStyles.primary} disabled={pending}>
+                {pending ? "Creating…" : "Create template"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
+
+const dialogClass =
+  "dx-dialog fixed top-1/2 left-1/2 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 " +
+  "rounded-xl bg-white p-6 shadow-xl ring-1 ring-black/10 dark:bg-neutral-900 dark:ring-white/10";
+
+const inputClass =
+  "block h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-[15px] font-normal text-neutral-900 " +
+  "placeholder:text-neutral-400 focus-visible:border-blue-600 focus-visible:outline-2 focus-visible:outline-offset-1 " +
+  "focus-visible:outline-blue-600 aria-invalid:border-red-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100";
 
 export function TemplateActions({
   id,
@@ -137,7 +198,7 @@ function ConfirmDelete({
       <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="dx-overlay fixed inset-0 bg-black/30" />
-        <Dialog.Content className="dx-dialog fixed top-1/2 left-1/2 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl ring-1 ring-black/10 dark:bg-neutral-900 dark:ring-white/10">
+        <Dialog.Content className={dialogClass}>
           <Dialog.Title className="text-lg font-semibold break-words">
             Delete “{title}”?
           </Dialog.Title>

@@ -3,7 +3,7 @@
 // answer "not found" for someone else's private template, whatever the ID.
 // Runs after auth.spec.ts, which creates the accounts used here.
 import { type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, signedIn } from "./support";
+import { ADMIN, FACULTY, asUser } from "./support";
 
 test.describe.configure({ mode: "serial" });
 
@@ -22,7 +22,7 @@ async function openTemplate(page: Page, title: string) {
 }
 
 test("the library lists every built-in with its PCI status and filters", async ({ browser }) => {
-  const page = await signedIn(browser, FACULTY, FACULTY.own);
+  const page = await asUser(browser, FACULTY, FACULTY.own);
   await page.goto("/templates");
   await expect(page.getByText("12 templates")).toBeVisible();
   const legacy = page.getByRole("link", { name: /KSV Legacy/ });
@@ -54,10 +54,36 @@ test("the library lists every built-in with its PCI status and filters", async (
   await expect(page.getByText("No templates match.")).toBeVisible();
 });
 
+test("a new template asks for its title first and opens in the builder", async ({ browser }) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto("/templates");
+  await page.getByRole("button", { name: "New template" }).click();
+  const dialog = page.getByRole("dialog", { name: "New template" });
+  await dialog.getByRole("button", { name: "Create template" }).click();
+  await expect(dialog.getByText("Give the template a title.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.goto("/templates?scope=MINE");
+  await expect(page.getByText("No templates match.")).toBeVisible();
+
+  await page.goto("/templates");
+  await page.getByRole("button", { name: "New template" }).click();
+  await dialog.getByLabel("Title").fill("Invented Microbiology Sessional");
+  await dialog.getByLabel("Title").press("Enter");
+  await expect(page).toHaveURL(/\/templates\/[0-9a-f-]{36}\/edit$/);
+  await expect(page.getByLabel("Title")).toHaveValue("Invented Microbiology Sessional");
+
+  // Leave "Mine" empty again for the tests below.
+  await page.getByRole("link", { name: "← Back to the template" }).click();
+  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete template" }).click();
+  await expect(page).toHaveURL(/\/templates\?deleted=1$/);
+});
+
 test("a built-in shows its preview, cannot be edited, and is copied into the builder", async ({
   browser,
 }) => {
-  const page = await signedIn(browser, FACULTY, FACULTY.own);
+  const page = await asUser(browser, FACULTY, FACULTY.own);
   await openTemplate(page, "PCI 2026 · B.Pharm · Theory · End-Semester · 4 credits");
   await expect(preview(page)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
@@ -106,7 +132,7 @@ test("a built-in shows its preview, cannot be edited, and is copied into the bui
 });
 
 test("a stale window cannot overwrite a newer save", async ({ browser }) => {
-  const a = await signedIn(browser, FACULTY, FACULTY.own);
+  const a = await asUser(browser, FACULTY, FACULTY.own);
   const b = await a.context().newPage();
   await a.goto(`/templates/${copyId}/edit`);
   await b.goto(`/templates/${copyId}/edit`);
@@ -121,7 +147,7 @@ test("a stale window cannot overwrite a newer save", async ({ browser }) => {
 test("someone else's private template does not exist for them, by any route", async ({
   browser,
 }) => {
-  const admin = await signedIn(browser, ADMIN, ADMIN.password);
+  const admin = await asUser(browser, ADMIN, ADMIN.password);
   await admin.goto("/templates");
   await expect(admin.getByRole("link", { name: new RegExp(COPY_TITLE) })).toHaveCount(0);
   for (const id of [copyId, "00000000-0000-4000-8000-000000000000"]) {
@@ -135,12 +161,12 @@ test("someone else's private template does not exist for them, by any route", as
 test("the owner makes it global; others see and copy it but cannot edit; an admin can unpublish and delete", async ({
   browser,
 }) => {
-  const owner = await signedIn(browser, FACULTY, FACULTY.own);
+  const owner = await asUser(browser, FACULTY, FACULTY.own);
   await owner.goto(`/templates/${copyId}`);
   await owner.getByRole("button", { name: "Make global" }).click();
   await expect(owner.getByText("Global", { exact: true })).toBeVisible();
 
-  const admin = await signedIn(browser, ADMIN, ADMIN.password);
+  const admin = await asUser(browser, ADMIN, ADMIN.password);
   await admin.goto(`/templates/${copyId}`);
   await expect(admin.getByRole("heading", { level: 1, name: COPY_TITLE })).toBeVisible();
   await expect(admin.getByRole("link", { name: "Edit" })).toHaveCount(0);
