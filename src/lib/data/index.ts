@@ -6,12 +6,14 @@ import { bpharmCatalogue } from "@/lib/catalogue";
 import { authStore } from "./auth-store";
 import { courses, syncCatalogue } from "./courses";
 import { papers } from "./papers";
-import { templates } from "./templates";
+import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
+import { syncBuiltInTemplates, templates } from "./templates";
 import { users } from "./users";
 
 export type { Actor } from "./actor";
 export type { CourseFilter, SyncResult } from "./courses";
-export { ConflictError, ForbiddenError, NotFoundError } from "./errors";
+export type { SeedSyncResult, TemplateFilter, TemplateScope } from "./templates";
+export { ConflictError, ForbiddenError, InvalidTemplateError, NotFoundError } from "./errors";
 export type { Role } from "@/generated/prisma/enums";
 
 export function dataLayer(db: Db) {
@@ -25,6 +27,7 @@ export function dataLayer(db: Db) {
     /** Startup and maintenance only; never call these on behalf of a user. */
     system: {
       syncCatalogue: () => syncCatalogue(db, bpharmCatalogue()),
+      syncBuiltInTemplates: () => syncBuiltInTemplates(db, BUILT_IN_TEMPLATES),
     },
   };
 }

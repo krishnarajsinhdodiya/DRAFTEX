@@ -35,7 +35,7 @@ export default async function UsersPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-6 py-10">
       <section aria-labelledby="people" className="flex flex-col gap-4">
         <h1 id="people" className="text-2xl font-semibold tracking-tight">
           People

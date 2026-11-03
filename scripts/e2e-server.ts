@@ -5,11 +5,23 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
+import { dataPaths, peekDataDir } from "../src/lib/paths.ts";
 
 const port = process.argv[2] ?? "3211";
+// The installed LaTeX engine is shared (linked), so previews compile; nothing else is.
+const realTools = dataPaths(peekDataDir()).tools;
 const dataDir = path.join(os.tmpdir(), `draftex-e2e-${port}`);
-fs.rmSync(dataDir, { recursive: true, force: true });
+/** Removes the throwaway folder; the tools link is unlinked first so the real tools are never touched. */
+function clean(): void {
+  const link = path.join(dataDir, "tools");
+  if (fs.lstatSync(link, { throwIfNoEntry: false })?.isSymbolicLink()) fs.unlinkSync(link);
+  fs.rmSync(dataDir, { recursive: true, force: true });
+}
+clean();
 fs.mkdirSync(dataDir, { recursive: true });
+if (fs.existsSync(realTools)) {
+  fs.symlinkSync(realTools, path.join(dataDir, "tools"), "junction");
+}
 const env = {
   ...process.env,
   DRAFTEX_DATA_DIR: dataDir,
@@ -36,6 +48,6 @@ const stop = () => child.kill();
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 child.on("exit", (code) => {
-  fs.rmSync(dataDir, { recursive: true, force: true });
+  clean();
   process.exit(code ?? 0);
 });

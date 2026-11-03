@@ -96,6 +96,21 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Unit titles are best effort: the bold heading at the top of each unit cell; 34 units have no heading in the PDF and keep an empty title; a few titles carry a bold sub-heading. CO text matched the PDF word for word (545/545) · units are informational in v1
 - 2026-11-03 · CO tag helper `coTag(code, n)` drops spaces: `BP607T AEC1` → `BP607TAEC1.01` · slot `coTag` allows no spaces; owner to confirm how electives are tagged on real papers
 
+- 2026-11-03 · D15: built-in templates are owned by the first administrator; `data.system.syncBuiltInTemplates()` runs at startup and right after first-run setup, keyed by `Template.seedKey` (adds missing, rewrites changed in place with version + 1, never deletes); before setup it does nothing · no fake system user, so "first-run only when no user exists" stays exact; owner approved
+- 2026-11-03 · D16: the KSV and KBIPER logos are `assets/logos/*.png`, tracked since the owner's first pack (no new files); until uploads (Phase 5) they are the only header images, resolved by hash in `src/lib/templates/logos.ts` · owner approved
+- 2026-11-03 · D17: 12 built-ins: theory end-sem and sessional for 4 / 3 / "2 or 1" credits (creditTier 2 covers 1-credit, rules `$ref`), practical sessional (2/4/2/2) and end-sem (7.5/10/5/7.5) at creditTier 2 and 4 h, synopsis, KSV legacy 75 (SUPPLEMENTARY_ATKT, no credits → Non-PCI), KSV Pharm.D 70 (two sections: compulsory 5 + any three of four 10s), blank · owner approved
+- 2026-11-03 · D18: templates carry no lab hours; the practical duration check accepts 3 h or 4 h until Phase 5 passes the course's lab hours on papers · owner approved
+- 2026-11-03 · D19: template previews are route handlers (POST unsaved, GET saved) that check Origin themselves (Next only guards server actions); PDFs cached in memory by LaTeX hash (40 entries); compiles superseded per user · owner approved
+- 2026-11-03 · D20/D21: no /prototype skill on the Mac; builder built directly as form-left / preview-right; pdf.js (runtime dependency) renders previews to canvas from Phase 4 · owner approved
+- 2026-11-03 · SPEC §5 names shadcn/ui; Phase 4 uses `@radix-ui/react-dialog` directly with the project's own Tailwind classes (shadcn's pattern, without its CLI or extra packages) and lucide-react; the `radix-ui` umbrella package was rejected (~290 packages) · not pre-approved; raised with the owner in the Phase 4 report
+- 2026-11-03 · Zod 4 fills `.default()` values even inside `.partial()`; every data-layer patch goes through `parsePatch` (src/lib/data/patch.ts), which keeps only the keys the caller sent · the bug reset credits/description on template copies and course/status on paper edits (found by e2e)
+- 2026-11-03 · A plain value exported from a "use client" module reaches server components as undefined; shared class names live in `src/components/styles.ts` · header buttons had been unstyled since Phase 2
+- 2026-11-03 · Text the paper cannot print (emoji, unknown placeholder) is a level-1 checker error (`UNPRINTABLE_TEXT`, from the serializer, reported only when there are no structural errors) · otherwise a saved template could never compile
+- 2026-11-03 · Template field schema lives in `src/lib/templates/fields.ts` (client-safe) so the builder validates with the data layer's rules; the rule set follows the program (`ruleSetIdFor`), user input cannot set it · one source of rules
+- 2026-11-03 · Builder: preview 1.5 s after the last change (first one immediately), undo 50 steps with one step per 800 ms pause, links and tab close ask before dropping unsaved changes, Ctrl/Cmd+S saves · design review findings
+- 2026-11-03 · New templates are copies of the blank built-in ("New template" = Save as new), opened straight in the builder; abandoned "Untitled template" copies stay in Mine until deleted · simplest flow; owner to confirm
+- 2026-11-03 · The e2e server links `<real data folder>/tools` into its throwaway folder (junction on Windows) and unlinks it before deleting the folder · previews need Tectonic; the real engine must never be deleted
+- 2026-11-03 · Template group numbering runs straight through the parts (Q.1 … Q.4 for two sections of two groups); hand-written Pharm.D papers number every question (Q.1 … Q.10). The group model cannot print that yet · open question for Phase 5
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -108,10 +123,14 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Phase 1 (installed): zod 4.6.7 · pdfjs-dist 6.5.438 (dev for now; preview needs it in Phase 5) · @napi-rs/canvas 1.1.0 · pixelmatch 8.0.0 · pngjs 7.0.0 · @types/pngjs 6.0.5 · actions/cache v6.1.0 (55cc8345)
 - Phase 2 (installed, verified 2026-11-03): @prisma/client 7.10.1 · prisma 7.10.1 (CLI `latest` tag points at 8.0.0-rc.29: do not use) · @prisma/adapter-better-sqlite3 7.10.1 · better-sqlite3 12.11.1 (not 13.x: the adapter needs ^12.6) · @types/better-sqlite3 9.6.0 · @node-rs/argon2 2.2.2 · install scripts approved in package.json `allowScripts` for better-sqlite3, prisma, @prisma/engines only
 - Phase 3: no new dependencies (the syllabus parser uses the existing dev dependency pdfjs-dist)
-- Planned, re-verify at phase start: @tiptap/* 3.32.2 · mathlive 0.111.4 · sharp 0.35.5 · @resvg/resvg-js 2.6.2 · lucide-react 1.66.0 · shadcn 4.23.0
+- Phase 4 (installed, verified 2026-11-03): pdfjs-dist 6.5.438 moved to dependencies · @radix-ui/react-dialog 1.3.1 · lucide-react 1.67.0 (planned 1.66.0; 1.67.0 is current) · shadcn CLI 4.23.0 checked, not used
+- Planned, re-verify at phase start: @tiptap/* 3.32.2 · mathlive 0.111.4 · sharp 0.35.5 · @resvg/resvg-js 2.6.2 · lucide-react 1.66.0 · shadcn 4.23.0 [lucide-react and shadcn SUPERSEDED 2026-11-03 → see "Phase 4 (installed)"]
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
 - Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable.
 - How are COs of elective options tagged on real papers? Default `BP607TAEC1.01` (see `coTag`).
+- Pharm.D (and other) papers number each question (Q.1 … Q.10); templates number groups. Should Phase 5 add "number each question" to a group?
+- shadcn/ui: keep the direct Radix + own-styles approach, or adopt the shadcn CLI components?
+- "New template" creates an Untitled copy at once; is that acceptable, or should it ask for a title first?

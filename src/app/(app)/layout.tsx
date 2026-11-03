@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { buttonStyles } from "@/components/form";
+import { buttonStyles } from "@/components/styles";
 import { appInfo } from "@/lib/app-info";
 import { signOutAction } from "@/server/actions";
 import { requireUser } from "@/server/auth";
@@ -10,11 +10,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 dark:border-neutral-800">
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
+        <div className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2">
           <Link href="/" className="text-sm font-semibold tracking-wide">
             {appInfo.name}
           </Link>
           <nav aria-label="Main" className="flex items-center gap-1">
+            <Link href="/templates" className={buttonStyles.quiet}>
+              Templates
+            </Link>
             {user.role === "ADMIN" ? (
               <Link href="/admin/users" className={buttonStyles.quiet}>
                 People
@@ -36,7 +39,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">{children}</main>
+      <main className="flex w-full flex-1 flex-col">{children}</main>
     </div>
   );
 }

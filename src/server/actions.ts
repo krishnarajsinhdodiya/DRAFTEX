@@ -74,6 +74,8 @@ export async function setupAction(_prev: FormState, fd: FormData): Promise<FormS
       password: text(fd, "password"),
     });
     await setSessionCookie(s.token);
+    // The built-ins belong to the first administrator, who exists from now on.
+    await (await getData()).system.syncBuiltInTemplates();
   } catch (e) {
     return failure(e, values);
   }

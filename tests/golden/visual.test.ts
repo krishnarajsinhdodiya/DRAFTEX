@@ -8,7 +8,7 @@ import type { CompileService } from "@/lib/latex/compile";
 import { serializePaper } from "@/lib/latex/serialize";
 import { realCompileService } from "../support/engine";
 import { diffPages, pngBytes, readPng, renderPdf } from "../support/pdf";
-import { ALL_ASSETS, FIXTURES } from "../fixtures/papers/papers";
+import { ALL_ASSETS, FIXTURES, SEED_PREVIEWS } from "../fixtures/papers/papers";
 
 const OUT = path.resolve("test-results/golden");
 const BASELINES = path.resolve("tests/golden/baselines");
@@ -27,8 +27,10 @@ beforeAll(() => {
 
 const assets = ALL_ASSETS.map((a) => ({ name: a.name, sourcePath: a.sourcePath }));
 
-async function compileFixture(name: keyof typeof FIXTURES): Promise<Buffer> {
-  const ser = serializePaper(FIXTURES[name]());
+const PAPERS: Record<string, () => unknown> = { ...FIXTURES, ...SEED_PREVIEWS };
+
+async function compileFixture(name: string): Promise<Buffer> {
+  const ser = serializePaper((PAPERS[name] as () => unknown)());
   if (!ser.ok) throw new Error(ser.issues.map((i) => i.message).join("\n"));
   const res = await svc.compile({
     userId: "visual",
@@ -68,7 +70,7 @@ describe("reference template regenerated from JSON", () => {
 
 const targets: Array<[string, () => Promise<Buffer>]> = [
   ["handwritten-reference", compileHandwritten],
-  ...(Object.keys(FIXTURES) as Array<keyof typeof FIXTURES>).map(
+  ...Object.keys(PAPERS).map(
     (n) => [n, () => compileFixture(n)] as [string, () => Promise<Buffer>],
   ),
 ];

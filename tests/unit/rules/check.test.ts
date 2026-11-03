@@ -385,9 +385,19 @@ describe("checkTemplate: practical warnings", () => {
     });
   });
 
-  it("warns on max marks, components and extra groups (the old fixture)", () => {
+  it("passes the practical fixture, which follows the PCI components", () => {
     const st = structureSchema.parse(practicalEnd.structure);
-    const r = checkTemplate(st, pMeta(), rules);
+    expect(checkTemplate(st, pMeta(), rules)).toMatchObject({ warnings: [], pci: "COMPLIANT" });
+  });
+
+  it("warns on max marks, components and extra groups (the old fixture's marks)", () => {
+    const old = s(
+      g("syn", "SYNOPSIS", 1, 1, 5),
+      g("major", "PRACTICAL_PERFORM", 1, 1, 10),
+      g("minor", "PRACTICAL_PERFORM", 1, 1, 10),
+      g("viva", "VIVA", 1, 1, 5),
+    );
+    const r = checkTemplate(old, pMeta(), rules);
     expect(r.warnings.map((w) => w.message)).toEqual([
       'PCI expects "Synopsis" for 7.5 marks; this template has 5 marks.',
       'PCI expects 2 "Perform the practical" items (10 marks and 5 marks); this template has 10 marks and 10 marks.',

@@ -3,30 +3,11 @@
 // Runs in order against one fresh data folder (scripts/e2e-server.ts).
 // All accounts and passwords here are invented test values.
 import { type Browser, type Page, expect, test } from "@playwright/test";
+import { ADMIN, FACULTY, JOINER, signIn } from "./support";
 
 test.describe.configure({ mode: "serial" });
 
-const ADMIN = { name: "Test Admin", email: "admin@example.test", password: "admin test password" };
-const FACULTY = {
-  name: "Dr Test Faculty",
-  email: "faculty@example.test",
-  temp: "temporary pass 1",
-  own: "faculty own password",
-};
-const JOINER = {
-  name: "Dr Test Joiner",
-  email: "joiner@example.test",
-  password: "joiner test password",
-};
-
 let inviteCode = "";
-
-async function signIn(page: Page, email: string, password: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-}
 
 async function adminPage(browser: Browser): Promise<Page> {
   const page = await (await browser.newContext()).newPage();

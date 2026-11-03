@@ -11,7 +11,7 @@ export function templateFields(title: string): TemplateFields {
     courseKind: "THEORY",
     creditTier: 4,
     durationMinutes: 180,
-    maxMarks: 75,
+    maxMarks: 60,
     ...pciEndSem4CreditKsv,
   };
 }
