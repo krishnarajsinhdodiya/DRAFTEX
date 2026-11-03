@@ -20,6 +20,7 @@ function personViews(people: Person[], youId: string): PersonView[] {
     role: p.role,
     isActive: p.isActive,
     mustChangePassword: p.mustChangePassword,
+    allowAdvancedLatex: p.allowAdvancedLatex,
     lockedUntil: p.lockedUntil && p.lockedUntil.getTime() > now ? when.format(p.lockedUntil) : null,
     isYou: p.id === youId,
   }));

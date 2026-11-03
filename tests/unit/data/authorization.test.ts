@@ -160,6 +160,7 @@ describe("account administration", () => {
     ["change a role", () => t.data.users.setRole(other, other.userId, "ADMIN")],
     ["reset a password", () => t.data.users.resetPassword(other, owner.userId, "h")],
     ["unlock an account", () => t.data.users.unlock(other, owner.userId)],
+    ["allow Advanced LaTeX", () => t.data.users.setAdvancedLatex(other, other.userId, true)],
     ["create an invite", () => t.data.auth.createInvite(other, "id", "ADMIN", new Date(), null)],
     ["list invites", () => t.data.auth.listOpenInvites(other, new Date())],
     ["revoke an invite", () => t.data.auth.revokeInvite(other, "id", new Date())],

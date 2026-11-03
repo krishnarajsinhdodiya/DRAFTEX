@@ -86,6 +86,8 @@ model User {
   isActive           Boolean   @default(true)
   /// Set when an admin chose the password; the user must replace it at next sign-in.
   mustChangePassword Boolean   @default(false)
+  /// Admin-enabled: the user may add Advanced LaTeX blocks (sanitised) to questions.
+  allowAdvancedLatex Boolean   @default(false)
   failedLogins       Int       @default(0)
   lockedUntil        DateTime?
   createdAt          DateTime  @default(now())

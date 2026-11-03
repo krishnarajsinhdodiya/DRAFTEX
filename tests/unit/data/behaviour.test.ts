@@ -397,6 +397,29 @@ describe("users", () => {
     expect((await t.db.user.findUniqueOrThrow({ where: { id: u.id } })).lockedUntil).toBeNull();
     await expect(t.data.users.unlock(admin, "missing")).rejects.toBeInstanceOf(NotFoundError);
   });
+
+  it("Advanced LaTeX is off until an admin allows it, and can be turned off again", async () => {
+    const u = await t.data.users.create(admin, {
+      name: "Adv",
+      email: "adv@example.com",
+      passwordHash: "h",
+    });
+    expect(u.allowAdvancedLatex).toBe(false);
+    expect((await t.data.users.setAdvancedLatex(admin, u.id, true)).allowAdvancedLatex).toBe(true);
+    expect((await t.data.users.setAdvancedLatex(admin, u.id, false)).allowAdvancedLatex).toBe(
+      false,
+    );
+    const actions = await t.db.auditLog.findMany({
+      where: { entityId: u.id },
+      select: { action: true },
+    });
+    expect(actions.map((a) => a.action)).toEqual(
+      expect.arrayContaining(["advanced-latex:on", "advanced-latex:off"]),
+    );
+    await expect(t.data.users.setAdvancedLatex(admin, "missing", true)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
 });
 
 describe("audit log", () => {

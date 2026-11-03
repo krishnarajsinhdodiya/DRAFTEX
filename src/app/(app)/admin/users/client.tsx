@@ -22,6 +22,7 @@ export interface PersonView {
   role: "ADMIN" | "FACULTY";
   isActive: boolean;
   mustChangePassword: boolean;
+  allowAdvancedLatex: boolean;
   lockedUntil: string | null;
   isYou: boolean;
 }
@@ -47,7 +48,12 @@ export function UserRow({ person: p }: { person: PersonView }) {
           <div className="text-ink-2">{p.email}</div>
         </td>
         <td className="px-4 py-3">{p.role === "ADMIN" ? "Administrator" : "Faculty"}</td>
-        <td className="px-4 py-3">{status(p)}</td>
+        <td className="px-4 py-3">
+          {status(p)}
+          {p.allowAdvancedLatex ? (
+            <div className="text-caption text-ink-2">May use Advanced LaTeX</div>
+          ) : null}
+        </td>
         <td className="px-4 py-3">
           <form action={action} className="flex flex-wrap justify-end gap-1">
             <input type="hidden" name="userId" value={p.id} />
@@ -71,6 +77,15 @@ export function UserRow({ person: p }: { person: PersonView }) {
             ) : (
               <SubmitButton variant="quiet" name="op" value="make-admin">
                 Make administrator
+              </SubmitButton>
+            )}
+            {p.allowAdvancedLatex ? (
+              <SubmitButton variant="quiet" name="op" value="advanced-off">
+                Turn off Advanced LaTeX
+              </SubmitButton>
+            ) : (
+              <SubmitButton variant="quiet" name="op" value="advanced-on">
+                Allow Advanced LaTeX
               </SubmitButton>
             )}
             {p.isActive ? (
