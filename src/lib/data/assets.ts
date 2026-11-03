@@ -5,6 +5,7 @@ import type { Db } from "@/lib/db/client";
 import type { Actor } from "./actor";
 import { writeAudit } from "./audit";
 import { NotFoundError } from "./errors";
+import { builtInLogoBySha } from "@/lib/templates/logos";
 
 const WHAT = "Image";
 
@@ -23,6 +24,40 @@ export const assetInputSchema = z.object({
   originalName: z.string().trim().min(1).max(255),
 });
 export type AssetInput = z.input<typeof assetInputSchema>;
+
+/** Images in a template header that are uploads (built-in logos ship with the app). */
+export function headerUploads(header: { logoLeft?: { sha256: string } | undefined }): string[] {
+  const sha = header.logoLeft?.sha256;
+  return sha && !builtInLogoBySha(sha) ? [sha] : [];
+}
+
+/** Every upload must be the owner's own: a guessed hash of someone else's file is refused. */
+export async function assertOwnsAssets(db: Db, ownerId: string, shas: string[]): Promise<void> {
+  const unique = [...new Set(shas)];
+  if (unique.length === 0) return;
+  const found = await db.asset.count({ where: { ownerId, sha256: { in: unique } } });
+  if (found !== unique.length) throw new NotFoundError(WHAT);
+}
+
+/**
+ * D22: a paper or copy made from a visible template gets its own rows for the
+ * template's header images, so every compile resolves images by one owner.
+ */
+export async function shareAssets(db: Db, fromOwnerId: string, toOwnerId: string, shas: string[]) {
+  if (fromOwnerId === toOwnerId) return;
+  for (const sha256 of new Set(shas)) {
+    const src = await db.asset.findUnique({
+      where: { ownerId_sha256: { ownerId: fromOwnerId, sha256 } },
+    });
+    if (!src) continue;
+    const { mime, bytes, width, height, originalName } = src;
+    await db.asset.upsert({
+      where: { ownerId_sha256: { ownerId: toOwnerId, sha256 } },
+      create: { sha256, mime, bytes, width, height, originalName, ownerId: toOwnerId },
+      update: {},
+    });
+  }
+}
 
 export function assets(db: Db) {
   async function findOwn(actor: Actor, sha256: string) {

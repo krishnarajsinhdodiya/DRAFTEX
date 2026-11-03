@@ -108,7 +108,12 @@ describe.each([
     ["update", () => t.data.papers.update(who(), paperId, 1, { title: "x" })],
     ["delete", () => t.data.papers.remove(who(), paperId)],
     ["write a question", () => t.data.papers.saveSlot(who(), paperId, testSlot())],
-    ["delete a question", () => t.data.papers.removeSlot(who(), paperId, slotId)],
+    ["clear a question", () => t.data.papers.clearSlot(who(), paperId, testSlot())],
+    [
+      "move a question",
+      () => t.data.papers.moveSlot(who(), paperId, testSlot(), { groupKey: "g1", position: 2 }),
+    ],
+    ["duplicate a question", () => t.data.papers.duplicateSlot(who(), paperId, testSlot())],
     [
       "record a compile",
       () => t.data.papers.recordCompile(who(), paperId, { kind: "PAPER", status: "QUEUED" }),
@@ -118,10 +123,24 @@ describe.each([
     await expect(run()).rejects.toEqual(notFound);
   });
 
-  it("cannot delete a question by pairing its ID with a paper of their own", async () => {
+  it("clearing the same place in a paper of their own leaves the owner's question", async () => {
     const own = await t.data.papers.create(who(), globalTemplateId, paperMeta());
-    await expect(t.data.papers.removeSlot(who(), own.id, slotId)).rejects.toEqual(notFound);
+    await t.data.papers.clearSlot(who(), own.id, testSlot());
     expect(await t.db.slot.count({ where: { id: slotId } })).toBe(1);
+  });
+
+  it("cannot put the owner's picture into a paper of their own by its hash", async () => {
+    const own = await t.data.papers.create(who(), globalTemplateId, paperMeta());
+    const content = {
+      type: "doc" as const,
+      content: [{ type: "image" as const, attrs: { sha256: SHA, ext: "png" as const } }],
+    };
+    await expect(
+      t.data.papers.saveSlot(who(), own.id, testSlot({ content })),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    await expect(
+      t.data.papers.saveSlot(who(), own.id, testSlot({ answerKey: content })),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 

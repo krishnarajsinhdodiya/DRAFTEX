@@ -29,8 +29,12 @@ export interface CheckableTemplate {
  * print (an emoji in a heading, an unknown {{placeholder}}). Such a template
  * would save, but no paper made from it could compile.
  */
-export function checkTemplateFields(t: CheckableTemplate): CheckResult {
-  const result = checkRules(t);
+/** `labHoursPerWeek`: a paper's course, for the practical duration rule (D18). */
+export function checkTemplateFields(
+  t: CheckableTemplate,
+  opts: { labHoursPerWeek?: number | null } = {},
+): CheckResult {
+  const result = checkRules(t, opts.labHoursPerWeek ?? null);
   // Structural errors come first; the serializer would only repeat them.
   if (result.errors.length > 0) return result;
   const ser = serializePaper(previewPaper(t));
@@ -44,7 +48,7 @@ export function checkTemplateFields(t: CheckableTemplate): CheckResult {
   };
 }
 
-function checkRules(t: CheckableTemplate): CheckResult {
+function checkRules(t: CheckableTemplate, labHoursPerWeek: number | null): CheckResult {
   const id = ruleSetIdFor(t.program);
   return checkTemplate(
     t.structure,
@@ -55,6 +59,7 @@ function checkRules(t: CheckableTemplate): CheckResult {
       credits: t.creditTier,
       durationMinutes: t.durationMinutes,
       maxMarks: t.maxMarks,
+      labHoursPerWeek,
     },
     id ? pciRuleSet() : null,
   );

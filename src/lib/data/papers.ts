@@ -5,11 +5,16 @@ import type { CompileKind, CompileStatus } from "@/generated/prisma/enums";
 import { BloomLevel, ExamKind, PaperStatus, Program } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import type { Db } from "@/lib/db/client";
-import { docSchema } from "@/lib/paper/schema";
+import { advancedSnippets, imageShas, onlyKnownSnippets } from "@/lib/paper/content";
+import { questionNumbers } from "@/lib/paper/numbering";
+import { type Doc, docSchema } from "@/lib/paper/schema";
+import { type PaperSnapshot, paperSnapshotSchema } from "@/lib/paper/snapshot";
 import type { Actor } from "./actor";
+import { assertOwnsAssets, headerUploads, shareAssets } from "./assets";
 import { writeAudit } from "./audit";
 import { parsePatch } from "./patch";
-import { ConflictError, NotFoundError, STALE_VERSION } from "./errors";
+import { ConflictError, ForbiddenError, NotFoundError, STALE_VERSION } from "./errors";
+import { storedFields } from "./templates";
 
 const WHAT = "Paper";
 /** SPEC §6: keep the last 20 compile jobs per paper. */
@@ -34,8 +39,18 @@ export type PaperMeta = z.input<typeof paperMetaSchema>;
 export const paperPatchSchema = paperMetaSchema.partial();
 export type PaperPatch = z.input<typeof paperPatchSchema>;
 
+export const slotPlaceSchema = z.object({
+  groupKey: key,
+  position: z.number().int().min(1).max(100),
+});
+export type SlotPlace = z.input<typeof slotPlaceSchema>;
+
+export const ADVANCED_NOT_ALLOWED =
+  "Advanced LaTeX is turned off for your account. Ask an administrator to allow it.";
+
 export const slotInputSchema = z.object({
-  partKey: key,
+  /** Optional: the part follows from the group in the paper's template. */
+  partKey: key.optional(),
   groupKey: key,
   position: z.number().int().min(1).max(100),
   content: docSchema,
@@ -73,6 +88,46 @@ export function papers(db: Db) {
     return p;
   }
 
+  /** The paper's own copy of its template; every slot is checked against it. */
+  function snapshotOf(p: { templateSnapshot: unknown }): PaperSnapshot {
+    return paperSnapshotSchema.parse(p.templateSnapshot);
+  }
+
+  /** The group at `place` in the snapshot, or "not found" for a place the paper does not have. */
+  function placeIn(snapshot: PaperSnapshot, place: SlotPlace) {
+    const part = snapshot.structure.parts.find((x) =>
+      x.groups.some((g) => g.key === place.groupKey),
+    );
+    const group = part?.groups.find((g) => g.key === place.groupKey);
+    if (!part || !group || place.position > group.slots) throw new NotFoundError("Question");
+    return { partKey: part.key, group };
+  }
+
+  function labelOf(snapshot: PaperSnapshot, groupKey: string): string {
+    const n = questionNumbers(snapshot.structure).find((x) => x.key === groupKey);
+    return n?.label ?? n?.printed[0] ?? groupKey;
+  }
+
+  async function slotAt(
+    paperId: string,
+    place: { partKey: string; groupKey: string; position: number },
+  ) {
+    return db.slot.findUnique({
+      where: {
+        paperId_partKey_groupKey_position: {
+          paperId,
+          partKey: place.partKey,
+          groupKey: place.groupKey,
+          position: place.position,
+        },
+      },
+    });
+  }
+
+  async function touch(paperId: string) {
+    await db.paper.update({ where: { id: paperId }, data: { updatedAt: new Date() } });
+  }
+
   async function checkCourse(courseId: string | null | undefined) {
     if (
       courseId &&
@@ -101,7 +156,11 @@ export function papers(db: Db) {
         },
       });
       if (!p) throw new NotFoundError(WHAT);
-      return p;
+      return {
+        ...p,
+        snapshot: snapshotOf(p),
+        slots: p.slots.map((x) => ({ ...x, content: docSchema.parse(x.content) as Doc })),
+      };
     },
 
     /** Starts a paper from a template the actor can see, keeping a snapshot of it. */
@@ -122,9 +181,10 @@ export function papers(db: Db) {
           instructionsOverride: nullableJson(m.instructionsOverride),
           ownerId: actor.userId,
           templateId: t.id,
-          templateSnapshot: json({ structure: t.structure, style: t.style, header: t.header }),
+          templateSnapshot: json(paperSnapshotSchema.parse(storedFields(t))),
         },
       });
+      await shareAssets(db, t.ownerId, actor.userId, headerUploads(storedFields(t).header));
       await writeAudit(db, {
         actorId: actor.userId,
         action: "create",
@@ -160,10 +220,32 @@ export function papers(db: Db) {
       await writeAudit(db, { actorId: actor.userId, action: "delete", entity: WHAT, entityId: id });
     },
 
-    /** Creates or replaces the slot at (part, group, position) of the actor's paper. */
+    /**
+     * Creates or replaces the question at (group, position). Pictures must be
+     * the actor's own uploads; Advanced LaTeX needs the admin's permission
+     * (a user whose permission was turned off may keep, but not add, blocks).
+     */
     async saveSlot(actor: Actor, paperId: string, input: SlotInput) {
-      await findOwn(actor, paperId);
+      const paper = await findOwn(actor, paperId);
       const s = slotInputSchema.parse(input);
+      const { partKey } = placeIn(snapshotOf(paper), s);
+      if (s.partKey !== undefined && s.partKey !== partKey) throw new NotFoundError("Question");
+      await assertOwnsAssets(db, actor.userId, [
+        ...imageShas(s.content),
+        ...(s.answerKey ? imageShas(s.answerKey) : []),
+      ]);
+      const snippets = advancedSnippets(s.content);
+      if (snippets.length > 0) {
+        const user = await db.user.findUnique({
+          where: { id: actor.userId },
+          select: { allowAdvancedLatex: true },
+        });
+        if (!user?.allowAdvancedLatex) {
+          const prev = await slotAt(paperId, { partKey, ...s });
+          const before = prev ? advancedSnippets(docSchema.parse(prev.content)) : [];
+          if (!onlyKnownSnippets(snippets, before)) throw new ForbiddenError(ADVANCED_NOT_ALLOWED);
+        }
+      }
       const data = {
         content: json(s.content),
         marks: s.marks,
@@ -175,28 +257,113 @@ export function papers(db: Db) {
         where: {
           paperId_partKey_groupKey_position: {
             paperId,
-            partKey: s.partKey,
+            partKey,
             groupKey: s.groupKey,
             position: s.position,
           },
         },
-        create: {
-          paperId,
-          partKey: s.partKey,
-          groupKey: s.groupKey,
-          position: s.position,
-          ...data,
-        },
+        create: { paperId, partKey, groupKey: s.groupKey, position: s.position, ...data },
         update: data,
       });
-      await db.paper.update({ where: { id: paperId }, data: { updatedAt: new Date() } });
+      await touch(paperId);
       return slot;
     },
 
-    async removeSlot(actor: Actor, paperId: string, slotId: string) {
-      await findOwn(actor, paperId);
-      const { count } = await db.slot.deleteMany({ where: { id: slotId, paperId } });
-      if (count === 0) throw new NotFoundError("Question");
+    /** Empties the question at (group, position). Clearing an empty one is fine. */
+    async clearSlot(actor: Actor, paperId: string, place: SlotPlace) {
+      const paper = await findOwn(actor, paperId);
+      const p = slotPlaceSchema.parse(place);
+      const { partKey } = placeIn(snapshotOf(paper), p);
+      await db.slot.deleteMany({ where: { paperId, partKey, ...p } });
+      await touch(paperId);
+    },
+
+    /**
+     * Moves a question to another place in the paper; whatever was there
+     * takes its old place. The marks follow the place, not the question.
+     */
+    async moveSlot(actor: Actor, paperId: string, from: SlotPlace, to: SlotPlace) {
+      const paper = await findOwn(actor, paperId);
+      const snapshot = snapshotOf(paper);
+      const a = slotPlaceSchema.parse(from);
+      const b = slotPlaceSchema.parse(to);
+      const pa = placeIn(snapshot, a);
+      const pb = placeIn(snapshot, b);
+      if (a.groupKey === b.groupKey && a.position === b.position) return;
+      const [sa, sb] = await Promise.all([
+        slotAt(paperId, { partKey: pa.partKey, ...a }),
+        slotAt(paperId, { partKey: pb.partKey, ...b }),
+      ]);
+      const moved = (row: typeof sa, at: typeof pa, place: typeof a) =>
+        row
+          ? [
+              db.slot.create({
+                data: {
+                  paperId,
+                  partKey: at.partKey,
+                  groupKey: place.groupKey,
+                  position: place.position,
+                  content: json(row.content),
+                  // Within a group a question keeps its marks; in another group it takes that group's.
+                  marks: row.groupKey === place.groupKey ? row.marks : at.group.marksEach,
+                  coTag: row.coTag,
+                  bloomLevel: row.bloomLevel,
+                  answerKey: nullableJson(row.answerKey),
+                  keyCriteria: nullableJson(row.keyCriteria),
+                },
+              }),
+            ]
+          : [];
+      await db.$transaction([
+        db.slot.deleteMany({ where: { id: { in: [sa?.id, sb?.id].filter(Boolean) as string[] } } }),
+        ...moved(sa, pb, b),
+        ...moved(sb, pa, a),
+      ]);
+      await touch(paperId);
+    },
+
+    /** Copies a question into the next empty place of its group; returns that place. */
+    async duplicateSlot(actor: Actor, paperId: string, place: SlotPlace) {
+      const paper = await findOwn(actor, paperId);
+      const snapshot = snapshotOf(paper);
+      const p = slotPlaceSchema.parse(place);
+      const { partKey, group } = placeIn(snapshot, p);
+      const src = await slotAt(paperId, { partKey, ...p });
+      if (!src) throw new NotFoundError("Question");
+      const taken = new Set(
+        (
+          await db.slot.findMany({
+            where: { paperId, groupKey: p.groupKey },
+            select: { position: true },
+          })
+        ).map((x) => x.position),
+      );
+      const order = [
+        ...Array.from({ length: group.slots - p.position }, (_, i) => p.position + 1 + i),
+        ...Array.from({ length: p.position - 1 }, (_, i) => i + 1),
+      ];
+      const free = order.find((n) => !taken.has(n));
+      if (free === undefined) {
+        throw new ConflictError(
+          `Every question in ${labelOf(snapshot, p.groupKey)} is written. Clear one first.`,
+        );
+      }
+      await db.slot.create({
+        data: {
+          paperId,
+          partKey,
+          groupKey: p.groupKey,
+          position: free,
+          content: json(src.content),
+          marks: src.marks,
+          coTag: src.coTag,
+          bloomLevel: src.bloomLevel,
+          answerKey: nullableJson(src.answerKey),
+          keyCriteria: nullableJson(src.keyCriteria),
+        },
+      });
+      await touch(paperId);
+      return { groupKey: p.groupKey, position: free };
     },
 
     /** Records a compile and keeps only the newest COMPILE_HISTORY jobs for the paper. */

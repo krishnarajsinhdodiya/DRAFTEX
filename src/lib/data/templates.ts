@@ -11,6 +11,7 @@ import { type TemplateFields, templateFieldsSchema } from "@/lib/templates/field
 import { checkTemplateFields, ruleSetIdFor } from "@/lib/templates/check";
 import type { Actor } from "./actor";
 import { writeAudit } from "./audit";
+import { assertOwnsAssets, headerUploads, shareAssets } from "./assets";
 import { parsePatch } from "./patch";
 import {
   ConflictError,
@@ -154,6 +155,7 @@ export function templates(db: Db) {
     async create(actor: Actor, input: TemplateFields) {
       const fields = templateFieldsSchema.parse(input);
       assertValid(fields);
+      await assertOwnsAssets(db, actor.userId, headerUploads(fields.header));
       const t = await db.template.create({
         data: {
           ...createData(fields),
@@ -180,6 +182,7 @@ export function templates(db: Db) {
       }
       const fields = parsePatch(templatePatchSchema, patch);
       assertValid({ ...storedFields(t), ...fields });
+      if (fields.header) await assertOwnsAssets(db, actor.userId, headerUploads(fields.header));
       const { count } = await db.template.updateMany({
         where: { id, ownerId: actor.userId, version, deletedAt: null },
         data: { ...toData(fields), version: { increment: 1 } },
@@ -194,6 +197,12 @@ export function templates(db: Db) {
       const src = await findVisible(actor, id);
       const merged = { ...storedFields(src), ...parsePatch(templatePatchSchema, overrides) };
       assertValid(merged);
+      // A replaced header may use the source's images or the copier's own uploads.
+      const fromSource = headerUploads(storedFields(src).header);
+      if (overrides.header) {
+        const extra = headerUploads(merged.header).filter((sha) => !fromSource.includes(sha));
+        await assertOwnsAssets(db, actor.userId, extra);
+      }
       const copy = await db.template.create({
         data: {
           ...createData(merged),
@@ -202,6 +211,12 @@ export function templates(db: Db) {
           derivedFromId: src.id,
         },
       });
+      await shareAssets(
+        db,
+        src.ownerId,
+        actor.userId,
+        headerUploads(merged.header).filter((sha) => fromSource.includes(sha)),
+      );
       await writeAudit(db, {
         actorId: actor.userId,
         action: "copy",
