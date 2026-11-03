@@ -74,8 +74,9 @@ export function Select({ label, name, defaultValue, options }: SelectProps) {
 }
 
 const buttonBase =
-  "inline-flex h-10 items-center justify-center rounded-md px-4 text-[15px] font-medium transition-colors " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60";
+  "inline-flex h-10 items-center justify-center gap-1.5 rounded-md px-4 text-[15px] font-medium " +
+  "transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 disabled:active:scale-100";
 
 export const buttonStyles = {
   primary: `${buttonBase} bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500`,

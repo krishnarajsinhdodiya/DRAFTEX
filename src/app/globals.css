@@ -14,3 +14,19 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Dialog: a short fade and settle from the centre (modals stay centred). */
+.dx-overlay,
+.dx-dialog {
+  transition-property: opacity, scale;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  @starting-style {
+    opacity: 0;
+  }
+}
+.dx-dialog {
+  @starting-style {
+    scale: 0.97;
+  }
+}
