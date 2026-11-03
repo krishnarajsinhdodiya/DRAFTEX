@@ -19,6 +19,7 @@ import {
   type TableNode,
 } from "../paper/schema.ts";
 import type { SlotRange } from "./compile.ts";
+import { type GroupNumbers, questionNumbers } from "../paper/numbering.ts";
 import { describeChar, escapeText, mapMathUnicode, type QuoteState } from "./escape.ts";
 import { sanitizeLatex, type SanitizeMode } from "./sanitize.ts";
 
@@ -270,7 +271,9 @@ const CANDIDATE: Record<Header["candidateField"], string> = {
   NONE: "",
 };
 
-function preamble(w: Writer, style: Style, header: Header): void {
+/** `widestOwnLabel`: escaped text of the widest per-question label, if any group numbers each question. */
+function preamble(w: Writer, style: Style, header: Header, widestOwnLabel?: string): void {
+  const numberEach = widestOwnLabel !== undefined;
   const g = style.geometry;
   w.line(`\\documentclass[${style.classSize}pt, a4paper]{exam}`);
   w.line(
@@ -329,12 +332,22 @@ function preamble(w: Writer, style: Style, header: Header): void {
     "\\makeatletter\\newcommand{\\dxKeepWithNext}{\\ifnum\\value{question}>0 \\@nobreaktrue\\fi}\\makeatother",
   );
   w.line(
-    "\\newcommand{\\dxGroupHeadAt}[4]{\\par\\vspace{#1}\\uplevel{\\vspace{0pt}\\noindent\\textbf{#3}\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil\\textbf{#4}\\parfillskip=0pt\\finalhyphendemerits=0\\par\\vspace{#2}}\\global\\dxQOffset=\\value{question}\\relax\\dxKeepWithNext}",
+    `\\newcommand{\\dxGroupHeadAt}[4]{${numberEach ? "\\global\\let\\dxLabel\\dxGroupLabel" : ""}\\par\\vspace{#1}\\uplevel{\\vspace{0pt}\\noindent\\textbf{#3}\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil\\textbf{#4}\\parfillskip=0pt\\finalhyphendemerits=0\\par\\vspace{#2}}\\global\\dxQOffset=\\value{question}\\relax\\dxKeepWithNext}`,
   );
   w.line(
     `\\newcommand{\\dxGroupHead}[2]{\\dxGroupHeadAt{${inch(s.beforeGroup)}}{${inch(s.afterGroupHead)}}{#1}{#2}}`,
   );
-  w.line("\\renewcommand{\\questionlabel}{\\the\\numexpr\\value{question}-\\dxQOffset\\relax.}");
+  if (numberEach) {
+    w.line("%% Groups that number each question set their own label (Q.6); others count from 1.");
+    w.line("\\newcommand{\\dxGroupLabel}{\\the\\numexpr\\value{question}-\\dxQOffset\\relax.}");
+    w.line("\\global\\let\\dxLabel\\dxGroupLabel");
+    w.line("\\renewcommand{\\questionlabel}{\\dxLabel}");
+    w.line("%% Every own label takes the width of the widest, so question texts line up.");
+    w.line(`\\newlength\\dxOwnW\\settowidth{\\dxOwnW}{\\textbf{${widestOwnLabel}}}`);
+    w.line("\\newcommand{\\dxOwnLabel}[1]{\\gdef\\dxLabel{\\makebox[\\dxOwnW][l]{\\textbf{#1}}}}");
+  } else {
+    w.line("\\renewcommand{\\questionlabel}{\\the\\numexpr\\value{question}-\\dxQOffset\\relax.}");
+  }
   // Inside `questions` a center environment would need an \item and \centering
   // is ignored by \uplevel, so the title is centred with \hfill on both sides.
   w.line(
@@ -347,6 +360,12 @@ function preamble(w: Writer, style: Style, header: Header): void {
   w.line(
     `\\newcommand{\\dxTail}[1]{{\\unskip\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil${tag}\\parfillskip=0pt\\finalhyphendemerits=0\\par}}`,
   );
+  if (numberEach) {
+    w.line("%% The same tail, unstyled: a question's own marks (bold) and CO tag.");
+    w.line(
+      "\\newcommand{\\dxTailRaw}[1]{{\\unskip\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil#1\\parfillskip=0pt\\finalhyphendemerits=0\\par}}",
+    );
+  }
   w.line("\\newcommand{\\dxBlank}[1][2.5cm]{\\rule{#1}{0.4pt}}");
   w.line("\\renewcommand{\\choicelabel}{\\thechoice.}");
 }
@@ -416,6 +435,21 @@ function slotTail(slot: Slot, group: Group, structure: Structure, style: Style):
   return bits.length ? `\\dxTail{${bits.join("\\quad ")}}` : "";
 }
 
+/** Tail of a question that carries its own number: CO tag, then its marks in bold. */
+function ownTail(slot: Slot | undefined, group: Group, structure: Structure, style: Style): string {
+  const bits: string[] = [];
+  if (group.showCoTag === "SLOT" && slot?.coTag) {
+    bits.push(
+      style.coTagStyle === "BOLD"
+        ? `\\textbf{[${slot.coTag}]}`
+        : `{\\footnotesize [${slot.coTag}]}`,
+    );
+  }
+  const style2 = structure.marksStyle === "MARKS_COLON" ? "BRACKETS" : structure.marksStyle;
+  bits.push(`\\textbf{${marksLabel(style2, slot?.marks ?? group.marksEach)}}`);
+  return `\\dxTailRaw{${bits.join("\\quad ")}}`;
+}
+
 function questionBody(slot: Slot, ctx: BlockContext, tail: string): string {
   const content = slot.content.content;
   // A tail belongs to the question text, before any choices block.
@@ -469,8 +503,18 @@ function serializeParsed(paper: Paper): SerializeResult {
   }
   if (issues.list.length) return { ok: false, issues: issues.list };
 
+  const numbers = new Map(questionNumbers(structure).map((n) => [n.key, n]));
+  const ownLabels = [...numbers.values()]
+    .filter((n) => n.numbering === "QUESTION")
+    .flatMap((n) => n.printed);
+  // Longest string stands in for widest: labels differ only in their digits.
+  const widest = ownLabels.reduce<string | undefined>(
+    (a, b) => (a === undefined || b.length > a.length ? b : a),
+    undefined,
+  );
+
   w.line("%% Generated by DRAFTEX. Edit the paper in the app, not this file.");
-  preamble(w, style, header);
+  preamble(w, style, header, widest === undefined ? undefined : text(widest, issues));
   w.line();
   w.line("\\begin{document}");
   if (style.body) w.line(`\\fontsize{${style.body.size}}{${style.body.leading}}\\selectfont`);
@@ -479,25 +523,30 @@ function serializeParsed(paper: Paper): SerializeResult {
   w.line();
   w.line("\\begin{questions}");
 
-  let groupNumber = 0;
   for (const part of structure.parts) {
     if (part.title) {
       w.line(`%% ---------- part ${part.key} ----------`);
       w.line(`\\dxPartHead{${text(part.title, issues)}}`);
     }
     for (const group of part.groups) {
-      groupNumber++;
-      const label = `${structure.numbering.prefix}${groupNumber}${structure.numbering.separator}`;
+      // Keys are unique (checked above), so every group has its numbers.
+      const num = numbers.get(group.key) as GroupNumbers;
+      const ownNumbers = group.numbering === "QUESTION";
       w.line(
-        `%% DX-GROUP id=${group.key} type=${group.type} slots=${group.slots} attempt=${group.attempt} marksEach=${formatMarks(group.marksEach)}`,
+        `%% DX-GROUP id=${group.key} type=${group.type} slots=${group.slots} attempt=${group.attempt} marksEach=${formatMarks(group.marksEach)}${ownNumbers ? " numbering=QUESTION" : ""}`,
       );
-      const head = `{${text(label, issues)} ${text(group.heading, issues)}}{${text(marksLabel(structure.marksStyle, group.attempt * group.marksEach), issues)}}`;
-      if (group.spaceBefore === undefined && group.spaceAfterHead === undefined) {
-        w.line(`\\dxGroupHead${head}`);
+      if (ownNumbers) {
+        // No heading line: each question carries its number and marks (Pharm.D style).
+        w.line(`\\par\\vspace{${inch(group.spaceBefore ?? style.spacing.beforeGroup)}}`);
       } else {
-        const before = inch(group.spaceBefore ?? style.spacing.beforeGroup);
-        const after = inch(group.spaceAfterHead ?? style.spacing.afterGroupHead);
-        w.line(`\\dxGroupHeadAt{${before}}{${after}}${head}`);
+        const head = `{${text(num.label as string, issues)} ${text(group.heading, issues)}}{${text(marksLabel(structure.marksStyle, group.attempt * group.marksEach), issues)}}`;
+        if (group.spaceBefore === undefined && group.spaceAfterHead === undefined) {
+          w.line(`\\dxGroupHead${head}`);
+        } else {
+          const before = inch(group.spaceBefore ?? style.spacing.beforeGroup);
+          const after = inch(group.spaceAfterHead ?? style.spacing.afterGroupHead);
+          w.line(`\\dxGroupHeadAt{${before}}{${after}}${head}`);
+        }
       }
       const ctx: BlockContext = {
         issues,
@@ -518,12 +567,18 @@ function serializeParsed(paper: Paper): SerializeResult {
         issues.slotId = slotId;
         const start = w.next;
         w.line(`  %% DX-SLOT ${slotId}`);
+        if (ownNumbers) w.line(`  \\dxOwnLabel{${text(num.printed[pos - 1] as string, issues)}}`);
+        const tail = ownNumbers
+          ? ownTail(slot, group, structure, style)
+          : slot
+            ? slotTail(slot, group, structure, style)
+            : "";
         if (!slot || !hasContent) {
-          w.line("  \\question \\textit{(Question not written yet)}");
+          w.line(`  \\question \\textit{(Question not written yet)}${ownNumbers ? tail : ""}`);
         } else {
           // Escaped text writes "[" as {[}, but Advanced LaTeX may start with a
           // bracket, which \question would read as its points argument.
-          const raw = questionBody(slot, ctx, slotTail(slot, group, structure, style));
+          const raw = questionBody(slot, ctx, tail);
           const body = guardBracket(raw);
           w.line(`  \\question ${body.split("\n").join("\n  ")}`);
         }

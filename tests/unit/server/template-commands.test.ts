@@ -201,12 +201,7 @@ describe("template views", () => {
     });
     const s = summary(b as NonNullable<typeof b>, other);
     expect(s).toMatchObject({ builtIn: true, mine: false, pci: "COMPLIANT" });
-    expect(s.facts).toEqual([
-      "B.Pharm",
-      "Theory",
-      "End-semester",
-      "4 credits",
-    ]);
+    expect(s.facts).toEqual(["B.Pharm", "Theory", "End-semester", "4 credits"]);
     expect([s.marks, s.duration]).toEqual(["60 marks", "3 hours"]);
     const legacy = (await t.data.templates.list(other, { search: "Legacy" }))[0];
     const d = detail(legacy as NonNullable<typeof legacy>, other);

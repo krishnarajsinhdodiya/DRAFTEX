@@ -66,6 +66,11 @@ export const CANDIDATE_LABEL: Record<Header["candidateField"], string> = {
   NONE: "None",
 };
 
+export const NUMBERING_LABEL: Record<NonNullable<Group["numbering"]>, string> = {
+  GROUP: "One number for the group (Q.2, then 1, 2, 3)",
+  QUESTION: "A number for each question (Q.6, Q.7 …)",
+};
+
 export const OBJECTIVE_LAYOUT_LABEL: Record<NonNullable<Group["objectiveLayout"]>, string> = {
   TWO_COLUMN: "Two columns",
   ONE_COLUMN: "One column",

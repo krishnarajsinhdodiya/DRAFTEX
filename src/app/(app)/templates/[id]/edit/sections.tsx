@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { buttonStyles } from "@/components/form";
 import { CourseKind, ExamKind, Program } from "@/generated/prisma/enums";
+import { questionNumbers } from "@/lib/paper/numbering";
 import type { Group } from "@/lib/paper/schema";
 import type { ParsedTemplateFields } from "@/lib/templates/fields";
 import {
@@ -15,6 +16,7 @@ import {
   EXAM_KIND_LABEL,
   GROUP_TYPE_LABEL,
   MARKS_STYLE_LABEL,
+  NUMBERING_LABEL,
   OBJECTIVE_LAYOUT_LABEL,
   PROGRAM_LABEL,
   durationText,
@@ -365,10 +367,16 @@ export function QuestionsSection({
 }) {
   const s = f.structure;
   const multi = s.parts.length > 1;
-  // Groups are numbered straight through the sections, as on the paper.
-  const firstNumber = s.parts.map((_, p) =>
-    s.parts.slice(0, p).reduce((n, part) => n + part.groups.length, 1),
-  );
+  // Numbers run straight through the sections, as on the paper.
+  const numbers = new Map(questionNumbers(s).map((n) => [n.key, n]));
+  const nameOf = (g: Group) => {
+    const n = numbers.get(g.key);
+    if (!n) return "";
+    if (n.label) return n.label;
+    const first = n.printed[0] ?? "";
+    const last = n.printed[n.printed.length - 1] ?? "";
+    return first === last ? first : `${first}–${last}`;
+  };
   return (
     <Section title="Questions" id="questions">
       <div className="grid grid-cols-2 gap-3">
@@ -432,7 +440,7 @@ export function QuestionsSection({
 
           <ol className="flex flex-col gap-3">
             {part.groups.map((g, gi) => {
-              const number = (firstNumber[p] ?? 1) + gi;
+              const name = nameOf(g);
               const path = `parts.${p}.groups.${gi}`;
               const problems = issuesAt(path);
               const set = (change: (x: Group) => void) =>
@@ -444,14 +452,13 @@ export function QuestionsSection({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-small font-semibold">
-                      {s.numbering.prefix}
-                      {number}
+                      {name}
                       <span className="ml-2 font-normal text-ink-2 tabular-nums">
                         {marksText(g.attempt * g.marksEach)} marks
                       </span>
                     </span>
                     <ItemTools
-                      name={`${s.numbering.prefix}${number}`}
+                      name={name}
                       index={gi}
                       count={part.groups.length}
                       minCount={1}
@@ -468,6 +475,11 @@ export function QuestionsSection({
                   </div>
                   <TextInput
                     label="Heading"
+                    hint={
+                      g.numbering === "QUESTION"
+                        ? "Not printed: each question shows its own number and marks."
+                        : undefined
+                    }
                     value={g.heading}
                     maxLength={300}
                     error={
@@ -519,6 +531,15 @@ export function QuestionsSection({
                       value={g.showCoTag}
                       options={opts(CO_TAG_LABEL)}
                       onChange={(v) => set((x) => void (x.showCoTag = v))}
+                    />
+                    <SelectInput
+                      className="col-span-2 sm:col-span-4"
+                      label="Numbering"
+                      value={g.numbering ?? "GROUP"}
+                      options={opts(NUMBERING_LABEL)}
+                      onChange={(v) =>
+                        set((x) => void (x.numbering = v === "GROUP" ? undefined : v))
+                      }
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">

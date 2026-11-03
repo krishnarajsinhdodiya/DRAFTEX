@@ -425,6 +425,80 @@ describe("serializePaper: template options", () => {
   });
 });
 
+describe("serializePaper: per-question numbering", () => {
+  const numbered = withTemplate((t) => {
+    const [g1, g2, g3] = t.structure.parts[0]!.groups;
+    (g2 as NonNullable<typeof g2>).numbering = "QUESTION";
+    (g3 as NonNullable<typeof g3>).numbering = "QUESTION";
+    void g1;
+  });
+
+  it("numbers each question on from the last group number, with bold marks and no heading", () => {
+    const r = ok(
+      serializePaper({
+        template: numbered,
+        meta: {},
+        emptySlots: "PLACEHOLDER",
+        slots: [
+          {
+            groupKey: "g2",
+            position: 2,
+            marks: 3,
+            coTag: "BP101T.02",
+            content: { type: "doc", content: [p("Explain it.")] },
+          },
+        ],
+      }),
+    );
+    // g1 keeps its group number (Q.1); g2 is Q.2–Q.8, g3 is Q.9–Q.11.
+    expect(r.tex).toContain("\\dxGroupHead{Q.1 ");
+    expect(r.tex).not.toContain("Answer the following questions (Any five)");
+    expect(r.tex).toContain("\\settowidth{\\dxOwnW}{\\textbf{Q.10}}");
+    expect(r.tex).toContain("\\dxOwnLabel{Q.2}");
+    expect(r.tex).toContain("\\dxOwnLabel{Q.11}");
+    expect(r.tex).toContain(
+      "\\question Explain it.\\dxTailRaw{{\\footnotesize [BP101T.02]}\\quad \\textbf{[3]}}",
+    );
+    expect(r.tex).toContain(
+      "\\question \\textit{(Question not written yet)}\\dxTailRaw{\\textbf{[4]}}",
+    );
+    // Group-numbered headings switch the label back.
+    expect(r.tex).toContain(
+      "\\newcommand{\\dxGroupHeadAt}[4]{\\global\\let\\dxLabel\\dxGroupLabel",
+    );
+  });
+
+  it("uses the group's marks style and bold CO tags, and keeps the plain label without own numbers", () => {
+    const bold = withTemplate((t) => {
+      t.structure.marksStyle = "PARENS";
+      t.style.coTagStyle = "BOLD";
+      const g = t.structure.parts[0]!.groups[2]!;
+      g.numbering = "QUESTION";
+      g.spaceBefore = 0.3;
+    });
+    const r = ok(
+      serializePaper({
+        template: bold,
+        meta: {},
+        emptySlots: "OMIT",
+        slots: [
+          {
+            groupKey: "g3",
+            position: 1,
+            coTag: "X.01",
+            content: { type: "doc", content: [p("A")] },
+          },
+        ],
+      }),
+    );
+    expect(r.tex).toContain("\\dxTailRaw{\\textbf{[X.01]}\\quad \\textbf{(10)}}");
+    expect(r.tex).toContain("\\par\\vspace{0.3in}");
+    const plain = ok(serializePaper(paperWith([p("x")])));
+    expect(plain.tex).not.toContain("dxOwnLabel");
+    expect(plain.tex).toContain("\\renewcommand{\\questionlabel}{\\the\\numexpr");
+  });
+});
+
 describe("serializePaper: errors", () => {
   it("reports invalid data with its path", () => {
     expect(issues(serializePaper({}))).toMatch(/Invalid paper data at template/);
