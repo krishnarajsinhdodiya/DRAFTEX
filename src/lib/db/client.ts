@@ -7,9 +7,16 @@ import { sqliteUrl } from "./url";
 
 export type Db = PrismaClient;
 
-/** Opens the database file, switching it to WAL and enforcing foreign keys. */
+/**
+ * Opens an existing database file (migrations create it; opening never does),
+ * switching it to WAL and enforcing foreign keys.
+ */
 export async function openDatabase(file: string): Promise<Db> {
-  const adapter = new PrismaBetterSqlite3({ url: sqliteUrl(file), timeout: 5_000 });
+  const adapter = new PrismaBetterSqlite3({
+    url: sqliteUrl(file),
+    timeout: 5_000,
+    fileMustExist: true,
+  });
   const db = new PrismaClient({ adapter });
   await db.$queryRawUnsafe("PRAGMA journal_mode = WAL");
   await db.$executeRawUnsafe("PRAGMA foreign_keys = ON");

@@ -194,7 +194,8 @@ export class CompileService {
     onlyCached: boolean,
     job: CompileJob,
   ): Promise<Omit<CompileResult, "usedNetwork" | "durationMs">> {
-    for (const f of ["paper.pdf", "paper.log"]) fs.rmSync(path.join(dir, f), { force: true });
+    for (const f of ["paper.pdf", "paper.log"])
+      fs.rmSync(path.join(/*turbopackIgnore: true*/ dir, f), { force: true });
     const res = await this.engine({
       workDir: dir,
       texFile: TEX_FILE,

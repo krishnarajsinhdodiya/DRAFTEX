@@ -136,7 +136,7 @@ export async function installTectonic(opts: InstallOptions): Promise<string> {
     const extracted = path.join(staging, "x");
     fs.mkdirSync(extracted);
     await execFileAsync(tarCommand(platform), ["-xf", archive, "-C", extracted]);
-    const binary = path.join(extracted, asset.binary);
+    const binary = path.join(/*turbopackIgnore: true*/ extracted, asset.binary);
     if (!fs.existsSync(binary)) {
       throw new TectonicSetupError(`The engine archive does not contain ${asset.binary}.`);
     }
