@@ -58,6 +58,16 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Gate 5 reference image = the owner's original `BP702T Apr 26.tex` compiled with the pinned Tectonic (D3) · no original PDF exists in reference_papers/
 - 2026-11-03 · Visual baselines (gate 4) are rendered by a CI ubuntu job and committed from its artifact (D4) · owner's Mac has no Docker; comparisons run on ubuntu only
 - 2026-11-03 · Goldens treat every LaTeX warning, including underfull boxes, as a failure; overfull boxes > 1 pt fail · strict reading of SPEC §10 gate 3
+- 2026-11-03 · Tectonic --untrusted blocks shell escape but still lets \input read absolute paths (verified with /etc/hosts); the allow-list sanitiser is the only barrier, so user text never reaches a file primitive unsanitised · security
+- 2026-11-03 · Tectonic runs XeTeX with Latin Modern OpenType by default (same look as CM). Text policy: LaTeX specials escaped, listed symbols/Greek mapped to LaTeX, Latin-1 + Latin Extended-A letters pass through, any other character is a named validation error · fuzz-tested (gate 6)
+- 2026-11-03 · Times (newtx) is not offered: under XeTeX it emits fontspec/font-size warnings on every compile, which breaks the zero-warning rule; only 2 of 56 reference sources use it · open question for a later phase
+- 2026-11-03 · fancyhdr clashes with exam.cls in the pinned bundle ("\lhead already defined"); the generator uses exam's own header/footer commands; warm-up loads fancyhdr in an article document · verified
+- 2026-11-03 · Package warm-up must touch every Latin Modern and CM maths design size (4.5-25 pt, all families/series/shapes), every class size and both date-row styles; runtime compiles run offline first and retry online once only on a cache miss · a single 11.7 pt warm-up left lmmono10 and cmmi10 uncached
+- 2026-11-03 · Phase 5 upload re-encoding must strip EXIF resolution data and ICC v4 profiles · xdvipdfmx warns on both (seen with sips-made fixtures)
+- 2026-11-03 · Group and part headings keep with the next question (\@nobreaktrue, not before the first question), their space-before sits outside exam's \uplevel box so it vanishes at a page top, and the box starts with zero glue · found by gate 5; regenerated reference still matches the hand-written one (0.14%/0.26%)
+- 2026-11-03 · Templates may set per-group spaceBefore/spaceAfterHead, negative spacing and header lines whose leading follows their size (ownLeading) · the hand-written papers space long/short groups differently and use unbraced \large
+- 2026-11-03 · Gate 5 passes locally: BP702T re-encoded into the legacy layout differs from the original by 2.11% / 1.42% / 0.78% (limit 3%); tuned values live in tests/golden/house-style.test.ts (layout only, no paper text); the original's fancyhdr lines are stripped before compiling it (they print nothing under \pagestyle{empty}) · owner approval of the fixture 2026-11-03
+- 2026-11-03 · Setup and other Node scripts are TypeScript run with Node 24 type stripping (`node scripts/x.ts`); modules they import use relative `.ts` imports, no `@/` alias, erasable syntax only (tsconfig allowImportingTsExtensions + erasableSyntaxOnly) · no tsx dependency
 
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
@@ -68,7 +78,8 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - tailwindcss 4.3.3 · @tailwindcss/postcss 4.3.3
 - vitest 5.1.0 · @vitest/coverage-v8 5.1.0 · @playwright/test 1.64.1 (Chromium headless shell 156.0.8078.4)
 - actions/checkout v7.0.1 (3d3c42e5) · actions/setup-node v7.1.0 (949feb24) · actions/upload-artifact v7.0.2 (cf430e03)
-- Planned, re-verify at phase start: @prisma/client + prisma 7.10.1 (CLI `latest` tag points at 8.0.0-rc.29: do not use) · @prisma/adapter-better-sqlite3 7.10.1 · better-sqlite3 12.11.1 (adapter needs ^12) · better-auth 1.7.15 · @node-rs/argon2 2.2.2 · zod 4.6.7 · @tiptap/* 3.32.2 · mathlive 0.111.4 · pdfjs-dist 6.5.438 · sharp 0.35.5 · @resvg/resvg-js 2.6.2 · pixelmatch 8.0.0 · pngjs 7.0.0 · lucide-react 1.66.0 · shadcn 4.23.0
+- Phase 1 (installed): zod 4.6.7 · pdfjs-dist 6.5.438 (dev for now; preview needs it in Phase 5) · @napi-rs/canvas 1.1.0 · pixelmatch 8.0.0 · pngjs 7.0.0 · @types/pngjs 6.0.5 · actions/cache v6.1.0 (55cc8345)
+- Planned, re-verify at phase start: @prisma/client + prisma 7.10.1 (CLI `latest` tag points at 8.0.0-rc.29: do not use) · @prisma/adapter-better-sqlite3 7.10.1 · better-sqlite3 12.11.1 (adapter needs ^12) · better-auth 1.7.15 · @node-rs/argon2 2.2.2 · @tiptap/* 3.32.2 · mathlive 0.111.4 · sharp 0.35.5 · @resvg/resvg-js 2.6.2 · lucide-react 1.66.0 · shadcn 4.23.0
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
