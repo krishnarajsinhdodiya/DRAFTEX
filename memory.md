@@ -154,6 +154,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-04 · The editor placeholder needs `.dx-question p.is-editor-empty:first-child::before` in globals.css; QuestionEditor takes a `placeholder` prop · the hint never showed in Phase 5 (found by the Phase 6 review)
 - 2026-11-04 · The restore e2e starts a second built server on port 3214 from an empty folder holding only `restore-pending.zip`, and runs `npm run restore` into a third folder · covers both restore paths (D28, D35) on macOS and Windows CI
 - 2026-11-04 · Delete backups: each row on the Backups screen has Delete (inline confirm, Cancel focused, extra warning for the only backup); any kind may be deleted; automatic pruning stays as D31 (daily only, newest 14) · owner chose a Delete button over pruning "before update" backups
+- 2026-11-04 · E2E specs that compile (papers, restore) allow 120 s per test, and an editor test waits for the first preview before clicking; a test's own waits must fit inside its budget · on windows-latest one preview took 24 s and broke a 30 s test (seen twice in CI, fixed at the cause)
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)

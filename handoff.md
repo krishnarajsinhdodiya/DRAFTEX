@@ -21,7 +21,7 @@ no chat history must be able to continue from this file alone.
 - fflate 0.8.3 added (only new dependency).
 - Tests: unit 710 (was 650), golden 40 + 22 visual on ubuntu (was 36 + 19), e2e 30 (was 22). Gate 9 complete: backup → restore on an empty data folder (both paths) → exported paper.tex/key.tex byte-identical, every PDF page 0 changed pixels. Gate 8 for key preview, export, duplicate and every backup route. Fuzz covers the key. Exported zip compiles standalone (golden).
 - `/apple-design` review and `/break-ui` pass on the new screens; findings fixed (see "Review findings").
-- After the phase (owner choice, `chore/delete-backups`): Delete on each backup row, with an inline confirm; admin-only, audited. Unit 712, e2e 30.
+- After the phase (owner choice, `chore/delete-backups`): Delete on each backup row, with an inline confirm; admin-only, audited. Unit 712, e2e 30. Two Windows-only e2e timing races fixed at the cause (a template test checked a badge before navigation finished; compile-heavy specs had waits longer than their 30 s budget).
 
 ## Review findings (all fixed unless marked)
 - Editor placeholder never rendered (no CSS) → fixed; the answer editor has its own hint.
