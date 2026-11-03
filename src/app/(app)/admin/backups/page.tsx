@@ -31,10 +31,11 @@ export default async function BackupsPage() {
         <h1 className={pageTitleStyles}>Backups</h1>
         <p className="max-w-prose text-ink-2">
           A backup holds every paper, answer key, template, picture and account. DRAFTEX makes one
-          every day and keeps the last 14 of those; backups you make yourself are kept until you
-          delete them. They are saved in <span className="break-all text-ink">{folder}</span>.
+          every day and keeps the last 14 of those. Other backups (made by hand, before an update or
+          before a restore) are never removed for you: delete old ones from the folder when you no
+          longer need them. They are saved in <span className="break-all text-ink">{folder}</span>.
         </p>
-        <FormAlert kind="notice">
+        <FormAlert kind="caution">
           Backups contain unreleased exam papers. Keep copies on a drive only you use, not in a
           shared or cloud-synced folder.
         </FormAlert>
@@ -83,9 +84,11 @@ export default async function BackupsPage() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.name} className="border-t border-rule">
-                    <td className="px-4 py-2.5 tabular-nums">{when.format(new Date(r.at))}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap tabular-nums">
+                      {when.format(new Date(r.at))}
+                    </td>
                     <td className="px-4 py-2.5 text-ink-2">{r.kind}</td>
-                    <td className="px-4 py-2.5 text-right text-ink-2 tabular-nums">
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap text-ink-2 tabular-nums">
                       {size(r.bytes)}
                     </td>
                     <td className="px-4 py-2.5 text-right">
@@ -105,7 +108,7 @@ export default async function BackupsPage() {
           </div>
         ) : (
           <p className="text-small text-ink-2">
-            No backups yet. The first daily backup is made shortly after DRAFTEX starts.
+            No backups yet. Make one now; DRAFTEX also makes one every day while it runs.
           </p>
         )}
       </section>

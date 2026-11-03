@@ -16,6 +16,8 @@ import {
   sessionToken,
   setSessionCookie,
 } from "./auth";
+import { autoBackupIfDue } from "@/lib/backup/run";
+import { backupContext } from "./backups";
 import type { FormState } from "./form-state";
 
 function text(fd: FormData, name: string): string {
@@ -76,6 +78,8 @@ export async function setupAction(_prev: FormState, fd: FormData): Promise<FormS
     await setSessionCookie(s.token);
     // The built-ins belong to the first administrator, who exists from now on.
     await (await getData()).system.syncBuiltInTemplates();
+    // The first daily backup, now that there is something to keep (D31).
+    void autoBackupIfDue(backupContext()).catch(() => {});
   } catch (e) {
     return failure(e, values);
   }
