@@ -144,6 +144,11 @@ export function getDataDir(): string {
   cached ??= resolveDataDir(defaultDeps());
   return cached.dir;
 }
+
+/** Same resolution as getDataDir, but never creates the default folder (Prisma CLI config). */
+export function peekDataDir(): string {
+  return resolveDataDir({ ...defaultDeps(), mkdir: () => {} }).dir;
+}
 /* v8 ignore stop */
 
 export interface DataPaths {

@@ -1,0 +1,12 @@
+import type { Role } from "@/generated/prisma/enums";
+import { ForbiddenError } from "./errors";
+
+/** The signed-in user a data-layer call acts for. Every scoped function takes one. */
+export interface Actor {
+  userId: string;
+  role: Role;
+}
+
+export function requireAdmin(actor: Actor): void {
+  if (actor.role !== "ADMIN") throw new ForbiddenError("Only an administrator can do this.");
+}

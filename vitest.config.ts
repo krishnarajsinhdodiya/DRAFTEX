@@ -20,6 +20,7 @@ export default defineConfig({
         "src/lib/latex/**": strictCoverage,
         "src/lib/rules/**": strictCoverage,
         "src/lib/auth/**": strictCoverage,
+        "src/lib/data/**": strictCoverage,
       },
     },
   },

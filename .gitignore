@@ -50,3 +50,6 @@ desktop.ini
 .vscode/
 .idea/
 *.swp
+
+# Generated Prisma client (npm run db:generate)
+/src/generated/

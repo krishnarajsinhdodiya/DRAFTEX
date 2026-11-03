@@ -1,0 +1,327 @@
+// DRAFTEX data model (SPEC §6). Model and field names are binding.
+// SQLite only in v1 (memory.md); keep to features Postgres also has.
+// Every read and write goes through src/lib/data, which enforces ownership.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  ADMIN
+  FACULTY
+}
+
+enum Program {
+  B_PHARM
+  M_PHARM
+  PHARM_D
+}
+
+enum ExamKind {
+  SESSIONAL_1
+  SESSIONAL_2
+  SESSIONAL_IMPROVEMENT
+  END_SEMESTER
+  YEAR_END
+  SUPPLEMENTARY_ATKT
+  PRACTICAL_SESSIONAL
+  PRACTICAL_END
+  SYNOPSIS
+  CUSTOM
+}
+
+enum CourseKind {
+  THEORY
+  PRACTICAL
+  PROJECT
+}
+
+enum Visibility {
+  PRIVATE
+  GLOBAL
+}
+
+enum PaperStatus {
+  DRAFT
+  FINAL
+}
+
+enum BloomLevel {
+  REMEMBER
+  UNDERSTAND
+  APPLY
+  ANALYZE
+  EVALUATE
+  CREATE
+}
+
+enum CompileKind {
+  PAPER
+  KEY
+}
+
+enum CompileStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  name               String
+  /// Stored lower-cased and trimmed.
+  email              String    @unique
+  passwordHash       String
+  role               Role      @default(FACULTY)
+  institution        String?
+  isActive           Boolean   @default(true)
+  /// Set when an admin chose the password; the user must replace it at next sign-in.
+  mustChangePassword Boolean   @default(false)
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  sessions        Session[]
+  invitesCreated  InviteCode[] @relation("InviteCreator")
+  invitesUsed     InviteCode[] @relation("InviteUser")
+  templates       Template[]
+  papers          Paper[]
+  assets          Asset[]
+  questions       Question[]
+  auditLogs       AuditLog[]
+}
+
+model Session {
+  /// SHA-256 (hex) of the token in the cookie; the token itself is never stored.
+  id        String   @id
+  userId    String
+  createdAt DateTime @default(now())
+  /// Idle expiry: moved forward while the session is used.
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model InviteCode {
+  /// SHA-256 (hex) of the code; the code is shown once and never stored.
+  id          String    @id
+  role        Role      @default(FACULTY)
+  createdById String
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedById    String?
+  revokedAt   DateTime?
+  /// Short label so the admin can tell invites apart, e.g. "for Dr Shah".
+  note        String?
+
+  createdBy User  @relation("InviteCreator", fields: [createdById], references: [id])
+  usedBy    User? @relation("InviteUser", fields: [usedById], references: [id])
+
+  @@index([createdById])
+}
+
+model Course {
+  id             String     @id @default(uuid())
+  code           String     @unique
+  title          String
+  program        Program
+  semesterOrYear Int
+  courseKind     CourseKind
+  credits        Float
+  lectureHrs     Int
+  tutorialHrs    Int
+  practicalHrs   Int
+  maxMarks       Int
+  sessionalMarks Int
+  endSemMarks    Int
+  endSemMinutes  Int
+  ruleSetId      String?
+
+  outcomes CourseOutcome[]
+  units    CourseUnit[]
+  papers   Paper[]
+}
+
+model CourseOutcome {
+  id       String @id @default(uuid())
+  courseId String
+  number   Int
+  text     String
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, number])
+}
+
+model CourseUnit {
+  id       String @id @default(uuid())
+  courseId String
+  number   Int
+  title    String
+  hours    Int
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, number])
+}
+
+model Template {
+  id              String     @id @default(uuid())
+  title           String
+  description     String     @default("")
+  ownerId         String
+  visibility      Visibility @default(PRIVATE)
+  /// Seed templates: global, read-only, shown as "Built-in".
+  builtIn         Boolean    @default(false)
+  program         Program
+  examKind        ExamKind
+  courseKind      CourseKind
+  creditTier      Int?
+  ruleSetId       String?
+  durationMinutes Int
+  maxMarks        Float
+  /// Zod-validated in src/lib/paper/schema.ts.
+  structure       Json
+  style           Json
+  header          Json
+  derivedFromId   String?
+  deletedAt       DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  version         Int        @default(1)
+
+  owner       User       @relation(fields: [ownerId], references: [id])
+  derivedFrom Template?  @relation("TemplateDerivation", fields: [derivedFromId], references: [id], onDelete: SetNull)
+  derived     Template[] @relation("TemplateDerivation")
+  papers      Paper[]
+
+  @@index([ownerId])
+  @@index([visibility, deletedAt])
+}
+
+model Paper {
+  id                   String      @id @default(uuid())
+  ownerId              String
+  templateId           String?
+  /// Copy of the template's structure, style and header when the paper was made.
+  templateSnapshot     Json
+  title                String
+  courseId             String?
+  courseCode           String
+  courseTitle          String
+  program              Program
+  semesterOrYear       Int
+  examKind             ExamKind
+  academicYear         String
+  examDate             DateTime?
+  instructionsOverride Json?
+  status               PaperStatus @default(DRAFT)
+  derivedFromPaperId   String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  version              Int         @default(1)
+
+  owner            User         @relation(fields: [ownerId], references: [id])
+  template         Template?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  course           Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  derivedFromPaper Paper?       @relation("PaperDerivation", fields: [derivedFromPaperId], references: [id], onDelete: SetNull)
+  derivedPapers    Paper[]      @relation("PaperDerivation")
+  slots            Slot[]
+  compileJobs      CompileJob[]
+
+  @@index([ownerId])
+  @@index([templateId])
+}
+
+model Slot {
+  id          String      @id @default(uuid())
+  paperId     String
+  partKey     String
+  groupKey    String
+  position    Int
+  /// TipTap JSON, validated by docSchema.
+  content     Json
+  marks       Float
+  coTag       String?
+  bloomLevel  BloomLevel?
+  answerKey   Json?
+  keyCriteria Json?
+  /// Future question bank (SPEC §14); always null in v1.
+  questionId  String?
+
+  paper    Paper     @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@unique([paperId, partKey, groupKey, position])
+}
+
+/// Future question bank (SPEC §14). Empty in v1.
+model Question {
+  id        String   @id @default(uuid())
+  ownerId   String
+  createdAt DateTime @default(now())
+
+  owner User   @relation(fields: [ownerId], references: [id])
+  slots Slot[]
+
+  @@index([ownerId])
+}
+
+/// One row per owner and file; the file itself is stored once as assets/<sha256>.<ext>.
+model Asset {
+  sha256       String
+  ownerId      String
+  mime         String
+  bytes        Int
+  width        Int?
+  height       Int?
+  originalName String
+  createdAt    DateTime @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id])
+
+  @@id([ownerId, sha256])
+  @@index([sha256])
+}
+
+model CompileJob {
+  /// Increasing, so "newest 20" is exact even when two jobs share a millisecond.
+  id           Int           @id @default(autoincrement())
+  paperId      String
+  kind         CompileKind
+  status       CompileStatus
+  durationMs   Int?
+  errorSummary String?
+  createdAt    DateTime      @default(now())
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId, createdAt])
+}
+
+model AuditLog {
+  id       String   @id @default(uuid())
+  /// Null for events with no signed-in actor (e.g. a failed sign-in).
+  actorId  String?
+  action   String
+  entity   String
+  entityId String?
+  at       DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([at])
+}
