@@ -151,7 +151,17 @@ export function Builder({
     setSaving(true);
     setSaveError(null);
     const snapshot = JSON.stringify(fields);
-    const r = await saveTemplateAction(id, version, parsed.data);
+    let r: Awaited<ReturnType<typeof saveTemplateAction>>;
+    try {
+      r = await saveTemplateAction(id, version, parsed.data);
+    } catch {
+      // The server is not reachable (stopped, or the network dropped). Nothing is lost.
+      r = {
+        ok: false,
+        message:
+          "DRAFTEX is not reachable, so nothing was saved. Your changes are still here; try again.",
+      };
+    }
     setSaving(false);
     if (r.ok) {
       setVersion(r.value);

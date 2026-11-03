@@ -17,8 +17,12 @@ function useCommand() {
   const run = (fn: () => Promise<CommandResult<unknown> | undefined>) =>
     start(async () => {
       setError(null);
-      const r = await fn();
-      if (r && !r.ok) setError(r.message);
+      try {
+        const r = await fn();
+        if (r && !r.ok) setError(r.message);
+      } catch {
+        setError("DRAFTEX is not reachable. Check that it is still running, then try again.");
+      }
     });
   return { pending, error, run };
 }

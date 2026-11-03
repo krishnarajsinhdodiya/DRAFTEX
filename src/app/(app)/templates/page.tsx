@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { z } from "zod";
 import { Badge, PciBadge } from "@/components/badge";
-import { FormAlert, buttonStyles } from "@/components/form";
+import { FormAlert } from "@/components/form";
+import { buttonStyles } from "@/components/styles";
 import { ExamKind, Program } from "@/generated/prisma/enums";
 import { actorOf } from "@/lib/auth/service";
 import { getData } from "@/lib/data";

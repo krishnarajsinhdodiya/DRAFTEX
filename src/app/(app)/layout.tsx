@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { buttonStyles } from "@/components/form";
+import { buttonStyles } from "@/components/styles";
 import { appInfo } from "@/lib/app-info";
 import { signOutAction } from "@/server/actions";
 import { requireUser } from "@/server/auth";
@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 dark:border-neutral-800">
-        <div className="flex h-14 items-center gap-6 px-6">
+        <div className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2">
           <Link href="/" className="text-sm font-semibold tracking-wide">
             {appInfo.name}
           </Link>

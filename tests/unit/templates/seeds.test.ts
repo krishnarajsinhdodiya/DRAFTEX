@@ -62,6 +62,21 @@ describe("built-in templates", () => {
     for (const w of r.warnings) expect(w.page).toBeDefined();
   });
 
+  it("text the paper cannot print blocks saving, after the structural errors", () => {
+    const base = byKey("blank") as NonNullable<ReturnType<typeof byKey>>;
+    const emoji = structuredClone(base);
+    (emoji.structure.parts[0]?.groups[0] as { heading: string }).heading = "Answer these 🧪.";
+    expect(checkTemplateFields(emoji).errors).toEqual([
+      expect.objectContaining({
+        code: "UNPRINTABLE_TEXT",
+        message: expect.stringContaining("cannot be printed"),
+      }),
+    ]);
+    const both = structuredClone(emoji);
+    both.maxMarks = 99;
+    expect(checkTemplateFields(both).errors.map((e) => e.code)).toEqual(["TOTAL_MISMATCH"]);
+  });
+
   it.each(parsed)("$seedKey serialises as an empty preview", ({ fields }) => {
     const ser = serializePaper(previewPaper(fields));
     expect(ser.ok ? [] : ser.issues).toEqual([]);

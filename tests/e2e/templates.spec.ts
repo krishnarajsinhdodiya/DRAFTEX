@@ -35,6 +35,12 @@ test("the library lists every built-in with its PCI status and filters", async (
   ).toBeVisible();
   await expect(page.getByRole("link", { name: /Pharm\.D/ }).getByText("No rule set")).toBeVisible();
 
+  // Server pages get their button styles (a client-module import once gave them none).
+  const border = await page
+    .getByRole("button", { name: "Show" })
+    .evaluate((el) => getComputedStyle(el).borderTopWidth);
+  expect(border).toBe("1px");
+
   await page.getByLabel("Search").fill("Pharm.D");
   await page.getByRole("button", { name: "Show" }).click();
   await expect(page.getByText("1 template", { exact: true })).toBeVisible();

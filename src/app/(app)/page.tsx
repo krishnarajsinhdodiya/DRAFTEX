@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { FormAlert, buttonStyles } from "@/components/form";
+import { FormAlert } from "@/components/form";
+import { buttonStyles } from "@/components/styles";
 import { requireUser } from "@/server/auth";
 
 export default async function HomePage({

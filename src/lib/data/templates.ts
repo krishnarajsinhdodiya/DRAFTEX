@@ -122,7 +122,10 @@ function scopeWhere(actor: Actor, scope: TemplateScope): Prisma.TemplateWhereInp
 
 export function templates(db: Db) {
   async function findVisible(actor: Actor, id: string) {
-    const t = await db.template.findFirst({ where: { id, ...visibleTo(actor) } });
+    const t = await db.template.findFirst({
+      where: { id, ...visibleTo(actor) },
+      include: { owner: { select: { name: true } } },
+    });
     if (!t) throw new NotFoundError(WHAT);
     return t;
   }
