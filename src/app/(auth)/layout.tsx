@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { appInfo } from "@/lib/app-info";
+import { appInfo, creditLine } from "@/lib/app-info";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -8,6 +8,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         {appInfo.name}
       </p>
       {children}
+      <p className="text-caption text-ink-3">{creditLine}</p>
     </main>
   );
 }

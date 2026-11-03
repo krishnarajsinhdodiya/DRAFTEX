@@ -215,7 +215,7 @@ export function Builder({
         : "No changes";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-3.5rem-1px)] lg:flex-none">
+    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-3.5rem-2rem-2px)] lg:flex-none">
       <div className="flex flex-wrap items-center gap-3 border-b border-rule bg-surface px-6 py-3">
         <Link href={`/templates/${id}`} className={`${linkStyles} text-small`}>
           ← Back to the template

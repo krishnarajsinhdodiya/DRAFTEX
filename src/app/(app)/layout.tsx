@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { NavLink } from "@/components/nav-link";
 import { buttonStyles } from "@/components/styles";
-import { appInfo } from "@/lib/app-info";
+import { appInfo, creditLine } from "@/lib/app-info";
 import { signOutAction } from "@/server/actions";
 import { requireUser } from "@/server/auth";
 
@@ -37,6 +37,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="flex w-full flex-1 flex-col">{children}</main>
+      <footer className="flex h-8 items-center border-t border-rule px-6 text-caption text-ink-3">
+        {creditLine}
+      </footer>
     </div>
   );
 }
