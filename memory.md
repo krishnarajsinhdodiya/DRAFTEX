@@ -37,7 +37,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Node 24 LTS (24.22.2), not 22 · Node 22 EOL 2027-04-30; 24 supported to 2028-04-30; 26 is too new for native-module prebuilds
 - 2026-11-03 · Runtime compile warnings become notes on the slot and the PDF is still produced; golden tests stay zero-warning · a long chemical name must not block an exam paper
 - 2026-11-03 · Templates own font size, geometry and a "show marks per question" option; CO tag default is slot-level · reference papers vary (see facts above)
-- 2026-11-03 · Tectonic bundle pinned by explicit URL + checksum or a vendored copy (Phase 1) · default relay URL can change contents and break visual baselines
+- 2026-11-03 · Tectonic bundle pinned by explicit URL + checksum or a vendored copy (Phase 1) · default relay URL can change contents and break visual baselines [SUPERSEDED 2026-11-03 → see "Bundle pin (D1)"]
 - 2026-11-03 · Visual regression compares PNGs on ubuntu only; windows verifies clean compile · PDF rasterising differs by OS
 - 2026-11-03 · Serialiser fuzz compiles ~50 strings per document and bisects on failure · 1,000 separate compiles is too slow for CI
 - 2026-11-03 · Password hashing: argon2id via @node-rs/argon2 plugged into Better Auth · Better Auth defaults to scrypt; @node-rs ships prebuilt binaries (no node-gyp on Windows)
@@ -53,6 +53,11 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Rules files tracked: the operating-rules file and START_HERE.md are committed and exempt from the no-tool-mention rule (exemption written in the rules file §4); the local tool-settings folder stays git-ignored · owner decision
 - 2026-11-03 · Gate 5 fixture approved: `BP702T Apr 26.tex` may be used for the local-only house-style fidelity test; it is never committed and never copied into tracked files · owner approval by filename in chat
 - 2026-11-03 · After each merge to `main`, the merged branch is deleted locally and on GitHub; between-phase fixes use short-lived `chore/` or `fix/` branches · owner requirement (operating rules §4, §8; SPEC §13)
+- 2026-11-03 · Bundle pin (D1): Tectonic gets `--bundle https://data1b.fullyjustified.net/tlextras-2022.0r0.tar` (the target of the relay's `default_bundle_v33.tar` redirect; format 33, TeX Live 2022) and the app checks the bundle's internal SHA256SUM `6ffe055852f8faf66c0acbe1a7fb27f87b869a90bad1204f3bf4d9683f597c7c` before use; a mismatch is a hard failure. Not vendored · the relay is only a 302, the archive is 2.9 GB and was re-uploaded 2026-08-26; a self-hosted minimal bundle is an open question for Phase 8
+- 2026-11-03 · pdflatex fallback deferred to Phase 8 (D2); Phase 1 ships one engine interface with Tectonic only · no TeX Live on the Mac or CI runners, so the path could not be tested
+- 2026-11-03 · Gate 5 reference image = the owner's original `BP702T Apr 26.tex` compiled with the pinned Tectonic (D3) · no original PDF exists in reference_papers/
+- 2026-11-03 · Visual baselines (gate 4) are rendered by a CI ubuntu job and committed from its artifact (D4) · owner's Mac has no Docker; comparisons run on ubuntu only
+- 2026-11-03 · Goldens treat every LaTeX warning, including underfull boxes, as a failure; overfull boxes > 1 pt fail · strict reading of SPEC §10 gate 3
 
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
