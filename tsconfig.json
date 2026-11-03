@@ -13,6 +13,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
     "jsx": "react-jsx",
@@ -30,7 +32,8 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "*.ts",
-    "*.mts"
+    "*.mts",
+    "scripts/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

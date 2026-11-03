@@ -5,64 +5,77 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-03
-- **Current phase:** 0 Bootstrap: done. Next: Phase 1 LaTeX core.
-- **Branch:** `main` only (Phase 0 merged with `--no-ff` and tagged `v0.0.0`; `phase/0-bootstrap` deleted locally and on GitHub; post-phase fixes merged from `chore/track-rules-files`, also deleted)
-- **Last green commit:** latest `main` (CI green on ubuntu, windows and commit-hygiene)
-- **CI:** GitHub Actions `CI` workflow: `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, all green
-- **Repo:** github.com/krishnarajsinhdodiya/DRAFTEX, verified **private** on 2026-11-03
+- **Current phase:** 1 LaTeX core: done. Next: Phase 2 Data + auth.
+- **Branch:** `main` only (Phase 1 merged with `--no-ff` from `phase/1-latex-core`, tagged `v0.1.0`; the phase branch is deleted locally and on GitHub)
+- **Last green commit:** latest `main`
+- **CI:** `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, all green. Each OS job now also installs Tectonic, warms the cache (restored by `actions/cache`) and runs `npm run test:golden`.
 
-## Done this session
-- Reviewed SPEC, PCI rules, reference template and reference papers (structure only). The owner accepted every recommendation; all are logged in `memory.md` → Decisions.
-- `.gitignore` + `.gitattributes` (LF everywhere; CRLF for .ps1/.bat/.cmd) as the root commit on `main`.
-- Commit hygiene: `scripts/commit-hygiene.mjs` holds the rules (forbidden-text regex exactly as the owner specified; author and committer must be the owner). `.githooks/commit-msg` (Node, CommonJS pinned via `.githooks/package.json`) calls it; `git config core.hooksPath .githooks` is set locally. CI job `commit-hygiene` runs `--range <sha>` over all history.
-  - Verified live: a commit with a co-author trailer is refused, and the hook also refused one of this session's own messages that quoted the trailer name.
-- After Phase 0: the operating-rules file and START_HERE.md are now tracked (exemption in its §4); branch-deletion rule added to its §4/§8 and SPEC §13; runtime-data ignore patterns anchored to the repo root so `src/lib/data/` is not ignored.
-- Tool attribution switched off in the local, git-ignored tool settings (empty commit/pr text, session link off; the boolean `false` form needs a newer tool version than the installed one).
-- Scaffold: Next.js 16 App Router, TypeScript strict (`noUncheckedIndexedAccess`, `noImplicitOverride`), ESLint 10 flat config (next core-web-vitals + typescript), Prettier, Tailwind 4, Vitest 5 with coverage thresholds for `src/lib/{latex,rules,auth}/**` (inert until those dirs exist), Playwright smoke test against `next start` on 127.0.0.1:3210.
-- Node 24.22.2 installed on the Mac via Homebrew as a keg-only package; the system default is still Node 22. Use `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands (or `brew link --overwrite node@24`).
-- Gates run locally and in CI (ubuntu + windows): format:check, lint (0 warnings), typecheck, unit (22 tests), build, e2e (2 tests).
+## Done this session (Phase 1)
+- Approved deviations D1–D4 logged in `memory.md`: bundle pinned by direct archive URL + digest; pdflatex fallback deferred to Phase 8; gate 5 reference compiled from the original source; visual baselines come from CI ubuntu.
+- `src/lib/paths.ts`: data folder resolved from `DRAFTEX_DATA_DIR` → `draftex.local.json` → `~/DRAFTEX-data`. A configured folder that is missing is an error and nothing gets created. `draftex.local.example.json` added. 100% covered.
+- `src/lib/latex/`:
+  - `pins.ts`: Tectonic 0.17.0 assets + SHA-256; bundle URL and digest.
+  - `tectonic.ts`: download, verify and install (system tar; `System32\tar.exe` on Windows); install marker; upstream bundle digest read by HTTP range request; offline cache check.
+  - `engine.ts`: `execFile` with `--untrusted --keep-logs --bundle <pin> [--only-cached]`, minimal environment.
+  - `compile.ts`: temp folder per job under `os.tmpdir()/DRAFTEX/<user>/<job>`, FIFO queue (2 at a time), per-user rate limit, 20 s and 20 MB limits, cleanup in `finally` plus `sweep()`. Compiles offline first and retry online once on a cache miss. `supersedeKey` lets a newer compile cancel a queued older one; diagnostics map to slots by line.
+  - `log.ts`: parses stderr (`file:line`, `caused by:`) and the .log (LaTeX/package warnings, missing characters). `goldenFailures` allows only overfull boxes of 1 pt or less.
+  - `sanitize.ts`: allow-list for maths and Advanced LaTeX (gate 7).
+  - `escape.ts` + `serialize.ts`: paper JSON → house-style LaTeX (single `questions` env, `\dxGroupHead`/`\dxGroupHeadAt`, `\dxQOffset`, `%% DX-SLOT` markers, parts, KSV/KBIPER headers, logo, CO tags and marks via `\dxTail`).
+  - `warmup.ts`: warm-up documents (packages, fancyhdr in article, every font size, papers for every class size).
+- `src/lib/paper/schema.ts`: Zod schemas for template structure/header/style and TipTap-shaped slot content. Phase 4/5 should reuse them.
+- `scripts/setup-tectonic.ts` (`npm run setup:tectonic [-- --skip-remote-check]`): installs into `<dataDir>/tools`, checks the bundle digest, warms online, verifies the cache came from the pinned bundle, recompiles offline. Already run on the owner's Mac (`/Volumes/DRAFTEX/DRAFTEX-data/tools`).
+- Tests: 246 unit tests (src/lib/latex 99.6% lines / ~96.6% branches). `npm run test:golden` covers:
+  - gate 3: 7 compiles with zero warnings, offline;
+  - gate 4: baselines in `tests/golden/baselines/`, compared on Linux only;
+  - phase exit check: regenerated vs hand-written reference at 0.139% / 0.259% (limit 0.5%);
+  - gate 6: fuzz, 809 compiled + 191 refused out of 1,000, plus a self-check of the detector;
+  - gate 5: local only.
+- Gate 5 (local, `tests/golden/house-style.test.ts`): BP702T re-encoded into the legacy layout differs from the original by **2.11% / 1.42% / 0.78%** (limit 3%). Paper text is read at test time only; renders go to `$TMPDIR/draftex-gate5`. Verified that no paper text is in any tracked file.
+- Serialiser bugs found and fixed while tuning against the real paper:
+  - group headings could be orphaned at the bottom of a page;
+  - space before a heading survived at the top of a page;
+  - lengths were rounded to 2 decimals;
+  - part titles were not centred;
+  - a logo header touched the date row;
+  - a long group heading ran into its marks.
+- Visual baselines (13 pages, 1.8 MB) rendered by CI ubuntu run 41582044094 and reviewed before commit. Final CI run 41582467802 is green on all three jobs, and the ubuntu baseline comparisons ran (not skipped).
 
 ## In progress
 - Nothing half-done.
 
-## Next steps (Phase 1, LaTeX core; follow SPEC §13 and memory.md decisions)
-1. Session start per the owner's operating rules; branch `phase/1-latex-core` from `main`.
-2. Tectonic manager: download 0.17.0 per OS, verify the SHA-256 values recorded in memory.md, store it under `<dataDir>/tools/`. Pin the bundle explicitly (URL `https://relay.fullyjustified.net/default_bundle_v<N>.tar` + checksum, or a vendored copy); confirm the format version from Tectonic's source before pinning.
-3. Compile service: `execFile` with an argument array, `--untrusted`, fresh temp dir per job, 20 s limit, FIFO queue (2 concurrent), cleanup in `finally` + startup sweep.
-4. Sanitiser (allow-list) + tests for every forbidden primitive and obfuscated form (gate 7).
-5. Serialiser from paper JSON → LaTeX reproducing the reference template structure (`\dxGroupHead`, `\dxQOffset`, single `questions` env); template-level font size/geometry/per-question-marks options; slot-level CO tags.
-6. Golden compile tests (gate 3) and visual regression on ubuntu only (gate 4); fuzz 1,000 strings in batches of ~50 per document (gate 6).
-7. Gate 5 runs **locally only**. The owner approved `reference_papers/…/BP702T Apr 26.tex` as the fixture source (2026-11-03). Build the fixture under a git-ignored path, record the result here, never commit it or copy its text.
-8. Add `src/lib/paths.ts` per memory.md "Data dir outside repo": order `DRAFTEX_DATA_DIR` → `dataDir` in `<repo>/draftex.local.json` (Zod-validated; repo root found from the module location, not `process.cwd()`) → default `%USERPROFILE%\DRAFTEX-data` / `~/DRAFTEX-data` via `os.homedir()`. A configured-but-missing path throws a plain-English error and creates nothing. Unit-test every branch on mac and Windows; add `draftex.local.example.json`. Compile temp dirs stay under the OS temp folder per SPEC §9.
-9. Add `tectonic` caching to CI (`actions/cache`, pinned SHA) so goldens don't refetch packages each run.
+## Next steps (Phase 2, Data + auth; follow SPEC §13 and memory.md)
+1. Session start per the operating rules; branch `phase/2-data-auth` from `main`.
+2. Re-verify the planned versions (prisma/@prisma/client 7.10.1, never the `latest` tag, which points at 8.0.0-rc; adapter-better-sqlite3; better-sqlite3 12.x; better-auth; @node-rs/argon2). npm 11.19 blocks install scripts: run `npm install-scripts approve <pkg>` for native deps and confirm it works in CI on both OSes first.
+3. Prisma schema per SPEC §6 (SQLite, WAL), the database at `dataPaths(getDataDir()).database`; migrations; one data-access layer that enforces ownership; gate 8 authorization tests; first-run admin; invites; sessions; rate limits; admin bootstrap e2e.
+4. The paper editor's slot content must keep validating with `docSchema` / `validateSlotContent` from Phase 1. Store `templateSnapshot` using `templateSchema`.
+5. When the app starts (Phase 2+), call `CompileService.sweep()` once, and treat `DataDirError` as a plain-English startup failure.
 
 ## Failing tests
 - None.
 
 ## Blockers / risks
-- npm 11.19 blocks dependency install scripts unless approved. Phase 1/2 native deps (better-sqlite3, sharp, @node-rs/argon2) need `npm install-scripts approve <pkg>`, and that approval must also work in CI on both OSes. Check this first when adding them.
-- The Prisma CLI's npm `latest` tag points at 8.0.0-rc.29 (a release candidate). Always install `prisma@7.10.1` explicitly.
-- `eslint-config-next` pulls three plugins whose peer range stops at ESLint 9; `package.json` `overrides` force ESLint 10. Re-check when eslint-config-next updates, and drop the overrides once peers include 10.
-- GitHub will move `ubuntu-latest` to Ubuntu 26 (notice in the CI log). Watch Playwright `--with-deps` after the switch.
-- The original prompt pack in `~/Downloads` is gone; git is now the only copy of the operating rules, START_HERE.md, SPEC and the rules. Repo copies are authoritative.
-- Data lives outside the repo (default `~/DRAFTEX-data`). The pointer file `draftex.local.json` is git-ignored, so a fresh clone falls back to the default: Phase 8 install/update scripts must preserve or recreate it, and the startup check must never mistake a missing configured folder for a first run.
-- `next` collects anonymous telemetry by default; CI disables it via env. The Phase 8 installer must run `next telemetry disable` on the faculty laptop.
+- Bundle host: if `data1b.fullyjustified.net` disappears, fresh installs cannot warm up (installed machines keep working offline). Open question for Phase 8: self-host a minimal bundle.
+- Times font (newtx) is not offered; two reference sources use it. Needs a warning-free XeTeX setup later.
+- `--untrusted` still allows `\input` of absolute paths: never add a code path where user text skips `sanitizeLatex`/`escapeText`.
+- Upload re-encoding (Phase 5) must strip EXIF resolution data and ICC v4 profiles, or xdvipdfmx warns.
+- First warm-up downloads for about 3 minutes (the fonts document is about 60 s). The Phase 8 installer must run `npm run setup:tectonic` and must show progress.
+- Carried over: npm install-script approvals for native deps; Prisma `latest` tag is an RC; ESLint 10 `overrides` for three plugins; `ubuntu-latest` moving to Ubuntu 26; `next telemetry disable` in the installer.
+- A visual baseline changes only in a commit that says why. Get new ones from the `golden-ubuntu-latest` artifact (rendered automatically when the Linux golden step fails) and review them before committing.
 
 ## Decisions made (copied to memory.md)
-- All accepted review items: local-only gate 5, SQLite-only v1, data dir in `%LOCALAPPDATA%`, Node 24, runtime warnings as notes, per-template style options, slot-level CO tags, pinned Tectonic bundle, ubuntu-only visual diffs, batched fuzz, argon2id via @node-rs/argon2, root commit on `main`, neutral template date.
-- Toolchain: TypeScript 6.0.3, ESLint 10 + overrides, Actions pinned to SHAs, Prettier never touches owner docs.
-- The local operating-rules file, START_HERE.md and the local tool-settings folder are git-ignored (kept on the owner's disk).
+- D1–D4 as above; Tectonic is XeTeX + Latin Modern, with the Unicode policy recorded in memory.md; Times dropped for now; fancyhdr warmed in an article document; warm-up covers every font design size; headings keep with the next question; per-group spacing and `ownLeading` header lines; scripts are TypeScript run with Node type stripping.
 
 ## Machine setup (owner's Mac)
-- Data folder: `/Volumes/DRAFTEX/DRAFTEX-data` (exists, empty). Pointer: `draftex.local.json` in the repo root (git-ignored) with `{"dataDir": "/Volumes/DRAFTEX/DRAFTEX-data"}`. Phase 1 `paths.ts` must honour it; do not recreate or overwrite the file.
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). It now holds `tools/tectonic/` and `tools/tectonic-cache/` (about 60 MB).
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands.
+- `npm run test:golden` needs `npm run setup:tectonic` to have run once.
 
 ## Questions for owner
-- None open. (Answered 2026-11-03: data folder outside the repo at `~/DRAFTEX-data` by default, movable via `draftex.local.json`; gate 5 fixture `BP702T Apr 26.tex` approved for local use.)
+- None blocking. Later: should the app offer Times at all (two of your papers use it), given that it needs extra work to compile without warnings?
 
 ## Phase checklist
 - [x] 0 Bootstrap
-- [ ] 1 LaTeX core
+- [x] 1 LaTeX core
 - [ ] 2 Data + auth
 - [ ] 3 Rules + course catalogue
 - [ ] 4 Template library + builder

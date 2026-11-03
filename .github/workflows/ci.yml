@@ -49,6 +49,32 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Create the data folder
+        run: node scripts/ci-data-dir.mjs
+      - name: Cache the LaTeX engine and package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/draftex-data/tools
+          key: tectonic-0.17.0-6ffe0558-${{ runner.os }}-${{ hashFiles('src/lib/latex/warmup.ts', 'src/lib/latex/pins.ts') }}
+          restore-keys: tectonic-0.17.0-6ffe0558-${{ runner.os }}-
+      - name: Install Tectonic and warm the package cache
+        run: npm run setup:tectonic
+      - name: Golden compile, visual regression and fuzz
+        run: npm run test:golden
+      - name: Render candidate visual baselines
+        if: failure() && runner.os == 'Linux'
+        run: npm run test:golden -- tests/golden/visual.test.ts
+        env:
+          UPDATE_BASELINES: "1"
+      - name: Upload golden results
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: golden-${{ matrix.os }}
+          path: |
+            test-results/golden/
+            tests/golden/baselines/
+          retention-days: 7
       - name: Install Playwright browser
         run: npx playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} chromium
       - run: npm run test:e2e
