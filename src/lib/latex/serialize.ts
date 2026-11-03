@@ -382,6 +382,7 @@ function headerBlock(
     lines.forEach((l) => w.line(l));
     w.line("\\end{center}");
     w.line("\\end{minipage}\\par");
+    w.line(`\\vspace{${inch(style.spacing.afterTitle)}}`);
   } else {
     w.line("\\begin{center}");
     lines.forEach((l) => w.line(l));

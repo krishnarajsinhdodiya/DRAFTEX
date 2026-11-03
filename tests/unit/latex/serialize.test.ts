@@ -348,6 +348,7 @@ describe("serializePaper: template options", () => {
     expect(r.tex).toContain("\\uline{Date: ");
     expect(r.tex).toContain("\\usepackage[normalem]{ulem}");
     expect(r.tex).toContain(`\\includegraphics[width=\\linewidth]{assets/${sha}.png}`);
+    expect(r.tex).toContain("\\end{minipage}\\par\n\\vspace{0.06in}\n\\par\\noindent\\uline{");
     expect(r.tex).toContain("{\\small small KBIPER}\\par");
     expect(r.tex).toContain("{\\large large plain}\\par");
     expect(r.tex).toContain("\\dxPartHead{SECTION I}");

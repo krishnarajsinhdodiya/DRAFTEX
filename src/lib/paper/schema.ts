@@ -237,6 +237,8 @@ export const styleSchema = z.object({
   logoWidth: z.number().min(0.05).max(0.3).default(0.1),
   spacing: z
     .object({
+      /** Between a logo header block and the date row. */
+      afterTitle: gap.default(0.06),
       afterHeader: gap.default(0.04),
       beforePart: gap.default(0.12),
       afterPart: gap.default(0.12),
