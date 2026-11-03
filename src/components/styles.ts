@@ -1,13 +1,39 @@
 // Shared class names. Kept out of "use client" modules: a server component
 // that imports a plain value from one receives undefined, not the value.
+// Colours are the role tokens from globals.css; none of these names a hue.
+const focusRing =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
 const buttonBase =
-  "inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-4 text-[15px] font-medium " +
+  "inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-4 text-body font-medium " +
   "transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-60 disabled:active:scale-100";
+  `${focusRing} disabled:opacity-60 disabled:active:scale-100`;
 
 export const buttonStyles = {
-  primary: `${buttonBase} bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500`,
-  secondary: `${buttonBase} border border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800`,
-  quiet: `${buttonBase} h-8 px-2.5 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800`,
-  danger: `${buttonBase} h-8 px-2.5 text-sm text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950`,
+  primary: `${buttonBase} bg-accent text-on-accent hover:bg-accent-hover`,
+  secondary: `${buttonBase} border border-rule-strong bg-surface text-ink hover:bg-sunk`,
+  quiet: `${buttonBase} h-8 px-2.5 text-small text-ink-2 hover:bg-sunk hover:text-ink`,
+  danger: `${buttonBase} h-8 px-2.5 text-small text-danger hover:bg-danger-soft`,
 };
+
+/** Text inputs and selects share one shape. */
+export const inputStyles =
+  "h-9 rounded-md border border-rule-strong bg-surface px-2.5 text-body text-ink placeholder:text-ink-3 " +
+  "focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent " +
+  "aria-invalid:border-danger";
+
+export const linkStyles = `rounded-sm text-accent underline-offset-2 hover:underline ${focusRing}`;
+
+/** A sheet of paper on the desk: lists, panels and the editor's slot cards. */
+export const sheetStyles = "rounded-lg bg-surface shadow-sheet";
+
+/** Page title in the paper voice. */
+export const pageTitleStyles = "font-paper text-display font-semibold text-ink";
+
+/** Small uppercase label above a group of fields or a list. */
+export const eyebrowStyles = "text-caption font-semibold tracking-[0.06em] text-ink-3 uppercase";
+
+/** Modal dialogs stay centred (they are not anchored to a trigger). */
+export const dialogStyles =
+  "dx-dialog fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 " +
+  "overflow-y-auto rounded-xl bg-surface p-6 shadow-sheet";

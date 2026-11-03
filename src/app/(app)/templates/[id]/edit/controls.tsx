@@ -5,11 +5,11 @@ import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 
 export const control =
-  "block h-9 w-full rounded-md border border-neutral-300 bg-white px-2.5 text-sm text-neutral-900 " +
-  "focus-visible:border-blue-600 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-blue-600 " +
-  "aria-invalid:border-red-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100";
+  "block h-9 w-full rounded-md border border-rule-strong bg-surface px-2.5 text-small text-ink " +
+  "focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent " +
+  "aria-invalid:border-danger";
 
-const labelClass = "text-[13px] font-medium text-neutral-700 dark:text-neutral-300";
+const labelClass = "text-small font-medium text-ink-2";
 
 function Wrap({
   id,
@@ -33,11 +33,11 @@ function Wrap({
       </label>
       {children}
       {error ? (
-        <p id={`${id}-e`} className="text-xs text-red-700 dark:text-red-400">
+        <p id={`${id}-e`} className="text-caption text-danger">
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-h`} className="text-xs text-neutral-600 dark:text-neutral-400">
+        <p id={`${id}-h`} className="text-caption text-ink-2">
           {hint}
         </p>
       ) : null}
@@ -239,15 +239,15 @@ export function Check({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-4 accent-blue-700"
+        className="mt-0.5 size-4 accent-accent"
         aria-describedby={hint ? `${id}-h` : undefined}
       />
       <div className="flex flex-col">
-        <label htmlFor={id} className="text-sm">
+        <label htmlFor={id} className="text-small">
           {label}
         </label>
         {hint ? (
-          <span id={`${id}-h`} className="text-xs text-neutral-600 dark:text-neutral-400">
+          <span id={`${id}-h`} className="text-caption text-ink-2">
             {hint}
           </span>
         ) : null}
@@ -257,9 +257,9 @@ export function Check({
 }
 
 const iconButton =
-  "inline-flex size-8 items-center justify-center rounded-md text-neutral-700 hover:bg-neutral-100 " +
-  "focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-30 disabled:hover:bg-transparent " +
-  "transition-[background-color,transform] duration-150 ease-out active:scale-[0.94] dark:text-neutral-300 dark:hover:bg-neutral-800";
+  "inline-flex size-8 items-center justify-center rounded-md text-ink-2 hover:bg-sunk " +
+  "focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-30 disabled:hover:bg-transparent " +
+  "transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]";
 
 /** Move up / move down / remove, with names that say what they act on. */
 export function ItemTools({
@@ -330,11 +330,8 @@ export function Section({
   id: string;
 }) {
   return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-4 border-t border-neutral-200 pt-5 dark:border-neutral-800"
-    >
-      <h2 id={id} className="text-[15px] font-semibold">
+    <section aria-labelledby={id} className="flex flex-col gap-4 border-t border-rule pt-5">
+      <h2 id={id} className="text-caption font-semibold tracking-[0.06em] text-ink-3 uppercase">
         {title}
       </h2>
       {children}

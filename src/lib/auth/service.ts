@@ -54,6 +54,8 @@ export interface SessionUser {
   email: string;
   role: Role;
   mustChangePassword: boolean;
+  /** Admin-enabled per user (SPEC §8); the data layer checks it again on save. */
+  allowAdvancedLatex: boolean;
 }
 
 export interface ValidSession {
@@ -159,6 +161,7 @@ export function createAuth(deps: AuthDeps) {
         email: s.user.email,
         role: s.user.role,
         mustChangePassword: s.user.mustChangePassword,
+        allowAdvancedLatex: s.user.allowAdvancedLatex,
       };
       let expiresAt = s.expiresAt;
       const renewed = expiresAt.getTime() - ms() < SESSION_IDLE_MS - SESSION_RENEW_AFTER_MS;

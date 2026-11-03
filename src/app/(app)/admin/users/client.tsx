@@ -22,6 +22,7 @@ export interface PersonView {
   role: "ADMIN" | "FACULTY";
   isActive: boolean;
   mustChangePassword: boolean;
+  allowAdvancedLatex: boolean;
   lockedUntil: string | null;
   isYou: boolean;
 }
@@ -38,16 +39,21 @@ export function UserRow({ person: p }: { person: PersonView }) {
   const [settingPassword, setSettingPassword] = useState(false);
   return (
     <>
-      <tr className={p.isActive ? undefined : "text-neutral-500"}>
+      <tr className={p.isActive ? undefined : "text-ink-3"}>
         <td className="px-4 py-3">
           <div className="font-medium">
             {p.name}
-            {p.isYou ? <span className="font-normal text-neutral-500"> (you)</span> : null}
+            {p.isYou ? <span className="font-normal text-ink-3"> (you)</span> : null}
           </div>
-          <div className="text-neutral-600 dark:text-neutral-400">{p.email}</div>
+          <div className="text-ink-2">{p.email}</div>
         </td>
         <td className="px-4 py-3">{p.role === "ADMIN" ? "Administrator" : "Faculty"}</td>
-        <td className="px-4 py-3">{status(p)}</td>
+        <td className="px-4 py-3">
+          {status(p)}
+          {p.allowAdvancedLatex ? (
+            <div className="text-caption text-ink-2">May use Advanced LaTeX</div>
+          ) : null}
+        </td>
         <td className="px-4 py-3">
           <form action={action} className="flex flex-wrap justify-end gap-1">
             <input type="hidden" name="userId" value={p.id} />
@@ -73,6 +79,15 @@ export function UserRow({ person: p }: { person: PersonView }) {
                 Make administrator
               </SubmitButton>
             )}
+            {p.allowAdvancedLatex ? (
+              <SubmitButton variant="quiet" name="op" value="advanced-off">
+                Turn off Advanced LaTeX
+              </SubmitButton>
+            ) : (
+              <SubmitButton variant="quiet" name="op" value="advanced-on">
+                Allow Advanced LaTeX
+              </SubmitButton>
+            )}
             {p.isActive ? (
               <SubmitButton variant="danger" name="op" value="deactivate">
                 Deactivate
@@ -94,7 +109,7 @@ export function UserRow({ person: p }: { person: PersonView }) {
       ) : null}
       {settingPassword ? (
         <tr>
-          <td colSpan={4} className="bg-neutral-50 px-4 py-4 dark:bg-neutral-900">
+          <td colSpan={4} className="bg-sunk px-4 py-4">
             <SetPasswordForm userId={p.id} name={p.name} />
           </td>
         </tr>
@@ -182,9 +197,9 @@ export function InviteForm() {
       {state.code ? (
         <div
           role="status"
-          className="flex flex-col gap-1 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950"
+          className="flex flex-col gap-1 rounded-lg border border-accent/25 bg-accent-soft px-4 py-3"
         >
-          <span className="text-sm text-neutral-700 dark:text-neutral-300">
+          <span className="text-small text-ink-2">
             New invite code. Copy it now: it will not be shown again.
           </span>
           <output

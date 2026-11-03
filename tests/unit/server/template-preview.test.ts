@@ -4,12 +4,10 @@ import { CompileRejected, type CompileJob, type CompileResult } from "@/lib/late
 import { templateFieldsSchema } from "@/lib/data/templates";
 import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import { sameOrigin } from "@/server/http";
-import {
-  PreviewCache,
-  resolveAssets,
-  templatePreview,
-  type PreviewDeps,
-} from "@/server/template-preview";
+import fs from "node:fs";
+import os from "node:os";
+import { MISSING_IMAGE, imageResolver } from "@/server/images";
+import { PreviewCache, templatePreview, type PreviewDeps } from "@/server/template-preview";
 
 const ROOT = path.resolve(".");
 const seed = (key: string) =>
@@ -34,7 +32,7 @@ function deps(compile: (job: CompileJob) => Promise<CompileResult>): PreviewDeps
   const jobs: CompileJob[] = [];
   return {
     jobs,
-    repoRoot: ROOT,
+    images: imageResolver({ repoRoot: ROOT, assetsDir: ROOT, ownAsset: async () => null }),
     cache: new PreviewCache(2),
     compile: {
       compile: vi.fn((job: CompileJob) => {
@@ -98,7 +96,7 @@ describe("templatePreview", () => {
     withUnknownLogo.header.logoLeft = { sha256: "a".repeat(64), ext: "png" };
     expect(await templatePreview(d, "u", withUnknownLogo)).toMatchObject({
       status: 422,
-      message: expect.stringContaining("built-in logos"),
+      message: MISSING_IMAGE,
     });
 
     const badPlaceholder = seed("blank");
@@ -137,14 +135,37 @@ describe("templatePreview", () => {
   });
 });
 
-describe("resolveAssets", () => {
-  it("only allows the built-in logos with their own extension", () => {
-    const ksv = "f847009ea404b1e13d6e7e2ad544f73ca3fdd8ea791dfdb795e6a4c9b431658c";
-    expect(resolveAssets([`assets/${ksv}.png`], ROOT)).toEqual([
+describe("imageResolver", () => {
+  const ksv = "f847009ea404b1e13d6e7e2ad544f73ca3fdd8ea791dfdb795e6a4c9b431658c";
+  const up = "b".repeat(64);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dx-images-"));
+  fs.writeFileSync(path.join(dir, `${up}.png`), "x");
+  const rows: Record<string, string> = { [`u1:${up}`]: "image/png" };
+  const resolve = imageResolver({
+    repoRoot: ROOT,
+    assetsDir: dir,
+    ownAsset: async (owner, sha) => {
+      const mime = rows[`${owner}:${sha}`];
+      return mime ? { mime } : null;
+    },
+  });
+
+  it("finds built-in logos in the app folder with their own extension", async () => {
+    expect(await resolve([`assets/${ksv}.png`], "anyone")).toEqual([
       { name: `assets/${ksv}.png`, sourcePath: path.join(ROOT, "assets/logos/ksv-logo.png") },
     ]);
-    expect(typeof resolveAssets([`assets/${ksv}.pdf`], ROOT)).toBe("string");
-    expect(typeof resolveAssets(["assets/../../etc/hosts"], ROOT)).toBe("string");
+    expect(await resolve([`assets/${ksv}.pdf`], "anyone")).toBe(MISSING_IMAGE);
+    expect(await resolve(["assets/../../etc/hosts"], "anyone")).toBe(MISSING_IMAGE);
+  });
+
+  it("finds an upload only for an owner with a row, the same type and a file on disk", async () => {
+    expect(await resolve([`assets/${up}.png`], "u1")).toEqual([
+      { name: `assets/${up}.png`, sourcePath: path.join(dir, `${up}.png`) },
+    ]);
+    expect(await resolve([`assets/${up}.png`], "u2")).toBe(MISSING_IMAGE);
+    expect(await resolve([`assets/${up}.jpg`], "u1")).toBe(MISSING_IMAGE);
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(await resolve([`assets/${up}.png`], "u1")).toBe(MISSING_IMAGE);
   });
 });
 

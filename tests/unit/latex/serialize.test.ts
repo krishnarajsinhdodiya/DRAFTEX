@@ -282,7 +282,9 @@ describe("serializePaper: content nodes", () => {
         ]),
       ),
     );
-    expect(out.tex).toContain(`\\includegraphics[width=0.45\\linewidth]{assets/${sha}.png}`);
+    expect(out.tex).toContain(
+      `\\includegraphics[width=0.45\\linewidth,height=0.6\\textheight,keepaspectratio]{assets/${sha}.png}`,
+    );
     expect(out.tex).toContain(`\\includegraphics{assets/${sha}.jpg}`);
     expect(out.assets).toEqual([`assets/${sha}.jpg`, `assets/${sha}.png`]);
   });
@@ -425,6 +427,80 @@ describe("serializePaper: template options", () => {
   });
 });
 
+describe("serializePaper: per-question numbering", () => {
+  const numbered = withTemplate((t) => {
+    const [g1, g2, g3] = t.structure.parts[0]!.groups;
+    (g2 as NonNullable<typeof g2>).numbering = "QUESTION";
+    (g3 as NonNullable<typeof g3>).numbering = "QUESTION";
+    void g1;
+  });
+
+  it("numbers each question on from the last group number, with bold marks and no heading", () => {
+    const r = ok(
+      serializePaper({
+        template: numbered,
+        meta: {},
+        emptySlots: "PLACEHOLDER",
+        slots: [
+          {
+            groupKey: "g2",
+            position: 2,
+            marks: 3,
+            coTag: "BP101T.02",
+            content: { type: "doc", content: [p("Explain it.")] },
+          },
+        ],
+      }),
+    );
+    // g1 keeps its group number (Q.1); g2 is Q.2–Q.8, g3 is Q.9–Q.11.
+    expect(r.tex).toContain("\\dxGroupHead{Q.1 ");
+    expect(r.tex).not.toContain("Answer the following questions (Any five)");
+    expect(r.tex).toContain("\\settowidth{\\dxOwnW}{\\textbf{Q.10}}");
+    expect(r.tex).toContain("\\dxOwnLabel{Q.2}");
+    expect(r.tex).toContain("\\dxOwnLabel{Q.11}");
+    expect(r.tex).toContain(
+      "\\question Explain it.\\dxTailRaw{{\\footnotesize [BP101T.02]}\\quad \\textbf{[3]}}",
+    );
+    expect(r.tex).toContain(
+      "\\question \\textit{(Question not written yet)}\\dxTailRaw{\\textbf{[4]}}",
+    );
+    // Group-numbered headings switch the label back.
+    expect(r.tex).toContain(
+      "\\newcommand{\\dxGroupHeadAt}[4]{\\global\\let\\dxLabel\\dxGroupLabel",
+    );
+  });
+
+  it("uses the group's marks style and bold CO tags, and keeps the plain label without own numbers", () => {
+    const bold = withTemplate((t) => {
+      t.structure.marksStyle = "PARENS";
+      t.style.coTagStyle = "BOLD";
+      const g = t.structure.parts[0]!.groups[2]!;
+      g.numbering = "QUESTION";
+      g.spaceBefore = 0.3;
+    });
+    const r = ok(
+      serializePaper({
+        template: bold,
+        meta: {},
+        emptySlots: "OMIT",
+        slots: [
+          {
+            groupKey: "g3",
+            position: 1,
+            coTag: "X.01",
+            content: { type: "doc", content: [p("A")] },
+          },
+        ],
+      }),
+    );
+    expect(r.tex).toContain("\\dxTailRaw{\\textbf{[X.01]}\\quad \\textbf{(10)}}");
+    expect(r.tex).toContain("\\par\\vspace{0.3in}");
+    const plain = ok(serializePaper(paperWith([p("x")])));
+    expect(plain.tex).not.toContain("dxOwnLabel");
+    expect(plain.tex).toContain("\\renewcommand{\\questionlabel}{\\the\\numexpr");
+  });
+});
+
 describe("serializePaper: errors", () => {
   it("reports invalid data with its path", () => {
     expect(issues(serializePaper({}))).toMatch(/Invalid paper data at template/);
@@ -489,5 +565,88 @@ describe("validateSlotContent", () => {
       /cannot be printed/,
     );
     expect(validateSlotContent({ type: "nope" }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("serializePaper: question details found by the editor fuzz", () => {
+  const sub = (...texts: string[]): BlockNode => ({
+    type: "subParts",
+    content: texts.map((x) => ({ type: "subPart", content: [p(x)] })),
+  });
+
+  it("drops line breaks that would end no line", () => {
+    const r = ok(
+      serializePaper(
+        paperWith([
+          {
+            type: "paragraph",
+            content: [
+              { type: "hardBreak" },
+              { type: "text", text: "a" },
+              { type: "hardBreak" },
+              { type: "hardBreak" },
+              { type: "text", text: "b" },
+              { type: "hardBreak" },
+            ],
+          },
+        ]),
+      ),
+    );
+    expect(r.tex).toContain("\\question a\\newline{}b\n");
+  });
+
+  it("letters a second sub-parts list on from the first and fills one-column tables", () => {
+    const r = ok(serializePaper(paperWith([sub("x", "y"), p("between"), sub("z")])));
+    expect(r.tex).toContain("\\begin{parts}\n  \\setcounter{partno}{2}\n    \\part z");
+    const t = ok(
+      serializePaper(
+        paperWith([
+          {
+            type: "table",
+            content: [
+              {
+                type: "tableRow",
+                content: [
+                  {
+                    type: "tableCell",
+                    content: [{ type: "paragraph", content: [{ type: "text", text: "only" }] }],
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      ),
+    );
+    expect(t.tex).toContain("{@{}X@{}}");
+    expect(t.tex).toMatch(/^\\RequirePackage\{fix-cm\}$/m);
+  });
+});
+
+describe("serializePaper: empty header values", () => {
+  it("drops the brackets around an empty value and keeps filled ones", () => {
+    const tpl = withTemplate((t) => {
+      t.header.lines = [
+        {
+          text: "{{courseTitle}} [{{courseCode}}] ({{date}})",
+          size: "normal",
+          bold: false,
+          ownLeading: false,
+        },
+      ];
+    });
+    const empty = ok(
+      serializePaper(paperWith([p("x")], { template: tpl, meta: { courseTitle: "Pharmacology" } })),
+    );
+    expect(empty.tex).toContain("  Pharmacology\\par");
+    const full = ok(
+      serializePaper(
+        paperWith([p("x")], {
+          template: tpl,
+          meta: { courseTitle: "P", courseCode: "BP604T", date: "1" },
+        }),
+      ),
+    );
+    expect(full.tex).toContain("  P {[}BP604T{]} (1)\\par");
   });
 });

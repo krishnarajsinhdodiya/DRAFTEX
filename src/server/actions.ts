@@ -213,6 +213,12 @@ export async function userAdminAction(_prev: FormState, fd: FormData): Promise<F
       case "make-faculty":
         await data.users.setRole(actor, userId, "FACULTY");
         break;
+      case "advanced-on":
+        await data.users.setAdvancedLatex(actor, userId, true);
+        break;
+      case "advanced-off":
+        await data.users.setAdvancedLatex(actor, userId, false);
+        break;
       default:
         return { error: "Unknown action." };
     }

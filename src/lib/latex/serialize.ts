@@ -19,6 +19,7 @@ import {
   type TableNode,
 } from "../paper/schema.ts";
 import type { SlotRange } from "./compile.ts";
+import { type GroupNumbers, questionNumbers } from "../paper/numbering.ts";
 import { describeChar, escapeText, mapMathUnicode, type QuoteState } from "./escape.ts";
 import { sanitizeLatex, type SanitizeMode } from "./sanitize.ts";
 
@@ -96,10 +97,24 @@ function snippet(src: string, mode: SanitizeMode, issues: Issues, what: string):
   return "";
 }
 
+/**
+ * A line break can only end a line that has something on it: leading,
+ * repeated and trailing breaks are dropped ("There's no line here to end").
+ */
+function usefulBreaks(nodes: InlineNode[]): InlineNode[] {
+  const out: InlineNode[] = [];
+  for (const n of nodes) {
+    if (n.type === "hardBreak" && (out.length === 0 || out.at(-1)?.type === "hardBreak")) continue;
+    out.push(n);
+  }
+  while (out.at(-1)?.type === "hardBreak") out.pop();
+  return out;
+}
+
 function inline(nodes: InlineNode[] | undefined, issues: Issues): string {
   const quotes: QuoteState = { doubleOpen: false };
   let out = "";
-  for (const n of nodes ?? []) {
+  for (const n of usefulBreaks(nodes ?? [])) {
     switch (n.type) {
       case "text": {
         let t = text(n.text, issues, quotes);
@@ -143,13 +158,16 @@ interface BlockContext {
   assets: Set<string>;
   defaultColumns: 1 | 2 | 4;
   beforeChoices: number;
+  /** Sub-parts already lettered in this question: a second list carries on (c), (d). */
+  partsSoFar?: number;
 }
 
 function table(t: TableNode, ctx: BlockContext): string {
   const headerRow = t.attrs?.headerRow ?? true;
   const width = (t.attrs?.widthPercent ?? 80) / 100;
   const cols = Math.max(...t.content.map((r) => r.content.length));
-  const spec = `@{}l${"X".repeat(cols - 1)}@{}`;
+  // A one-column table still fills its width, so it needs a stretchable column.
+  const spec = cols === 1 ? "@{}X@{}" : `@{}l${"X".repeat(cols - 1)}@{}`;
   const rows = t.content.map((row) => {
     const cells = row.content.map((c) =>
       (c.content ?? []).map((p) => paragraph(p, ctx.issues)).join(" "),
@@ -189,8 +207,9 @@ function leaf(b: LeafBlockNode, ctx: BlockContext): string {
     case "image": {
       const name = `assets/${b.attrs.sha256}.${b.attrs.ext}`;
       ctx.assets.add(name);
+      // A tall drawing at full width would run off the page; the height cap keeps its shape.
       const opt = b.attrs.widthPercent
-        ? `[width=${formatMarks(b.attrs.widthPercent / 100)}\\linewidth]`
+        ? `[width=${formatMarks(b.attrs.widthPercent / 100)}\\linewidth,height=0.6\\textheight,keepaspectratio]`
         : "";
       return `\\par\\smallskip\\begin{center}\\includegraphics${opt}{${name}}\\end{center}`;
     }
@@ -218,18 +237,23 @@ const guardBracket = (s: string) => (s.startsWith("[") ? `{}${s}` : s);
  * Joins blocks the way the hand-written papers do: display maths stays inside
  * its paragraph (no \par around \[ \]), other blocks start a new paragraph.
  */
+function subParts(b: Extract<BlockNode, { type: "subParts" }>, ctx: BlockContext): string {
+  const before = ctx.partsSoFar ?? 0;
+  ctx.partsSoFar = before + b.content.length;
+  return [
+    "\\begin{parts}",
+    // exam.cls restarts lettering (and its labels) in every parts list.
+    ...(before > 0 ? [`\\setcounter{partno}{${before}}`] : []),
+    ...b.content.map((p) => `  \\part ${guardBracket(blocks(p.content, ctx))}`),
+    "\\end{parts}",
+  ].join("\n");
+}
+
 function blocks(nodes: BlockNode[], ctx: BlockContext): string {
   const out: string[] = [];
   let prev: BlockNode["type"] | undefined;
   for (const b of nodes) {
-    const s =
-      b.type === "subParts"
-        ? [
-            "\\begin{parts}",
-            ...b.content.map((p) => `  \\part ${guardBracket(blocks(p.content, ctx))}`),
-            "\\end{parts}",
-          ].join("\n")
-        : leaf(b, ctx);
+    const s = b.type === "subParts" ? subParts(b, ctx) : leaf(b, ctx);
     if (b.type === "paragraph" && s === "") continue;
     const joinTight =
       prev === undefined ||
@@ -248,7 +272,12 @@ function blocks(nodes: BlockNode[], ctx: BlockContext): string {
 // ---------- document ----------
 
 function fill(template: string, meta: Meta, issues: Issues): string {
-  const parts = template.split(/(\{\{[a-zA-Z]+\}\})/);
+  // An empty value takes the brackets around it along: no "Course Title []".
+  const blank = (k: string) => k in meta && meta[k as keyof Meta].trim() === "";
+  const tidy = template.replace(/\s*[[(]\{\{([a-zA-Z]+)\}\}[\])]/g, (whole, k: string) =>
+    blank(k) ? "" : whole,
+  );
+  const parts = tidy.split(/(\{\{[a-zA-Z]+\}\})/);
   return parts
     .map((p) => {
       const m = /^\{\{([a-zA-Z]+)\}\}$/.exec(p);
@@ -270,8 +299,12 @@ const CANDIDATE: Record<Header["candidateField"], string> = {
   NONE: "",
 };
 
-function preamble(w: Writer, style: Style, header: Header): void {
+/** `widestOwnLabel`: escaped text of the widest per-question label, if any group numbers each question. */
+function preamble(w: Writer, style: Style, header: Header, widestOwnLabel?: string): void {
+  const numberEach = widestOwnLabel !== undefined;
   const g = style.geometry;
+  // Scalable Computer Modern: maths inside subscript text needs sizes below 5 pt.
+  w.line("\\RequirePackage{fix-cm}");
   w.line(`\\documentclass[${style.classSize}pt, a4paper]{exam}`);
   w.line(
     `\\usepackage[left=${inch(g.left)}, top=${inch(g.top)}, total={${inch(g.width)},${inch(g.height)}}]{geometry}`,
@@ -329,12 +362,22 @@ function preamble(w: Writer, style: Style, header: Header): void {
     "\\makeatletter\\newcommand{\\dxKeepWithNext}{\\ifnum\\value{question}>0 \\@nobreaktrue\\fi}\\makeatother",
   );
   w.line(
-    "\\newcommand{\\dxGroupHeadAt}[4]{\\par\\vspace{#1}\\uplevel{\\vspace{0pt}\\noindent\\textbf{#3}\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil\\textbf{#4}\\parfillskip=0pt\\finalhyphendemerits=0\\par\\vspace{#2}}\\global\\dxQOffset=\\value{question}\\relax\\dxKeepWithNext}",
+    `\\newcommand{\\dxGroupHeadAt}[4]{${numberEach ? "\\global\\let\\dxLabel\\dxGroupLabel" : ""}\\par\\vspace{#1}\\uplevel{\\vspace{0pt}\\noindent\\textbf{#3}\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil\\textbf{#4}\\parfillskip=0pt\\finalhyphendemerits=0\\par\\vspace{#2}}\\global\\dxQOffset=\\value{question}\\relax\\dxKeepWithNext}`,
   );
   w.line(
     `\\newcommand{\\dxGroupHead}[2]{\\dxGroupHeadAt{${inch(s.beforeGroup)}}{${inch(s.afterGroupHead)}}{#1}{#2}}`,
   );
-  w.line("\\renewcommand{\\questionlabel}{\\the\\numexpr\\value{question}-\\dxQOffset\\relax.}");
+  if (numberEach) {
+    w.line("%% Groups that number each question set their own label (Q.6); others count from 1.");
+    w.line("\\newcommand{\\dxGroupLabel}{\\the\\numexpr\\value{question}-\\dxQOffset\\relax.}");
+    w.line("\\global\\let\\dxLabel\\dxGroupLabel");
+    w.line("\\renewcommand{\\questionlabel}{\\dxLabel}");
+    w.line("%% Every own label takes the width of the widest, so question texts line up.");
+    w.line(`\\newlength\\dxOwnW\\settowidth{\\dxOwnW}{\\textbf{${widestOwnLabel}}}`);
+    w.line("\\newcommand{\\dxOwnLabel}[1]{\\gdef\\dxLabel{\\makebox[\\dxOwnW][l]{\\textbf{#1}}}}");
+  } else {
+    w.line("\\renewcommand{\\questionlabel}{\\the\\numexpr\\value{question}-\\dxQOffset\\relax.}");
+  }
   // Inside `questions` a center environment would need an \item and \centering
   // is ignored by \uplevel, so the title is centred with \hfill on both sides.
   w.line(
@@ -347,6 +390,12 @@ function preamble(w: Writer, style: Style, header: Header): void {
   w.line(
     `\\newcommand{\\dxTail}[1]{{\\unskip\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil${tag}\\parfillskip=0pt\\finalhyphendemerits=0\\par}}`,
   );
+  if (numberEach) {
+    w.line("%% The same tail, unstyled: a question's own marks (bold) and CO tag.");
+    w.line(
+      "\\newcommand{\\dxTailRaw}[1]{{\\unskip\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil#1\\parfillskip=0pt\\finalhyphendemerits=0\\par}}",
+    );
+  }
   w.line("\\newcommand{\\dxBlank}[1][2.5cm]{\\rule{#1}{0.4pt}}");
   w.line("\\renewcommand{\\choicelabel}{\\thechoice.}");
 }
@@ -416,6 +465,21 @@ function slotTail(slot: Slot, group: Group, structure: Structure, style: Style):
   return bits.length ? `\\dxTail{${bits.join("\\quad ")}}` : "";
 }
 
+/** Tail of a question that carries its own number: CO tag, then its marks in bold. */
+function ownTail(slot: Slot | undefined, group: Group, structure: Structure, style: Style): string {
+  const bits: string[] = [];
+  if (group.showCoTag === "SLOT" && slot?.coTag) {
+    bits.push(
+      style.coTagStyle === "BOLD"
+        ? `\\textbf{[${slot.coTag}]}`
+        : `{\\footnotesize [${slot.coTag}]}`,
+    );
+  }
+  const style2 = structure.marksStyle === "MARKS_COLON" ? "BRACKETS" : structure.marksStyle;
+  bits.push(`\\textbf{${marksLabel(style2, slot?.marks ?? group.marksEach)}}`);
+  return `\\dxTailRaw{${bits.join("\\quad ")}}`;
+}
+
 function questionBody(slot: Slot, ctx: BlockContext, tail: string): string {
   const content = slot.content.content;
   // A tail belongs to the question text, before any choices block.
@@ -469,8 +533,18 @@ function serializeParsed(paper: Paper): SerializeResult {
   }
   if (issues.list.length) return { ok: false, issues: issues.list };
 
+  const numbers = new Map(questionNumbers(structure).map((n) => [n.key, n]));
+  const ownLabels = [...numbers.values()]
+    .filter((n) => n.numbering === "QUESTION")
+    .flatMap((n) => n.printed);
+  // Longest string stands in for widest: labels differ only in their digits.
+  const widest = ownLabels.reduce<string | undefined>(
+    (a, b) => (a === undefined || b.length > a.length ? b : a),
+    undefined,
+  );
+
   w.line("%% Generated by DRAFTEX. Edit the paper in the app, not this file.");
-  preamble(w, style, header);
+  preamble(w, style, header, widest === undefined ? undefined : text(widest, issues));
   w.line();
   w.line("\\begin{document}");
   if (style.body) w.line(`\\fontsize{${style.body.size}}{${style.body.leading}}\\selectfont`);
@@ -479,25 +553,30 @@ function serializeParsed(paper: Paper): SerializeResult {
   w.line();
   w.line("\\begin{questions}");
 
-  let groupNumber = 0;
   for (const part of structure.parts) {
     if (part.title) {
       w.line(`%% ---------- part ${part.key} ----------`);
       w.line(`\\dxPartHead{${text(part.title, issues)}}`);
     }
     for (const group of part.groups) {
-      groupNumber++;
-      const label = `${structure.numbering.prefix}${groupNumber}${structure.numbering.separator}`;
+      // Keys are unique (checked above), so every group has its numbers.
+      const num = numbers.get(group.key) as GroupNumbers;
+      const ownNumbers = group.numbering === "QUESTION";
       w.line(
-        `%% DX-GROUP id=${group.key} type=${group.type} slots=${group.slots} attempt=${group.attempt} marksEach=${formatMarks(group.marksEach)}`,
+        `%% DX-GROUP id=${group.key} type=${group.type} slots=${group.slots} attempt=${group.attempt} marksEach=${formatMarks(group.marksEach)}${ownNumbers ? " numbering=QUESTION" : ""}`,
       );
-      const head = `{${text(label, issues)} ${text(group.heading, issues)}}{${text(marksLabel(structure.marksStyle, group.attempt * group.marksEach), issues)}}`;
-      if (group.spaceBefore === undefined && group.spaceAfterHead === undefined) {
-        w.line(`\\dxGroupHead${head}`);
+      if (ownNumbers) {
+        // No heading line: each question carries its number and marks (Pharm.D style).
+        w.line(`\\par\\vspace{${inch(group.spaceBefore ?? style.spacing.beforeGroup)}}`);
       } else {
-        const before = inch(group.spaceBefore ?? style.spacing.beforeGroup);
-        const after = inch(group.spaceAfterHead ?? style.spacing.afterGroupHead);
-        w.line(`\\dxGroupHeadAt{${before}}{${after}}${head}`);
+        const head = `{${text(num.label as string, issues)} ${text(group.heading, issues)}}{${text(marksLabel(structure.marksStyle, group.attempt * group.marksEach), issues)}}`;
+        if (group.spaceBefore === undefined && group.spaceAfterHead === undefined) {
+          w.line(`\\dxGroupHead${head}`);
+        } else {
+          const before = inch(group.spaceBefore ?? style.spacing.beforeGroup);
+          const after = inch(group.spaceAfterHead ?? style.spacing.afterGroupHead);
+          w.line(`\\dxGroupHeadAt{${before}}{${after}}${head}`);
+        }
       }
       const ctx: BlockContext = {
         issues,
@@ -516,14 +595,21 @@ function serializeParsed(paper: Paper): SerializeResult {
         const hasContent = slot && slot.content.content.length > 0;
         if (!hasContent && paper.emptySlots === "OMIT") continue;
         issues.slotId = slotId;
+        ctx.partsSoFar = 0;
         const start = w.next;
         w.line(`  %% DX-SLOT ${slotId}`);
+        if (ownNumbers) w.line(`  \\dxOwnLabel{${text(num.printed[pos - 1] as string, issues)}}`);
+        const tail = ownNumbers
+          ? ownTail(slot, group, structure, style)
+          : slot
+            ? slotTail(slot, group, structure, style)
+            : "";
         if (!slot || !hasContent) {
-          w.line("  \\question \\textit{(Question not written yet)}");
+          w.line(`  \\question \\textit{(Question not written yet)}${ownNumbers ? tail : ""}`);
         } else {
           // Escaped text writes "[" as {[}, but Advanced LaTeX may start with a
           // bracket, which \question would read as its points argument.
-          const raw = questionBody(slot, ctx, slotTail(slot, group, structure, style));
+          const raw = questionBody(slot, ctx, tail);
           const body = guardBracket(raw);
           w.line(`  \\question ${body.split("\n").join("\n  ")}`);
         }

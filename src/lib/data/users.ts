@@ -36,6 +36,7 @@ export const publicUserSelect = {
   institution: true,
   isActive: true,
   mustChangePassword: true,
+  allowAdvancedLatex: true,
   lockedUntil: true,
   createdAt: true,
 } as const;
@@ -147,6 +148,20 @@ export function users(db: Db) {
         entity: WHAT,
         entityId: userId,
       });
+    },
+
+    /** Advanced LaTeX blocks are off by default and enabled per user by an admin (SPEC §8). */
+    async setAdvancedLatex(actor: Actor, userId: string, allow: boolean) {
+      requireAdmin(actor);
+      await findUser(userId);
+      await db.user.update({ where: { id: userId }, data: { allowAdvancedLatex: allow } });
+      await writeAudit(db, {
+        actorId: actor.userId,
+        action: allow ? "advanced-latex:on" : "advanced-latex:off",
+        entity: WHAT,
+        entityId: userId,
+      });
+      return findUser(userId);
     },
 
     async unlock(actor: Actor, userId: string) {

@@ -171,6 +171,12 @@ export const groupSchema = z.object({
   compulsory: z.boolean().optional(),
   objectiveLayout: z.enum(["TWO_COLUMN", "ONE_COLUMN", "FOUR_COLUMN"]).optional(),
   showCoTag: z.enum(["NONE", "GROUP", "SLOT"]).default("SLOT"),
+  /**
+   * GROUP: one number for the group ("Q.2"), its questions numbered 1, 2, 3.
+   * QUESTION: every question gets its own number ("Q.6"), continuing across
+   * groups and parts, with its marks at the right; the heading is not printed.
+   */
+  numbering: z.enum(["GROUP", "QUESTION"]).optional(),
   /** Overrides style.spacing for this group's heading (inches). */
   spaceBefore: gap.optional(),
   spaceAfterHead: gap.optional(),

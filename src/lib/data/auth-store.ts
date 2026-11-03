@@ -26,6 +26,7 @@ const sessionUserSelect = {
   role: true,
   isActive: true,
   mustChangePassword: true,
+  allowAdvancedLatex: true,
 } as const;
 
 export function authStore(db: Db) {

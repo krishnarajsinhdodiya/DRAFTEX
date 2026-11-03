@@ -56,7 +56,7 @@ export function NewTemplateButton({ blankId }: { blankId: string }) {
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="dx-overlay fixed inset-0 bg-black/30" />
+        <Dialog.Overlay className="dx-overlay fixed inset-0 bg-scrim" />
         <Dialog.Content className={dialogClass}>
           <form
             onSubmit={(e) => {
@@ -67,13 +67,15 @@ export function NewTemplateButton({ blankId }: { blankId: string }) {
             className="flex flex-col gap-4"
           >
             <div>
-              <Dialog.Title className="text-lg font-semibold">New template</Dialog.Title>
-              <Dialog.Description className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+              <Dialog.Title className="font-paper text-title font-semibold">
+                New template
+              </Dialog.Title>
+              <Dialog.Description className="mt-1 text-small text-ink-2">
                 It starts as one group of questions with a plain header; you build it from there. To
                 start from a PCI or KSV pattern instead, open that template and make a copy.
               </Dialog.Description>
             </div>
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
+            <label className="flex flex-col gap-1.5 text-small font-medium">
               Title
               <input
                 autoFocus
@@ -86,7 +88,7 @@ export function NewTemplateButton({ blankId }: { blankId: string }) {
                 className={inputClass}
               />
               {touched && missing ? (
-                <span id="new-title-error" className="font-normal text-red-700 dark:text-red-400">
+                <span id="new-title-error" className="font-normal text-danger">
                   Give the template a title.
                 </span>
               ) : null}
@@ -107,12 +109,12 @@ export function NewTemplateButton({ blankId }: { blankId: string }) {
 
 const dialogClass =
   "dx-dialog fixed top-1/2 left-1/2 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 " +
-  "rounded-xl bg-white p-6 shadow-xl ring-1 ring-black/10 dark:bg-neutral-900 dark:ring-white/10";
+  "rounded-xl bg-surface p-6 shadow-xl ring-1 ring-rule";
 
 const inputClass =
-  "block h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-[15px] font-normal text-neutral-900 " +
-  "placeholder:text-neutral-400 focus-visible:border-blue-600 focus-visible:outline-2 focus-visible:outline-offset-1 " +
-  "focus-visible:outline-blue-600 aria-invalid:border-red-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100";
+  "block h-10 w-full rounded-md border border-rule-strong bg-surface px-3 text-body font-normal text-ink " +
+  "placeholder:text-ink-3 focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-1 " +
+  "focus-visible:outline-accent aria-invalid:border-danger";
 
 export function TemplateActions({
   id,
@@ -131,14 +133,14 @@ export function TemplateActions({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {access.edit ? (
-        <a href={editHref} className={buttonStyles.primary}>
+        <a href={editHref} className={buttonStyles.secondary}>
           Edit
         </a>
       ) : null}
       {access.copy ? (
         <button
           type="button"
-          className={access.edit ? buttonStyles.secondary : buttonStyles.primary}
+          className={buttonStyles.secondary}
           disabled={pending}
           onClick={() => run(() => copyTemplateAction(id))}
         >
@@ -170,10 +172,7 @@ export function TemplateActions({
       ) : null}
       {access.remove ? (
         <ConfirmDelete title={title} onConfirm={() => run(() => deleteTemplateAction(id))}>
-          <button
-            type="button"
-            className={`${buttonStyles.secondary} text-red-700 dark:text-red-400`}
-          >
+          <button type="button" className={`${buttonStyles.secondary} text-danger`}>
             <Trash2 aria-hidden size={16} />
             Delete
           </button>
@@ -197,12 +196,12 @@ function ConfirmDelete({
     <Dialog.Root>
       <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="dx-overlay fixed inset-0 bg-black/30" />
+        <Dialog.Overlay className="dx-overlay fixed inset-0 bg-scrim" />
         <Dialog.Content className={dialogClass}>
-          <Dialog.Title className="text-lg font-semibold break-words">
+          <Dialog.Title className="font-paper text-title font-semibold break-words">
             Delete “{title}”?
           </Dialog.Title>
-          <Dialog.Description className="mt-2 text-sm text-neutral-700 dark:text-neutral-300">
+          <Dialog.Description className="mt-2 text-small text-ink-2">
             It disappears from the library. Papers already made from it keep their own copy and are
             not changed.
           </Dialog.Description>
@@ -211,7 +210,7 @@ function ConfirmDelete({
             <button
               type="button"
               onClick={onConfirm}
-              className={`${buttonStyles.primary} bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-600`}
+              className={`${buttonStyles.primary} bg-danger hover:opacity-90`}
             >
               Delete template
             </button>

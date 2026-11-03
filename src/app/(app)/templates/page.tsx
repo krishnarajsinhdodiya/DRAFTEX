@@ -2,7 +2,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { Badge, PciBadge } from "@/components/badge";
 import { FormAlert } from "@/components/form";
-import { buttonStyles } from "@/components/styles";
+import { buttonStyles, inputStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
 import { ExamKind, Program } from "@/generated/prisma/enums";
 import { actorOf } from "@/lib/auth/service";
 import { getData } from "@/lib/data";
@@ -28,9 +28,7 @@ const filterSchema = z.object({
   deleted: z.string().optional().catch(undefined),
 });
 
-const selectClass =
-  "h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm dark:border-neutral-700 dark:bg-neutral-900 " +
-  "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600";
+const selectClass = `${inputStyles} text-small`;
 
 export default async function TemplatesPage({
   searchParams,
@@ -72,12 +70,12 @@ export default async function TemplatesPage({
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Templates</h1>
+        <h1 className={pageTitleStyles}>Templates</h1>
         {blank ? <NewTemplateButton blankId={blank.id} /> : null}
       </div>
       {f.deleted ? <FormAlert kind="notice">The template was deleted.</FormAlert> : null}
 
-      <nav aria-label="Which templates" className="flex flex-wrap gap-1">
+      <nav aria-label="Which templates" className="flex flex-wrap gap-1 border-b border-rule">
         {SCOPES.map((s) => {
           const current = (f.scope ?? "ALL") === s.value;
           return (
@@ -85,7 +83,13 @@ export default async function TemplatesPage({
               key={s.value}
               href={scopeHref(s.value)}
               aria-current={current ? "page" : undefined}
-              className={`${buttonStyles.quiet} ${current ? "bg-neutral-100 font-semibold text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100" : ""}`}
+              className={
+                "-mb-px inline-flex h-9 items-center border-b-2 px-2.5 text-small font-medium " +
+                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent " +
+                (current
+                  ? "border-ink text-ink"
+                  : "border-transparent text-ink-2 hover:border-rule-strong hover:text-ink")
+              }
             >
               {s.label}
             </Link>
@@ -101,7 +105,7 @@ export default async function TemplatesPage({
         action="/templates"
       >
         {f.scope ? <input type="hidden" name="scope" value={f.scope} /> : null}
-        <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm font-medium">
+        <label className="flex min-w-48 flex-1 flex-col gap-1 text-small font-medium">
           Search
           <input
             type="search"
@@ -111,7 +115,7 @@ export default async function TemplatesPage({
             className={`${selectClass} w-full px-3`}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
+        <label className="flex flex-col gap-1 text-small font-medium">
           Program
           <AutoSelect name="program" defaultValue={f.program ?? ""} className={selectClass}>
             <option value="">Any</option>
@@ -122,7 +126,7 @@ export default async function TemplatesPage({
             ))}
           </AutoSelect>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
+        <label className="flex flex-col gap-1 text-small font-medium">
           Exam
           <AutoSelect name="kind" defaultValue={f.kind ?? ""} className={selectClass}>
             <option value="">Any</option>
@@ -143,43 +147,50 @@ export default async function TemplatesPage({
         ) : null}
       </form>
 
-      <p className="text-sm text-neutral-600 dark:text-neutral-400" aria-live="polite">
+      <p className="text-small text-ink-2" aria-live="polite">
         {items.length === 1 ? "1 template" : `${items.length} templates`}
       </p>
 
       {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-neutral-300 px-6 py-12 text-center dark:border-neutral-700">
+        <div className={`${sheetStyles} px-6 py-12 text-center`}>
           <p className="font-medium">
             {filtered ? "No templates match." : "There are no templates yet."}
           </p>
-          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="mt-1 text-small text-ink-2">
             {filtered
               ? "Try other words, or clear the filters."
               : "Built-in templates appear after the first administrator is set up."}
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+        <ul className={`${sheetStyles} divide-y divide-rule overflow-hidden`}>
           {items.map((t) => (
             <li key={t.id}>
               <Link
                 href={`/templates/${t.id}`}
-                className="flex flex-col gap-1.5 px-4 py-3 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:hover:bg-neutral-900"
+                className="flex items-stretch gap-4 px-5 py-3.5 hover:bg-sunk/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
               >
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-medium break-words [overflow-wrap:anywhere]">
-                    {t.title}
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-paper text-lead font-semibold break-words [overflow-wrap:anywhere]">
+                      {t.title}
+                    </span>
+                    {t.builtIn ? <Badge tone="blue">Built-in</Badge> : null}
+                    {!t.builtIn && t.visibility === "GLOBAL" ? <Badge>Global</Badge> : null}
+                    {!t.builtIn && t.mine && t.visibility === "PRIVATE" ? (
+                      <Badge>Only you</Badge>
+                    ) : null}
+                    <PciBadge status={t.pci} />
                   </span>
-                  {t.builtIn ? <Badge tone="blue">Built-in</Badge> : null}
-                  {!t.builtIn && t.visibility === "GLOBAL" ? <Badge>Global</Badge> : null}
-                  {!t.builtIn && t.mine && t.visibility === "PRIVATE" ? (
-                    <Badge>Only you</Badge>
-                  ) : null}
-                  <PciBadge status={t.pci} />
+                  <span className="text-small text-ink-2">
+                    {t.facts.join(" · ")}
+                    {!t.mine && !t.builtIn && t.ownerName ? ` · by ${t.ownerName}` : null}
+                    <span className="sm:hidden">{` · ${t.marks} · ${t.duration}`}</span>
+                  </span>
                 </span>
-                <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                  {t.facts.join(" · ")}
-                  {!t.mine && !t.builtIn && t.ownerName ? ` · by ${t.ownerName}` : null}
+                <span className="dx-margin hidden w-36 shrink-0 flex-col sm:flex justify-center text-body">
+                  <span className="font-semibold text-ink">{t.marks}</span>
+                  <span className="text-small whitespace-normal text-ink-2">{t.duration}</span>
                 </span>
               </Link>
             </li>

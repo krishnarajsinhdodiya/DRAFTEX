@@ -10,11 +10,11 @@ export default async function ChangePasswordPage() {
   return (
     <>
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="font-paper text-display font-semibold">
           {user.mustChangePassword ? "Choose your own password" : "Change password"}
         </h1>
         {user.mustChangePassword ? (
-          <p className="text-neutral-700 dark:text-neutral-300">
+          <p className="text-ink-2">
             An administrator set your current password. Choose one only you know before you
             continue.
           </p>
@@ -24,7 +24,7 @@ export default async function ChangePasswordPage() {
       {user.mustChangePassword ? null : (
         <Link
           href="/"
-          className="text-sm font-medium text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+          className="text-small font-medium text-accent underline-offset-2 hover:underline"
         >
           Back without changing
         </Link>

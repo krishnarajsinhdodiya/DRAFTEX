@@ -432,6 +432,7 @@ const pharmD: SeedTemplate = {
           marksEach: 5,
           compulsory: true,
           showCoTag: "NONE" as const,
+          numbering: "QUESTION" as const,
         },
         {
           key: `s${i + 1}l`,
@@ -441,6 +442,7 @@ const pharmD: SeedTemplate = {
           attempt: 3,
           marksEach: 10,
           showCoTag: "NONE" as const,
+          numbering: "QUESTION" as const,
         },
       ],
     })),
@@ -456,8 +458,8 @@ const pharmD: SeedTemplate = {
     },
     candidateField: "EXAM_NO",
     instructions: [
-      "The first question of each section (5 marks) is compulsory.",
-      "Attempt any three of the other four questions in each section.",
+      "Questions 1 and 6 are compulsory.",
+      "Attempt any three of the remaining four questions in each section.",
     ],
     pageNumbers: "NONE",
   },

@@ -6,7 +6,7 @@ import {
   InvalidTemplateError,
   NotFoundError,
 } from "@/lib/data";
-import { COMPILE_HISTORY } from "@/lib/data/papers";
+import { ADVANCED_NOT_ALLOWED, COMPILE_HISTORY } from "@/lib/data/papers";
 import { createTestDb, type TestDb } from "../../support/db";
 import { paperMeta, templateFields, testSlot } from "./fixtures";
 
@@ -161,9 +161,11 @@ describe("templates", () => {
     await t.data.templates.remove(faculty, tpl.id);
     const kept = await t.data.papers.get(faculty, paper.id);
     expect(kept.templateId).toBe(tpl.id);
-    expect(kept.templateSnapshot).toEqual({
+    expect(kept.templateSnapshot).toMatchObject({
+      title: "F",
+      durationMinutes: 180,
+      maxMarks: 60,
       structure: tpl.structure,
-      style: tpl.style,
       header: tpl.header,
     });
     expect((await t.data.templates.list(faculty)).map((x) => x.id)).not.toContain(tpl.id);
@@ -254,10 +256,114 @@ describe("papers", () => {
         testSlot({ content: { type: "doc", content: [{ type: "x" }] } as never }),
       ),
     ).rejects.toThrow();
-    await t.data.papers.removeSlot(faculty, p.id, s1.id);
-    await expect(t.data.papers.removeSlot(faculty, p.id, s1.id)).rejects.toBeInstanceOf(
-      NotFoundError,
+    await t.data.papers.clearSlot(faculty, p.id, testSlot());
+    await t.data.papers.clearSlot(faculty, p.id, testSlot());
+    expect(await t.db.slot.count({ where: { paperId: p.id } })).toBe(0);
+  });
+
+  it("slots only exist at places the paper's template has", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("Places"));
+    const p = await t.data.papers.create(faculty, tpl.id, paperMeta());
+    // The part follows from the group when it is left out.
+    const s = await t.data.papers.saveSlot(faculty, p.id, testSlot({ partKey: undefined }));
+    expect(s.partKey).toBe("p1");
+    for (const bad of [
+      testSlot({ groupKey: "nope" }),
+      testSlot({ position: 21 }),
+      testSlot({ partKey: "p9" }),
+    ]) {
+      await expect(t.data.papers.saveSlot(faculty, p.id, bad)).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
+    }
+    await expect(
+      t.data.papers.clearSlot(faculty, p.id, { groupKey: "g2", position: 8 }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("moves swap places; marks follow the group; duplicates fill the next empty place", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("Moves"));
+    const p = await t.data.papers.create(faculty, tpl.id, paperMeta());
+    const text = (x: string) => ({
+      type: "doc" as const,
+      content: [{ type: "paragraph" as const, content: [{ type: "text" as const, text: x }] }],
+    });
+    await t.data.papers.saveSlot(faculty, p.id, testSlot({ content: text("A") }));
+    await t.data.papers.saveSlot(
+      faculty,
+      p.id,
+      testSlot({ position: 2, content: text("B"), coTag: "XX101T.02" }),
     );
+    const at = async (groupKey: string, position: number) =>
+      t.db.slot.findFirst({ where: { paperId: p.id, groupKey, position } });
+
+    await t.data.papers.moveSlot(
+      faculty,
+      p.id,
+      { groupKey: "g1", position: 1 },
+      { groupKey: "g1", position: 2 },
+    );
+    expect((await at("g1", 1))?.content).toEqual(text("B"));
+    expect(await at("g1", 1)).toMatchObject({ coTag: "XX101T.02" });
+    expect((await at("g1", 2))?.content).toEqual(text("A"));
+
+    // Into an empty place of another group: it takes that group's marks.
+    await t.data.papers.moveSlot(
+      faculty,
+      p.id,
+      { groupKey: "g1", position: 2 },
+      { groupKey: "g2", position: 3 },
+    );
+    expect(await at("g1", 2)).toBeNull();
+    expect(await at("g2", 3)).toMatchObject({ partKey: "p1", marks: 4 });
+    // Moving onto itself changes nothing.
+    await t.data.papers.moveSlot(
+      faculty,
+      p.id,
+      { groupKey: "g2", position: 3 },
+      { groupKey: "g2", position: 3 },
+    );
+    expect(await at("g2", 3)).not.toBeNull();
+
+    expect(
+      await t.data.papers.duplicateSlot(faculty, p.id, { groupKey: "g2", position: 3 }),
+    ).toEqual({ groupKey: "g2", position: 4 });
+    for (let i = 5; i <= 7; i++) {
+      await t.data.papers.duplicateSlot(faculty, p.id, { groupKey: "g2", position: 3 });
+    }
+    // Wraps round to the start of the group.
+    expect(
+      await t.data.papers.duplicateSlot(faculty, p.id, { groupKey: "g2", position: 3 }),
+    ).toEqual({ groupKey: "g2", position: 1 });
+    await t.data.papers.duplicateSlot(faculty, p.id, { groupKey: "g2", position: 3 });
+    await expect(
+      t.data.papers.duplicateSlot(faculty, p.id, { groupKey: "g2", position: 3 }),
+    ).rejects.toThrow("Every question in Q.2 is written. Clear one first.");
+    await expect(
+      t.data.papers.duplicateSlot(faculty, p.id, { groupKey: "g3", position: 1 }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("Advanced LaTeX needs the admin's permission; a revoked user may keep, not add", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("Adv"));
+    const p = await t.data.papers.create(faculty, tpl.id, paperMeta());
+    const adv = (...latex: string[]) => ({
+      type: "doc" as const,
+      content: latex.map((l) => ({ type: "advancedLatex" as const, attrs: { latex: l } })),
+    });
+    await expect(
+      t.data.papers.saveSlot(faculty, p.id, testSlot({ content: adv("\\textbf{x}") })),
+    ).rejects.toThrow(ADVANCED_NOT_ALLOWED);
+    await t.data.users.setAdvancedLatex(admin, faculty.userId, true);
+    await t.data.papers.saveSlot(faculty, p.id, testSlot({ content: adv("\\textbf{x}") }));
+    await t.data.users.setAdvancedLatex(admin, faculty.userId, false);
+    await t.data.papers.saveSlot(faculty, p.id, testSlot({ content: adv("\\textbf{x}") }));
+    await expect(
+      t.data.papers.saveSlot(faculty, p.id, testSlot({ content: adv("\\textbf{x}", "\\emph{y}") })),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      t.data.papers.saveSlot(faculty, p.id, testSlot({ position: 3, content: adv("\\textbf{x}") })),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it(`keep the newest ${COMPILE_HISTORY} compile jobs`, async () => {
@@ -397,6 +503,29 @@ describe("users", () => {
     expect((await t.db.user.findUniqueOrThrow({ where: { id: u.id } })).lockedUntil).toBeNull();
     await expect(t.data.users.unlock(admin, "missing")).rejects.toBeInstanceOf(NotFoundError);
   });
+
+  it("Advanced LaTeX is off until an admin allows it, and can be turned off again", async () => {
+    const u = await t.data.users.create(admin, {
+      name: "Adv",
+      email: "adv@example.com",
+      passwordHash: "h",
+    });
+    expect(u.allowAdvancedLatex).toBe(false);
+    expect((await t.data.users.setAdvancedLatex(admin, u.id, true)).allowAdvancedLatex).toBe(true);
+    expect((await t.data.users.setAdvancedLatex(admin, u.id, false)).allowAdvancedLatex).toBe(
+      false,
+    );
+    const actions = await t.db.auditLog.findMany({
+      where: { entityId: u.id },
+      select: { action: true },
+    });
+    expect(actions.map((a) => a.action)).toEqual(
+      expect.arrayContaining(["advanced-latex:on", "advanced-latex:off"]),
+    );
+    await expect(t.data.users.setAdvancedLatex(admin, "missing", true)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
 });
 
 describe("audit log", () => {
@@ -413,5 +542,56 @@ describe("audit log", () => {
         "id",
       ]);
     }
+  });
+});
+
+describe("header images (D22)", () => {
+  const LOGO = "c".repeat(64);
+  const withLogo = (title: string) => {
+    const f = templateFields(title);
+    return { ...f, header: { ...f.header, logoLeft: { sha256: LOGO, ext: "png" as const } } };
+  };
+
+  it("a template may only show the owner's own upload; copies and papers get their own row", async () => {
+    await expect(t.data.templates.create(faculty, withLogo("Not mine"))).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    await t.data.assets.add(admin, {
+      sha256: LOGO,
+      mime: "image/png",
+      bytes: 3,
+      width: 1,
+      height: 1,
+      originalName: "logo.png",
+    });
+    const tpl = await t.data.templates.create(admin, withLogo("Admin logo"));
+    await t.data.templates.setVisibility(admin, tpl.id, "GLOBAL");
+    await expect(
+      t.data.templates.update(faculty, tpl.id, tpl.version, { header: withLogo("x").header }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    // A copy may keep the source's logo, even with a changed header.
+    const copy = await t.data.templates.saveAsNew(faculty, tpl.id, {
+      header: { ...withLogo("x").header, instructions: ["Changed."] },
+    });
+    expect(await t.data.assets.get(faculty, LOGO)).toMatchObject({ originalName: "logo.png" });
+    await t.data.templates.update(faculty, copy.id, copy.version, { header: withLogo("y").header });
+    await t.data.assets.remove(faculty, LOGO);
+
+    const p = await t.data.papers.create(faculty, tpl.id, paperMeta());
+    expect(p.id).toBeTruthy();
+    expect(await t.data.assets.get(faculty, LOGO)).toMatchObject({ mime: "image/png" });
+    // Making a paper from one's own template copies nothing.
+    const own = await t.data.templates.create(admin, withLogo("Own"));
+    await t.data.papers.create(admin, own.id, paperMeta());
+    expect(await t.db.asset.count({ where: { sha256: LOGO } })).toBe(2);
+
+    // A copy that swaps in someone else's upload is refused.
+    const OTHER = "d".repeat(64);
+    await expect(
+      t.data.templates.saveAsNew(faculty, tpl.id, {
+        header: { ...withLogo("z").header, logoLeft: { sha256: OTHER, ext: "png" } },
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });

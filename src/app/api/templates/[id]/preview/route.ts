@@ -11,13 +11,16 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/templates/[
   if (actor instanceof Response) return actor;
   const { id } = await ctx.params;
   const data = await getData();
-  let fields;
+  let fields, ownerId;
   try {
-    fields = storedFields(await data.templates.get(actor, id));
+    const t = await data.templates.get(actor, id);
+    fields = storedFields(t);
+    ownerId = t.ownerId;
   } catch (e) {
     if (e instanceof NotFoundError) return jsonError(404, e.message);
     throw e;
   }
-  const r = await templatePreview(previewDeps(), actor.userId, fields);
+  // A visible template may show its owner's logo to everyone who can see it.
+  const r = await templatePreview(previewDeps(), actor.userId, fields, ownerId);
   return r.ok ? pdfResponse(r.pdf) : jsonError(r.status, r.message, r.details);
 }

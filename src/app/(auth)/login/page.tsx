@@ -10,7 +10,7 @@ export default async function LoginPage() {
   if (await getSession()) redirect("/");
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+      <h1 className="font-paper text-display font-semibold">Sign in</h1>
       <SignInForm />
     </>
   );
