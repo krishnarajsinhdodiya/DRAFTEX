@@ -10,3 +10,8 @@ export interface Actor {
 export function requireAdmin(actor: Actor): void {
   if (actor.role !== "ADMIN") throw new ForbiddenError("Only an administrator can do this.");
 }
+
+/** Any signed-in user may read; the actor must still be a real one. */
+export function requireSignedIn(actor: Actor): void {
+  if (!actor?.userId) throw new ForbiddenError("Sign in first.");
+}

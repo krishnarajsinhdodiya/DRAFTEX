@@ -21,6 +21,8 @@ export default defineConfig({
         "src/lib/rules/**": strictCoverage,
         "src/lib/auth/**": strictCoverage,
         "src/lib/data/**": strictCoverage,
+        // SPEC §10 gate 2: the PCI checker needs every branch covered.
+        "src/lib/rules/check.ts": { lines: 100, functions: 100, branches: 100, statements: 100 },
       },
     },
   },

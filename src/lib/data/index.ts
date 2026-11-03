@@ -2,12 +2,15 @@
 // never Prisma directly; ESLint blocks the Prisma client everywhere else.
 import { type Db, getDb } from "@/lib/db/client";
 import { assets } from "./assets";
+import { bpharmCatalogue } from "@/lib/catalogue";
 import { authStore } from "./auth-store";
+import { courses, syncCatalogue } from "./courses";
 import { papers } from "./papers";
 import { templates } from "./templates";
 import { users } from "./users";
 
 export type { Actor } from "./actor";
+export type { CourseFilter, SyncResult } from "./courses";
 export { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 export type { Role } from "@/generated/prisma/enums";
 
@@ -18,6 +21,11 @@ export function dataLayer(db: Db) {
     assets: assets(db),
     users: users(db),
     auth: authStore(db),
+    courses: courses(db),
+    /** Startup and maintenance only; never call these on behalf of a user. */
+    system: {
+      syncCatalogue: () => syncCatalogue(db, bpharmCatalogue()),
+    },
   };
 }
 export type DataLayer = ReturnType<typeof dataLayer>;
