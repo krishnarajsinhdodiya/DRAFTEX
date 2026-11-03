@@ -127,6 +127,9 @@ test("a built-in shows its preview, cannot be edited, and is copied into the bui
   await page.reload();
   await expect(page.getByLabel("Title")).toHaveValue(COPY_TITLE);
   await page.getByRole("link", { name: "← Back to the template" }).click();
+  // The builder shows "Non-PCI" too: wait for the template page itself before checking it.
+  await expect(page).toHaveURL(new RegExp(`/templates/${copyId}$`));
+  await expect(page.getByRole("heading", { level: 1, name: COPY_TITLE })).toBeVisible();
   await expect(page.getByText("Non-PCI")).toBeVisible();
   await expect(page.getByText("Only you")).toBeVisible();
 });
