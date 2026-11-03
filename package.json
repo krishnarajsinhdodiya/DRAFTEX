@@ -22,6 +22,8 @@
     "hygiene": "node scripts/commit-hygiene.mjs --range HEAD",
     "db:generate": "prisma generate",
     "db:migrate": "node scripts/db-migrate.ts",
+    "backup": "node scripts/backup.ts",
+    "restore": "node scripts/restore.ts",
     "setup:tectonic": "node scripts/setup-tectonic.ts",
     "catalogue:parse": "node scripts/parse-syllabus.ts",
     "catalogue:check": "node scripts/parse-syllabus.ts --check",

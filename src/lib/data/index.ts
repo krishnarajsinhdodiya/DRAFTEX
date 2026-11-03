@@ -3,6 +3,7 @@
 import { type Db, getDb } from "@/lib/db/client";
 import { assets } from "./assets";
 import { bpharmCatalogue } from "@/lib/catalogue";
+import { type AuditEntry, writeAudit } from "./audit";
 import { authStore } from "./auth-store";
 import { courses, syncCatalogue } from "./courses";
 import { papers } from "./papers";
@@ -24,6 +25,8 @@ export function dataLayer(db: Db) {
     users: users(db),
     auth: authStore(db),
     courses: courses(db),
+    /** Records what an administrator did outside the other tables (backups, restores). */
+    audit: { record: (entry: AuditEntry) => writeAudit(db, entry) },
     /** Startup and maintenance only; never call these on behalf of a user. */
     system: {
       syncCatalogue: () => syncCatalogue(db, bpharmCatalogue()),

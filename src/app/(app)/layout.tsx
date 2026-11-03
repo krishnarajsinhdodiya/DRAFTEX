@@ -21,7 +21,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <nav aria-label="Main" className="flex items-center">
             <NavLink href="/papers">Papers</NavLink>
             <NavLink href="/templates">Templates</NavLink>
-            {user.role === "ADMIN" ? <NavLink href="/admin/users">People</NavLink> : null}
+            {user.role === "ADMIN" ? (
+              <>
+                <NavLink href="/admin/users">People</NavLink>
+                <NavLink href="/admin/backups">Backups</NavLink>
+              </>
+            ) : null}
           </nav>
           <div className="ml-auto flex items-center gap-1">
             <span className="mr-2 hidden text-small text-ink-2 sm:inline">{user.name}</span>
