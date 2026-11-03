@@ -9,6 +9,7 @@ import { GROUP_TYPE_LABEL, marksText } from "@/lib/templates/labels";
 import { requireUser } from "@/server/auth";
 import { detail, pageCite } from "@/server/template-view";
 import { TemplateActions } from "../buttons";
+import { NewPaperButton } from "../new-paper";
 
 export default async function TemplatePage({ params }: { params: Promise<{ id: string }> }) {
   const { user } = await requireUser();
@@ -24,6 +25,10 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
   }
   const t = detail(row, actor);
   const { structure } = t.fields;
+  const courses = await data.courses.list(actor, {
+    program: t.fields.program,
+    courseKind: t.fields.courseKind,
+  });
 
   return (
     <div className="grid flex-1 gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
@@ -47,13 +52,26 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
           ) : null}
         </div>
 
-        <TemplateActions
-          id={t.id}
-          title={t.title}
-          access={t.access}
-          visibility={t.visibility}
-          editHref={`/templates/${t.id}/edit`}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <NewPaperButton
+            templateId={t.id}
+            templateTitle={t.title}
+            courses={courses.map((c) => ({
+              id: c.id,
+              code: c.code,
+              title: c.title,
+              semesterOrYear: c.semesterOrYear,
+            }))}
+            unit={t.fields.program === "PHARM_D" ? "Year" : "Semester"}
+          />
+          <TemplateActions
+            id={t.id}
+            title={t.title}
+            access={t.access}
+            visibility={t.visibility}
+            editHref={`/templates/${t.id}/edit`}
+          />
+        </div>
         {t.builtIn ? (
           <p className="text-small text-ink-2">
             Built-in templates cannot be changed. Make a copy to change one.

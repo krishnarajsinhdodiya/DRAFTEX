@@ -88,3 +88,31 @@ describe("editor schema ↔ stored content", () => {
     ]);
   });
 });
+
+describe("unfinished boxes", () => {
+  it("leaves out maths, LaTeX and units that are still empty", () => {
+    const r = toStored({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "a" },
+            { type: "mathInline", attrs: { latex: " " } },
+            { type: "units", attrs: { value: "1", unit: "" } },
+          ],
+        },
+        { type: "mathDisplay", attrs: { latex: "" } },
+        { type: "advancedLatex", attrs: { latex: "" } },
+        { type: "paragraph", content: [{ type: "mathInline", attrs: { latex: "" } }] },
+      ],
+    });
+    expect(r).toEqual({
+      ok: true,
+      doc: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "a" }] }],
+      },
+    });
+  });
+});

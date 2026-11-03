@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 type PdfJs = typeof PdfJsModule;
 let pdfjsPromise: Promise<PdfJs> | undefined;
 
-function loadPdfJs(): Promise<PdfJs> {
+export function loadPdfJs(): Promise<PdfJs> {
   pdfjsPromise ??= import("pdfjs-dist").then((m) => {
     m.GlobalWorkerOptions.workerSrc = new URL(
       "pdfjs-dist/build/pdf.worker.min.mjs",

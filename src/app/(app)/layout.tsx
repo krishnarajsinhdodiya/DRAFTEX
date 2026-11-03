@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             {appInfo.name}
           </Link>
           <nav aria-label="Main" className="flex items-center">
+            <NavLink href="/papers">Papers</NavLink>
             <NavLink href="/templates">Templates</NavLink>
             {user.role === "ADMIN" ? <NavLink href="/admin/users">People</NavLink> : null}
           </nav>

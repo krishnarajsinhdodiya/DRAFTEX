@@ -28,6 +28,15 @@ function isEmptyParagraph(n: EditorNode): boolean {
   return n.type === "paragraph" && !(n.content ?? []).length;
 }
 
+/** A maths or LaTeX box still being written (empty) is not part of the question yet. */
+function unfinished(n: EditorNode): boolean {
+  if (n.type === "mathInline" || n.type === "mathDisplay" || n.type === "advancedLatex") {
+    return !String(n.attrs?.latex ?? "").trim();
+  }
+  if (n.type === "units") return !String(n.attrs?.unit ?? "").trim();
+  return false;
+}
+
 function clean(n: EditorNode): EditorNode {
   const type = n.type === "tableHeader" ? "tableCell" : n.type;
   const out: EditorNode = { type };
@@ -52,7 +61,10 @@ function clean(n: EditorNode): EditorNode {
     const headerRow = first.length > 0 && first.every((c) => c.type === "tableHeader");
     out.attrs = { ...out.attrs, headerRow };
   }
-  if (n.content?.length) out.content = n.content.map(clean);
+  if (n.content?.length) {
+    const kids = n.content.filter((c) => !unfinished(c)).map(clean);
+    if (kids.length) out.content = kids;
+  }
   return out;
 }
 
@@ -68,7 +80,7 @@ function trim(blocks: EditorNode[]): EditorNode[] {
 export type ToStored = { ok: true; doc: Doc } | { ok: false; message: string };
 
 export function toStored(editor: EditorNode): ToStored {
-  const content = trim((editor.content ?? []).map(clean));
+  const content = trim((editor.content ?? []).filter((c) => !unfinished(c)).map(clean));
   const parsed = docSchema.safeParse({ type: "doc", content });
   if (parsed.success) return { ok: true, doc: parsed.data };
   const first = parsed.error.issues[0];

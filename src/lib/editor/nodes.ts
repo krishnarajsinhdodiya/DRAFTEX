@@ -64,6 +64,37 @@ export const Choice = Node.create({
   name: "choice",
   content: "inline*",
   defining: true,
+  addKeyboardShortcuts() {
+    return {
+      // Enter on an empty last choice leaves the choices, as in a list.
+      Enter: ({ editor }) => {
+        const { $from, empty } = editor.state.selection;
+        if (!empty || $from.parent.type.name !== "choice") return false;
+        const choices = $from.node(-1);
+        const last = $from.index(-1) === choices.childCount - 1;
+        if ($from.parent.content.size > 0 || !last || choices.childCount <= 2) return false;
+        const from = $from.before();
+        const after = $from.after(-1) - $from.parent.nodeSize;
+        return editor
+          .chain()
+          .deleteRange({ from, to: from + $from.parent.nodeSize })
+          .insertContentAt(after, { type: "paragraph" })
+          .setTextSelection(after + 1)
+          .run();
+      },
+      // Backspace in an empty choice removes it while at least two remain.
+      Backspace: ({ editor }) => {
+        const { $from, empty } = editor.state.selection;
+        if (!empty || $from.parent.type.name !== "choice" || $from.parentOffset > 0) return false;
+        if ($from.parent.content.size > 0 || $from.node(-1).childCount <= 2) return false;
+        const from = $from.before();
+        return editor
+          .chain()
+          .deleteRange({ from, to: from + $from.parent.nodeSize })
+          .run();
+      },
+    };
+  },
   parseHTML: () => [{ tag: 'li[data-type="choice"]' }],
   renderHTML: ({ HTMLAttributes }) => [
     "li",

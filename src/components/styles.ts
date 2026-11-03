@@ -32,3 +32,8 @@ export const pageTitleStyles = "font-paper text-display font-semibold text-ink";
 
 /** Small uppercase label above a group of fields or a list. */
 export const eyebrowStyles = "text-caption font-semibold tracking-[0.06em] text-ink-3 uppercase";
+
+/** Modal dialogs stay centred (they are not anchored to a trigger). */
+export const dialogStyles =
+  "dx-dialog fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 " +
+  "overflow-y-auto rounded-xl bg-surface p-6 shadow-sheet";

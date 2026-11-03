@@ -133,14 +133,14 @@ export function TemplateActions({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {access.edit ? (
-        <a href={editHref} className={buttonStyles.primary}>
+        <a href={editHref} className={buttonStyles.secondary}>
           Edit
         </a>
       ) : null}
       {access.copy ? (
         <button
           type="button"
-          className={access.edit ? buttonStyles.secondary : buttonStyles.primary}
+          className={buttonStyles.secondary}
           disabled={pending}
           onClick={() => run(() => copyTemplateAction(id))}
         >
