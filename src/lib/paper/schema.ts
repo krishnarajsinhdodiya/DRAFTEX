@@ -167,6 +167,8 @@ export const groupSchema = z.object({
   slots: z.number().int().min(1).max(100),
   attempt: z.number().int().min(1).max(100),
   marksEach: z.number().positive().max(100),
+  /** Every question must be answered; the checker then requires attempt = slots. */
+  compulsory: z.boolean().optional(),
   objectiveLayout: z.enum(["TWO_COLUMN", "ONE_COLUMN", "FOUR_COLUMN"]).optional(),
   showCoTag: z.enum(["NONE", "GROUP", "SLOT"]).default("SLOT"),
   /** Overrides style.spacing for this group's heading (inches). */

@@ -40,6 +40,7 @@ enum CourseKind {
   THEORY
   PRACTICAL
   PROJECT
+  INTERNSHIP
 }
 
 enum Visibility {
@@ -90,14 +91,14 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  sessions        Session[]
-  invitesCreated  InviteCode[] @relation("InviteCreator")
-  invitesUsed     InviteCode[] @relation("InviteUser")
-  templates       Template[]
-  papers          Paper[]
-  assets          Asset[]
-  questions       Question[]
-  auditLogs       AuditLog[]
+  sessions       Session[]
+  invitesCreated InviteCode[] @relation("InviteCreator")
+  invitesUsed    InviteCode[] @relation("InviteUser")
+  templates      Template[]
+  papers         Paper[]
+  assets         Asset[]
+  questions      Question[]
+  auditLogs      AuditLog[]
 }
 
 model Session {
@@ -134,21 +135,32 @@ model InviteCode {
 }
 
 model Course {
-  id             String     @id @default(uuid())
-  code           String     @unique
-  title          String
-  program        Program
-  semesterOrYear Int
-  courseKind     CourseKind
-  credits        Float
-  lectureHrs     Int
-  tutorialHrs    Int
-  practicalHrs   Int
-  maxMarks       Int
-  sessionalMarks Int
-  endSemMarks    Int
-  endSemMinutes  Int
-  ruleSetId      String?
+  id               String     @id @default(uuid())
+  code             String     @unique
+  title            String
+  program          Program
+  semesterOrYear   Int
+  courseKind       CourseKind
+  credits          Float
+  lectureHrs       Int
+  tutorialHrs      Int
+  practicalHrs     Int
+  maxMarks         Int
+  sessionalMarks   Int
+  endSemMarks      Int
+  endSemMinutes    Int
+  ruleSetId        String?
+  /// Continuous-mode internal marks (Table X); not a question paper.
+  continuousMarks  Int        @default(0)
+  /// Sessional exam duration; null when there is no sessional exam.
+  sessionalMinutes Int?
+  /// Contact hours for the whole course, from its syllabus page.
+  maxHours         Int?
+  /// Elective options: the slot code they fill (e.g. BP607T) and its label.
+  electiveOf       String?
+  electiveLabel    String?
+  /// Page of the PCI 2026 syllabus PDF the course was read from.
+  syllabusPage     Int?
 
   outcomes CourseOutcome[]
   units    CourseUnit[]
