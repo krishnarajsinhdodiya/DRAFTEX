@@ -201,7 +201,13 @@ function ToolButton({
   );
 }
 
-function Toolbar({
+/** The editor the shared toolbar acts on, and how to ask it for a picture. */
+export interface EditorHandle {
+  editor: Editor;
+  pickFile: () => void;
+}
+
+export function Toolbar({
   editor,
   allowAdvanced,
   onFile,
@@ -228,7 +234,7 @@ function Toolbar({
     <div
       role="toolbar"
       aria-label="Question formatting"
-      className="invisible flex flex-wrap items-center gap-0.5 border-b border-rule px-1 py-1 group-focus-within/slot:visible"
+      className="flex flex-wrap items-center gap-0.5"
     >
       <ToolButton label="Bold (Ctrl+B)" active={s.bold} onClick={() => c().toggleBold().run()}>
         <Bold size={16} aria-hidden />
@@ -339,7 +345,9 @@ function editorOptions(
   label: string,
 ): Parameters<typeof useEditor>[0] {
   return {
-    immediatelyRender: false,
+    // Rendered only in the browser, after a click: create the editor at once so
+    // the first keys typed after the click land in it.
+    immediatelyRender: true,
     extensions: extensions(
       store,
       () => ref.current.allowAdvanced,
@@ -386,9 +394,12 @@ export function QuestionEditor({
   upload,
   allowAdvanced,
   label,
+  onFocus,
 }: {
   initial: Doc;
   onChange: (doc: Doc) => void;
+  /** This editor took the focus; the paper's toolbar follows it. */
+  onFocus?: (handle: EditorHandle) => void;
   /** A change the paper cannot hold, or an upload that failed. */
   onProblem: (message: string | null) => void;
   upload: Uploader;
@@ -420,18 +431,32 @@ export function QuestionEditor({
     bridgeRef.current.editor = editor;
   }, [editor]);
 
-  useEffect(() => {
+  // Focus before the first paint, so keys typed straight after the click land here.
+  useLayoutEffect(() => {
     if (editor && !editor.isFocused) editor.commands.focus("end");
+  }, [editor]);
+  useEffect(() => {
+    // Load the equation editor early, so the first equation opens ready to type.
+    void import("mathlive");
+  }, []);
+
+  const focusRef = useRef(onFocus);
+  useLayoutEffect(() => {
+    focusRef.current = onFocus;
+  });
+  useEffect(() => {
+    if (!editor) return;
+    const tell = () => focusRef.current?.({ editor, pickFile: () => bridgeRef.current.pickFile() });
+    editor.on("focus", tell);
+    if (editor.isFocused) tell();
+    return () => {
+      editor.off("focus", tell);
+    };
   }, [editor]);
 
   if (!editor) return <div className="min-h-16 px-3 py-2 text-ink-3">Opening the question…</div>;
   return (
     <div className="flex flex-col">
-      <Toolbar
-        editor={editor}
-        allowAdvanced={allowAdvanced}
-        onFile={() => bridgeRef.current.pickFile()}
-      />
       <EditorContent editor={editor} />
       <SlashMenu store={store} />
       <input

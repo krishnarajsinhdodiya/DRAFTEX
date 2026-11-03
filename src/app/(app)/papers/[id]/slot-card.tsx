@@ -4,7 +4,11 @@
 // Bloom level and the question's actions.
 import { ArrowDown, ArrowUp, Copy, Eraser } from "lucide-react";
 import { memo, useId, useState } from "react";
-import { QuestionEditor, type Uploader } from "@/components/editor/question-editor";
+import {
+  type EditorHandle,
+  QuestionEditor,
+  type Uploader,
+} from "@/components/editor/question-editor";
 import { StaticDoc } from "@/components/editor/static-doc";
 import { inputStyles } from "@/components/styles";
 import type { BloomLevel } from "@/generated/prisma/enums";
@@ -50,6 +54,7 @@ export const SlotCard = memo(function SlotCard({
   onClear,
   onMove,
   onDuplicate,
+  onEditorFocus,
 }: {
   slotKey: string;
   group: EditorGroup;
@@ -67,6 +72,7 @@ export const SlotCard = memo(function SlotCard({
   onClear: (key: string) => void;
   onMove: (key: string, by: -1 | 1) => void;
   onDuplicate: (key: string) => void;
+  onEditorFocus: (handle: EditorHandle) => void;
 }) {
   const name = group.slotLabels[position - 1] ?? slotKey;
   const printed = group.printed[position - 1] ?? `${position}.`;
@@ -106,6 +112,7 @@ export const SlotCard = memo(function SlotCard({
               upload={upload}
               onProblem={setEditorProblem}
               onChange={(doc) => onChange(slotKey, { doc })}
+              onFocus={onEditorFocus}
             />
           ) : (
             <button
@@ -124,7 +131,7 @@ export const SlotCard = memo(function SlotCard({
         </div>
         <label
           htmlFor={marksId}
-          className="dx-margin flex w-20 shrink-0 flex-col items-end gap-0.5 py-2 pr-3"
+          className="dx-margin flex w-24 shrink-0 items-baseline justify-end gap-1 py-2 pr-3"
         >
           <span className="sr-only">Marks for {name}</span>
           <input
@@ -138,9 +145,11 @@ export const SlotCard = memo(function SlotCard({
               const v = Number(e.target.value);
               if (v > 0 && v <= 100) onMarks(slotKey, v);
             }}
-            className="w-14 rounded border border-transparent bg-transparent text-right font-paper text-body font-semibold text-ink tabular-nums hover:border-rule focus:border-accent focus:outline-none"
+            className="w-12 rounded border border-transparent bg-transparent text-right font-paper text-body font-semibold text-ink tabular-nums hover:border-rule focus:border-accent focus:outline-none"
           />
-          <span className="font-sans text-caption text-ink-3">marks</span>
+          <span className="font-sans text-caption text-ink-3">
+            {state.marks === 1 ? "mark" : "marks"}
+          </span>
         </label>
       </div>
 

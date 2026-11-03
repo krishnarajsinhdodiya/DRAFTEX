@@ -4,7 +4,7 @@
 import { Download, PanelRightClose, PanelRightOpen, RefreshCw, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { Uploader } from "@/components/editor/question-editor";
+import { type EditorHandle, Toolbar, type Uploader } from "@/components/editor/question-editor";
 import { FormAlert } from "@/components/form";
 import { PciBadge } from "@/components/badge";
 import { PdfView } from "@/components/pdf-view";
@@ -75,6 +75,7 @@ export function PaperEditor({
 }) {
   const paper = usePaper(view);
   const [active, setActive] = useState<Set<string>>(new Set());
+  const [focused, setFocused] = useState<EditorHandle | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [previewWidth, setPreviewWidth] = useStoredWidth();
   const dragging = useRef<{ x: number; w: number } | null>(null);
@@ -158,7 +159,7 @@ export function PaperEditor({
       : "All changes saved";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-3.5rem-1px)] lg:flex-none">
+    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-3.5rem-2rem-2px)] lg:flex-none">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-rule bg-surface px-4 py-2">
         <Link href="/papers" className={`${linkStyles} text-small`}>
           ← Papers
@@ -200,6 +201,20 @@ export function PaperEditor({
         </button>
       </div>
 
+      <div className="flex min-h-11 items-center border-b border-rule bg-surface px-4">
+        {focused && !focused.editor.isDestroyed ? (
+          <Toolbar
+            editor={focused.editor}
+            allowAdvanced={allowAdvanced}
+            onFile={focused.pickFile}
+          />
+        ) : (
+          <p className="text-small text-ink-3">
+            Click a question to write it. Press / in a question to insert.
+          </p>
+        )}
+      </div>
+
       {paper.restored ? (
         <div className="px-4 pt-3">
           <FormAlert kind="notice">
@@ -225,7 +240,7 @@ export function PaperEditor({
             <p className="mt-1 text-small text-ink-2">
               {totals.written} of {totals.count} questions written
             </p>
-            <p className="dx-margin mt-1 text-body font-semibold">
+            <p className="mt-1 font-paper text-body font-semibold tabular-nums">
               {marksText(paperMarks)} / {view.maxMarksText}
             </p>
             {paperMarks !== view.maxMarks ? (
@@ -379,6 +394,7 @@ export function PaperEditor({
                               onRetry={paper.retry}
                               onClear={(key) => void paper.clear(key)}
                               onMove={moveBy}
+                              onEditorFocus={setFocused}
                               onDuplicate={(key) =>
                                 void paper.duplicate(key).then((to) => to && activate(to))
                               }
