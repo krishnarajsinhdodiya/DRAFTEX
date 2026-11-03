@@ -3,7 +3,10 @@
 // Runs in order against one fresh data folder (scripts/e2e-server.ts).
 // All accounts and passwords here are invented test values.
 import { type Browser, type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, JOINER, signIn } from "./support";
+import { readFileSync } from "node:fs";
+import { ADMIN, FACULTY, JOINER, asUser, signIn } from "./support";
+
+const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
 
 test.describe.configure({ mode: "serial" });
 
@@ -153,4 +156,14 @@ test("a deactivated person is signed out and cannot sign in", async ({ page, bro
   await expect(page.locator("form").getByRole("alert")).toHaveText(
     "That email and password do not match.",
   );
+});
+
+test("the about page shows the version and credits the maker", async ({ browser }) => {
+  const page = await asUser(browser, ADMIN, ADMIN.password);
+  await page.getByRole("link", { name: /About DRAFTEX/ }).click();
+  await expect(page.getByRole("heading", { name: "About DRAFTEX" })).toBeVisible();
+  await expect(page.getByText(pkg.version, { exact: true })).toBeVisible();
+  await expect(page.getByText("Krishnarajsinh Hitesh Dodiya", { exact: true })).toBeVisible();
+  await expect(page.getByText("Data folder")).toBeVisible();
+  await page.context().close();
 });

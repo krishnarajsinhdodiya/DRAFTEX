@@ -37,8 +37,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="flex w-full flex-1 flex-col">{children}</main>
-      <footer className="flex h-8 items-center border-t border-rule px-6 text-caption text-ink-3">
-        {creditLine}
+      <footer className="flex h-8 items-center gap-2 border-t border-rule px-6 text-caption text-ink-3">
+        <span>{creditLine}</span>
+        <span aria-hidden>·</span>
+        <Link
+          href="/about"
+          className="rounded-sm underline-offset-2 hover:text-ink-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          About {appInfo.name} {appInfo.version}
+        </Link>
       </footer>
     </div>
   );
