@@ -1,14 +1,13 @@
 // Empty-template previews: serialise with sample header values, resolve the
-// header images, compile, and keep recent PDFs in memory by LaTeX hash so an
+// header images (built-in logos or the template owner's uploads), compile, and keep recent PDFs in memory by LaTeX hash so an
 // unchanged template never compiles twice (D19).
 import { createHash } from "node:crypto";
-import path from "node:path";
 import type { z } from "zod";
-import { CompileRejected, type CompileAsset, type CompileService } from "@/lib/latex/compile";
+import { CompileRejected, type CompileService } from "@/lib/latex/compile";
 import { serializePaper } from "@/lib/latex/serialize";
 import { templateFieldsSchema } from "@/lib/templates/fields";
-import { builtInLogoBySha } from "@/lib/templates/logos";
 import { previewPaper } from "@/lib/templates/preview";
+import type { ResolveImages } from "./images";
 
 export const previewRequestSchema = templateFieldsSchema.pick({
   program: true,
@@ -26,28 +25,13 @@ export type PreviewOutcome =
   | { ok: true; pdf: Buffer; cached: boolean }
   | { ok: false; status: 409 | 422 | 429 | 500; message: string; details?: string[] };
 
-const ASSET = /^assets\/([a-f0-9]{64})\.(png|jpg|pdf)$/;
-
-/** Header images a preview may use: only the built-in logos until uploads exist (D16). */
-export function resolveAssets(names: string[], repoRoot: string): CompileAsset[] | string {
-  const out: CompileAsset[] = [];
-  for (const name of names) {
-    const logo = builtInLogoBySha(ASSET.exec(name)?.[1] ?? "");
-    if (!logo || !name.endsWith(`.${logo.ext}`)) {
-      return "This template uses an image that is not available. Choose one of the built-in logos.";
-    }
-    out.push({ name, sourcePath: path.join(repoRoot, logo.file) });
-  }
-  return out;
-}
-
-export class PreviewCache {
-  private readonly entries = new Map<string, Buffer>();
+export class PreviewCache<T = Buffer> {
+  private readonly entries = new Map<string, T>();
   private readonly max: number;
   constructor(max = 40) {
     this.max = max;
   }
-  get(key: string): Buffer | undefined {
+  get(key: string): T | undefined {
     const hit = this.entries.get(key);
     if (hit) {
       this.entries.delete(key);
@@ -55,7 +39,7 @@ export class PreviewCache {
     }
     return hit;
   }
-  set(key: string, pdf: Buffer): void {
+  set(key: string, pdf: T): void {
     this.entries.delete(key);
     this.entries.set(key, pdf);
     while (this.entries.size > this.max) {
@@ -66,14 +50,16 @@ export class PreviewCache {
 
 export interface PreviewDeps {
   compile: Pick<CompileService, "compile">;
-  repoRoot: string;
+  images: ResolveImages;
   cache: PreviewCache;
 }
 
+/** `imageOwnerId`: whose uploads the header may show (the template's owner). */
 export async function templatePreview(
   deps: PreviewDeps,
   userId: string,
   input: unknown,
+  imageOwnerId: string = userId,
 ): Promise<PreviewOutcome> {
   const parsed = previewRequestSchema.safeParse(input);
   if (!parsed.success) {
@@ -93,7 +79,7 @@ export async function templatePreview(
       details: ser.issues.map((i) => i.message),
     };
   }
-  const assets = resolveAssets(ser.assets, deps.repoRoot);
+  const assets = await deps.images(ser.assets, imageOwnerId);
   if (typeof assets === "string") return { ok: false, status: 422, message: assets };
 
   const key = createHash("sha256").update(ser.tex).digest("hex");
