@@ -41,14 +41,10 @@ execFileSync(process.execPath, [require.resolve("prisma/build/index.js"), "migra
 });
 
 const nextBin = require.resolve("next/dist/bin/next");
-const child = spawn(
-  process.execPath,
-  [nextBin, mode, "--hostname", hostname, "--port", port],
-  {
-    stdio: "inherit",
-    env,
-  },
-);
+const child = spawn(process.execPath, [nextBin, mode, "--hostname", hostname, "--port", port], {
+  stdio: "inherit",
+  env,
+});
 const stop = () => child.kill();
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
