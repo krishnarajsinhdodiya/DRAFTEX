@@ -34,7 +34,19 @@ export function tectonicArgs(req: EngineRequest, bundleUrl: string = BUNDLE_URL)
   ];
 }
 
-const PASS_ENV = ["PATH", "HOME", "USERPROFILE", "SystemRoot", "TEMP", "TMP", "TMPDIR", "LANG"];
+// Windows needs SystemRoot for networking and APPDATA/LOCALAPPDATA for Tectonic's own config.
+const PASS_ENV = [
+  "PATH",
+  "HOME",
+  "USERPROFILE",
+  "SystemRoot",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "LANG",
+];
 
 /** Minimal environment: nothing from the app's own secrets reaches the engine. */
 export function engineEnv(
