@@ -4,57 +4,63 @@ Replace this whole file at the end of every session. A fresh session with
 no chat history must be able to continue from this file alone.
 
 ## Status
-- **Date:** 2026-11-03
-- **Current phase:** 5 Paper editor: done. Next: Phase 6 Answer keys + exports + files.
-- **Branch:** `main` only (Phase 5 merged with `--no-ff` from `phase/5-paper-editor`, tagged `v0.5.0`; the phase branch is deleted locally and on GitHub)
+- **Date:** 2026-11-04
+- **Current phase:** 6 Answer keys + exports + files: done. Next: Phase 7 Network modes + hardening.
+- **Branch:** `main` only (Phase 6 merged with `--no-ff` from `phase/6-keys-exports`, tagged `v0.6.0`; the phase branch is deleted locally and on GitHub)
 - **Last green commit:** latest `main`
 - **CI:** `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, green on the phase branch before the merge.
 
-## Done this session (Phase 5)
-- Deviations D22–D27 approved before the phase (memory.md); D27 amended (MathLive fonts bundled by Next).
-- Design direction: role tokens in `src/app/globals.css` (contrast figures in its header), shared classes in `src/components/styles.ts`, paper serif for printed content, the "marks margin" signature, nav with current-section underline. Owner approved from screenshots.
-- Per-question numbering (`numbering: "QUESTION"` on a group) in the serializer, builder and editor; Pharm.D built-in switched, instructions "Questions 1 and 6 are compulsory."
-- Advanced LaTeX permission per user (`User.allowAdvancedLatex`, migration `20261103200000_user_advanced_latex`, People screen toggle, audited). A revoked user may keep but not add blocks.
-- Uploads: `src/server/uploads/` (process, store, verify-pdf), `POST /api/assets`, `GET /api/assets/<sha>.<ext>` (owner only). sharp + resvg; PDFs placed once by the real engine at upload.
-- Header logos: templates may only show the owner's uploads; copies and papers get their own Asset row (D22). One resolver for both previews: `src/server/images.ts`.
-- Papers: snapshot (`src/lib/paper/snapshot.ts`), places checked against it, pictures must be the writer's own, move/duplicate/clear, lab hours to the checker (D18 closed). Commands `src/server/paper-commands.ts`, actions `paper-actions.ts`.
-- Preview: `GET /api/papers/[id]/preview` (D23), problems in `X-DX-Problems`, plain-English mapping in `src/lib/paper/problems.ts`, cache by LaTeX hash, fallback that leaves out refused questions.
-- Editor: `/papers`, "New paper" on a template page, `/papers/[id]` with outline, question cards (static until clicked, then TipTap), one shared toolbar, "/" menu, MathLive equations, tables, pictures (button, drag, paste), choices with the correct answer, blanks, sub-parts, units, Advanced LaTeX; autosave 1 s with IndexedDB drafts; preview 1.5 s after the last edit; paper-level undo of 50 (D25); Download PDF.
-- Credit line "Made by Krishnarajsinh Hitesh Dodiya" in the app footer and on sign-in/setup (owner request; never on papers).
-- Tests: unit 650 (was 479), golden 37 + editor fuzz (200 questions), e2e 22 (5 new: gate 9 editor part, gate 8 at the routes).
-- `/apple-design` review and `/break-ui` pass run on the editor; findings fixed or logged below. Worst-case seeder: `tests/break-ui/seed-worst-paper.ts`.
+## Done this session (Phase 6)
+- Deviations D28–D35 approved before the phase (memory.md). D34's "numbering unchanged" is superseded by "Export compaction" (same intent: no gaps).
+- About page (owner request mid-session): `/about` with version, engine, who it is made for, the maker's credit; data folder path for admins only; footer link. `package.json` version now follows the phase tag (0.6.0 from this merge).
+- Answer keys: `saveSlot` carries `answerKey` + `keyCriteria` (left alone when not sent). Key panel under each written question (`src/app/(app)/papers/[id]/key-panel.tsx`): model answer in the question editor, split-up rows with a running total and mismatch warning; objective questions take the ticked option.
+- Key PDF: `src/lib/latex/key.ts` (article, fancyhdr, No. | Answer | Marks for objective groups, Criteria | Marks per question). Preview switch Paper / Answer key (`GET /api/papers/[id]/preview?kind=key`, own queue).
+- Export: `POST /api/papers/[id]/export` → `exports/<Program>/<Code>/<YYYY-MM-DD> <title>/` (paper/key pdf+tex, assets, README) and the same as a zip. `src/lib/export/bundle.ts` (compaction, Windows-safe names), `src/server/export.ts`. Warnings → "Export anyway"; errors block.
+- Duplicate paper (ATKT flow): dialog in the editor; copies questions and keys, new undated draft, `derivedFromPaperId`. The editor now shows which exam a paper is for.
+- Backup/restore: `src/lib/backup/archive.ts` (zip format, checks) and `run.ts` (online SQLite backup, retention, stage, apply with rollback, lock). Admin `/admin/backups` (back up now, download, upload to restore, cancel). Restore is applied at the next start (`src/server/startup.ts`). Scripts `npm run backup [-- --kind before-update]`, `npm run restore -- <zip> [--yes]`.
+- fflate 0.8.3 added (only new dependency).
+- Tests: unit 710 (was 650), golden 40 + 22 visual on ubuntu (was 36 + 19), e2e 30 (was 22). Gate 9 complete: backup → restore on an empty data folder (both paths) → exported paper.tex/key.tex byte-identical, every PDF page 0 changed pixels. Gate 8 for key preview, export, duplicate and every backup route. Fuzz covers the key. Exported zip compiles standalone (golden).
+- `/apple-design` review and `/break-ui` pass on the new screens; findings fixed (see "Review findings").
+
+## Review findings (all fixed unless marked)
+- Editor placeholder never rendered (no CSS) → fixed; the answer editor has its own hint.
+- Key panel sat between a question and its own notes → moved below them.
+- Key summary counted blank rows; long criteria hidden in a one-line field; silent limit at 20 rows → fixed.
+- Export success was an information-only modal → inline notice; "Go back" → "Cancel"; failed export lists only the errors.
+- Export folder names cut mid-word; two papers with the same title overwrote each other's folder → word-boundary cut; "(2)" folders via `.draftex-paper`.
+- Backups: caution style for the confidentiality warning; page promised a Delete it does not have (copy fixed, behaviour is an open question); dates/sizes wrapped on a phone; first daily backup only an hour after setup → now right after setup.
+- Logged, not fixed: the Backups list is unpaginated (40 rows tested fine); the restore upload reads the whole file into memory (cap 2 GB).
 
 ## In progress
 - Nothing half-done.
 
-## Next steps (Phase 6, Answer keys + exports + files; follow SPEC §13)
-1. Session start per the operating rules; branch `phase/6-keys-exports` from `main`.
-2. Answer-key editor per slot (D24 moved it here): TipTap for `Slot.answerKey`, `keyCriteria` (split-up marks); the MCQ `choices.correct` already exists.
-3. Key PDF in the house style of the `*Keys.tex` references (booktabs/tabularx: No. | Answer | Marks).
-4. Export bundle: `exports/<Program>/<CourseCode>/<YYYY-MM-DD> <title>/` with paper.pdf, paper.tex, key.pdf, key.tex, assets/ that compiles standalone (include fix-cm in the bundle's notes; it is in the Tectonic bundle).
-5. Duplicate paper (ATKT flow), backup/restore (+ daily and before update, keep 14), restore round-trip e2e (rest of gate 9, D26).
-6. Gate 8 for export/backup routes.
+## Next steps (Phase 7, Network modes + hardening; follow SPEC §13)
+1. Session start per the operating rules; branch `phase/7-network-hardening` from `main`.
+2. Network modes in `config.json` (local / lan / server), admin switch + restart, LAN banner with URL, Windows Firewall helper (explicit admin action with UAC).
+3. Fix client-sent `x-forwarded-for` before LAN mode (memory.md, Next 16 `??=`).
+4. Security headers incl. CSP with the documented MathLive exception (D27); explicit CSRF tests for server actions and route handlers (export, restore, previews already check Origin).
+5. Audit log review (backups/restores are now logged); security checklist §11 verified item by item in handoff.
+6. Decide the "Move data folder" admin action (memory.md "Data dir outside repo").
 
 ## Failing tests
 - None.
 
 ## Blockers / risks
-- **Long chemical names in 2- or 4-column choices** overflow into the next column (e.g. a 60-character IUPAC name: about 68 pt). Breaks after hyphens did not help; the editor shows a note and Columns → 1 is the workaround. Investigate exam.cls choices + multicols line breaking.
-- **Phone layout of the editor** is usable for reading but cramped (header wraps, cards narrow). SPEC is desktop-first; library and PDF viewing work on a phone.
-- **Same question in two windows** is last-write-wins (memory.md).
-- **Wi-Fi demo**: a throwaway copy can run on `0.0.0.0:3215` (`.claude/launch.json` config `draftex-wifi-demo`, test admin from `tests/e2e/support.ts`). It stops when the app's Browser pane closes and its data is deleted on restart. Real LAN mode is Phase 7.
-- No pagination in the template library (search and filters instead).
-- Carried over: client-sent `x-forwarded-for` before LAN mode (Phase 7); explicit CSRF test for server actions (Phase 7); lockout can be used for denial of service; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); first warm-up about 3 minutes; ESLint 10 overrides; `ubuntu-latest` will move to Ubuntu 26; `next telemetry disable` and `npm run db:migrate` in the installer.
+- **Restore needs a restart** (D28). In dev, stop and start the server; Phase 8's start scripts make that one click.
+- **Backups and export zips hold unreleased papers in plain zips** (SPEC §11.8); the UI says so; no encryption in v1.
+- **Zip bombs**: entry names and declared sizes are checked before unpacking, but a zip that lies about sizes is only caught after inflating (admin-only upload, local mode).
+- Carried over: long chemical names in 2/4-column choices overflow; phone layout of the editor is cramped; same question in two windows is last-write-wins; Wi-Fi demo is a throwaway copy only; client-sent `x-forwarded-for` (Phase 7); lockout can be used for denial of service; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); first warm-up about 3 minutes; ESLint 10 overrides; `ubuntu-latest` moves to Ubuntu 26; `next telemetry disable` and `npm run db:migrate` in the installer.
 
 ## Decisions made (copied to memory.md)
-- Design direction approved; D27 amended; per-question numbering details; snapshot contents; last-write-wins per question; upload rules; fix-cm; literal M/mM units; fuzz policy; preview fallback; credit line; throwaway server modes and the Wi-Fi demo rule; no `next dev` during builds.
+- D28–D35; About page and version rule; export compaction; key saves with the question; split-up rows only for non-objective questions; separate preview queues; `.draftex-paper` folder owner; `draftex.lock`; backup module lint exemption; daily backup timing; audit of backup actions; editor placeholder CSS; restore e2e on port 3214; fflate pinned.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). Run `npm run db:migrate` once for the new user migration. Warm-up was re-run this session (fix-cm cached); `npm run setup:tectonic` again is harmless.
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). No new migration this phase. Backups go to `DRAFTEX-data/backups/`, exports to `DRAFTEX-data/exports/`; the first daily backup is made the next time the app starts.
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands.
-- `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (0.0.0.0:3215), `draftex-dev-throwaway` (3216, Next dev mode). All use throwaway data folders.
+- `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (0.0.0.0:3215), `draftex-dev-throwaway` (3216, Next dev mode). All use throwaway data folders. The restore e2e uses 3214 for its second server.
 
 ## Questions for owner
+- Backups made by hand / before an update / before a restore are never pruned and there is no Delete button: keep, prune "before update" to the newest 5, or add Delete?
 - Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`?
 - How does your father tag COs of elective options? The default is `BP607TAEC1.01`.
 - Later: should the app offer Times at all?
@@ -66,7 +72,7 @@ no chat history must be able to continue from this file alone.
 - [x] 3 Rules + course catalogue
 - [x] 4 Template library + builder
 - [x] 5 Paper editor
-- [ ] 6 Answer keys + exports + files
+- [x] 6 Answer keys + exports + files
 - [ ] 7 Network modes + hardening
 - [ ] 8 Installers + docs
 - [ ] 9 Polish
