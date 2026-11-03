@@ -114,6 +114,13 @@ export function PdfView({ state, label }: { state: PreviewState; label: string }
         ref={pagesRef}
         className={`flex flex-col gap-4 transition-opacity duration-150 ${state.busy && state.pdf ? "opacity-70" : ""}`}
       />
+      {!state.pdf && state.busy ? (
+        // An empty A4 sheet holds the place, so the layout does not jump when pages arrive.
+        <div
+          aria-hidden
+          className="aspect-[210/297] w-full bg-white shadow-sm ring-1 ring-black/10 dark:bg-neutral-800"
+        />
+      ) : null}
       {!state.pdf && !state.busy && !error ? (
         <p className="text-sm text-neutral-600 dark:text-neutral-400">No preview yet.</p>
       ) : null}

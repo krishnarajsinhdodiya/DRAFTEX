@@ -3,7 +3,7 @@
 // The checker runs as you type; saving is refused while it reports errors.
 // The preview recompiles 1.5 s after the last change (latest wins).
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { PciBadge } from "@/components/badge";
 import { buttonStyles } from "@/components/form";
 import { PdfView, type PreviewState, fetchPdf } from "@/components/pdf-view";
@@ -20,6 +20,8 @@ import {
 } from "./sections";
 
 const PREVIEW_DELAY_MS = 1500;
+const UNDO_PAUSE_MS = 800;
+const UNDO_STEPS = 50;
 
 type Problem = { message: string; path?: string };
 
@@ -44,6 +46,31 @@ function shortPath(path: string | undefined): string | undefined {
   return m ? m[1] : path;
 }
 
+interface EditorState {
+  fields: Fields;
+  /** Earlier versions, newest last; one step per pause in editing. */
+  history: Fields[];
+  lastEditAt: number;
+}
+
+type EditorAction =
+  { type: "edit"; change: (draft: Fields) => void; at: number } | { type: "undo" };
+
+function editor(state: EditorState, action: EditorAction): EditorState {
+  if (action.type === "undo") {
+    const prev = state.history.at(-1);
+    return prev ? { fields: prev, history: state.history.slice(0, -1), lastEditAt: 0 } : state;
+  }
+  const next = structuredClone(state.fields);
+  action.change(next);
+  const newStep = action.at - state.lastEditAt > UNDO_PAUSE_MS;
+  return {
+    fields: next,
+    history: newStep ? [...state.history.slice(-(UNDO_STEPS - 1)), state.fields] : state.history,
+    lastEditAt: action.at,
+  };
+}
+
 export function Builder({
   id,
   initial,
@@ -53,22 +80,22 @@ export function Builder({
   initial: Fields;
   initialVersion: number;
 }) {
-  const [fields, setFields] = useState(initial);
   const [saved, setSaved] = useState(() => JSON.stringify(initial));
   const [version, setVersion] = useState(initialVersion);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<{ message: string; issues: Problem[] } | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  const [{ fields, history }, dispatch] = useReducer(editor, {
+    fields: initial,
+    history: [],
+    lastEditAt: 0,
+  });
   const dirty = JSON.stringify(fields) !== saved;
-
   const edit: Edit = useCallback((change) => {
-    setFields((f) => {
-      const next = structuredClone(f);
-      change(next);
-      return next;
-    });
+    dispatch({ type: "edit", change, at: Date.now() });
     setJustSaved(false);
   }, []);
+  const undo = useCallback(() => dispatch({ type: "undo" }), []);
 
   const parsed = useMemo(() => templateFieldsSchema.safeParse(fields), [fields]);
   const check = useMemo(() => (parsed.success ? checkTemplateFields(parsed.data) : null), [parsed]);
@@ -146,11 +173,24 @@ export function Builder({
     return () => window.removeEventListener("keydown", onKey);
   }, [save]);
 
+  // Unsaved changes: warn before closing the tab and before following a link.
   useEffect(() => {
     if (!dirty) return;
     const onLeave = (e: BeforeUnloadEvent) => e.preventDefault();
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest("a[href]");
+      if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
+      if (!window.confirm("Leave without saving? Your changes to this template will be lost.")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
     window.addEventListener("beforeunload", onLeave);
-    return () => window.removeEventListener("beforeunload", onLeave);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", onLeave);
+      document.removeEventListener("click", onClick, true);
+    };
   }, [dirty]);
 
   const status = saving
@@ -178,6 +218,14 @@ export function Builder({
         <span className="text-sm text-neutral-600 dark:text-neutral-400" role="status">
           {status}
         </span>
+        <button
+          type="button"
+          className={buttonStyles.secondary}
+          disabled={history.length === 0}
+          onClick={undo}
+        >
+          Undo
+        </button>
         <button
           type="button"
           className={buttonStyles.primary}

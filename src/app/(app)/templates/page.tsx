@@ -9,6 +9,7 @@ import { EXAM_KIND_LABEL, PROGRAM_LABEL } from "@/lib/templates/labels";
 import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import { requireUser } from "@/server/auth";
 import { summary } from "@/server/template-view";
+import { AutoSelect } from "./auto-select";
 import { NewTemplateButton } from "./buttons";
 
 const SCOPES = [
@@ -91,7 +92,13 @@ export default async function TemplatesPage({
         })}
       </nav>
 
-      <form role="search" className="flex flex-wrap items-end gap-2" action="/templates">
+      <form
+        // Remount on each filter change so the fields show the filters in the address.
+        key={`${f.q ?? ""}|${f.program ?? ""}|${f.kind ?? ""}|${f.scope ?? ""}`}
+        role="search"
+        className="flex flex-wrap items-end gap-2"
+        action="/templates"
+      >
         {f.scope ? <input type="hidden" name="scope" value={f.scope} /> : null}
         <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm font-medium">
           Search
@@ -105,25 +112,25 @@ export default async function TemplatesPage({
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Program
-          <select name="program" defaultValue={f.program ?? ""} className={selectClass}>
+          <AutoSelect name="program" defaultValue={f.program ?? ""} className={selectClass}>
             <option value="">Any</option>
             {Object.entries(PROGRAM_LABEL).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>
             ))}
-          </select>
+          </AutoSelect>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Exam
-          <select name="kind" defaultValue={f.kind ?? ""} className={selectClass}>
+          <AutoSelect name="kind" defaultValue={f.kind ?? ""} className={selectClass}>
             <option value="">Any</option>
             {Object.entries(EXAM_KIND_LABEL).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>
             ))}
-          </select>
+          </AutoSelect>
         </label>
         <button type="submit" className={`${buttonStyles.secondary} h-9`}>
           Show

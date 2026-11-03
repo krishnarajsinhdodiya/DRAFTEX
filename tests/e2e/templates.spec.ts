@@ -39,8 +39,10 @@ test("the library lists every built-in with its PCI status and filters", async (
   await page.getByRole("button", { name: "Show" }).click();
   await expect(page.getByText("1 template", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Clear" }).click();
+  await expect(page).toHaveURL(/\/templates$/);
+  await expect(page.getByLabel("Search")).toHaveValue("");
   await page.getByLabel("Exam").selectOption("SYNOPSIS");
-  await page.getByRole("button", { name: "Show" }).click();
+  await expect(page).toHaveURL(/kind=SYNOPSIS/);
   await expect(page.getByText("1 template", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Mine" }).click();
   await expect(page.getByText("No templates match.")).toBeVisible();
@@ -76,6 +78,19 @@ test("a built-in shows its preview, cannot be edited, and is copied into the bui
   await expect(page.getByText("Can be saved, but differs from PCI 2026:")).toBeVisible();
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+
+  // Undo brings back a removed group; leaving with unsaved changes asks first.
+  await expect(page.getByLabel("Heading")).toHaveCount(3);
+  await page.getByRole("button", { name: "Remove Q.3" }).click();
+  await expect(page.getByLabel("Heading")).toHaveCount(2);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByLabel("Heading")).toHaveCount(3);
+  await page.getByLabel("Description").fill("Not saved");
+  page.once("dialog", (d) => void d.dismiss());
+  await page.getByRole("link", { name: "← Back to the template" }).click();
+  await expect(page).toHaveURL(/\/edit$/);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByLabel("Description")).toHaveValue(/^KSV university paper/);
 
   await page.reload();
   await expect(page.getByLabel("Title")).toHaveValue(COPY_TITLE);
