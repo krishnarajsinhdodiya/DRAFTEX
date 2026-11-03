@@ -101,6 +101,35 @@ describe("paper commands", () => {
     });
     expect(await t.db.slot.count({ where: { paperId } })).toBe(1);
   });
+
+  it("save an answer key and duplicate the paper for an ATKT exam", async () => {
+    const c = paperCommands(t.data, owner);
+    const key = {
+      groupKey: "g1",
+      position: 3,
+      content: testSlot().content,
+      marks: 1,
+      answerKey: testSlot().content,
+      keyCriteria: [{ text: "Definition", marks: 1 }],
+    };
+    expect((await c.saveSlot(paperId, key)).ok).toBe(true);
+    const bad = await c.saveSlot(paperId, { ...key, keyCriteria: [{ text: "", marks: -1 }] });
+    expect(bad.ok).toBe(false);
+    const copy = await c.duplicate(paperId, {
+      title: "Mine (ATKT)",
+      examKind: "SUPPLEMENTARY_ATKT",
+      examDate: "2027-06-01",
+    });
+    if (!copy.ok) throw new Error(copy.message);
+    const p = await t.data.papers.getWithSlots(owner, copy.value);
+    expect(p).toMatchObject({ examKind: "SUPPLEMENTARY_ATKT", derivedFromPaperId: paperId });
+    expect(p.examDate?.toISOString()).toBe("2027-06-01T00:00:00.000Z");
+    expect(p.slots.find((x) => x.position === 3)?.keyCriteria).toEqual(key.keyCriteria);
+    const invalid = await c.duplicate(paperId, { title: "", examKind: "NOPE" });
+    expect(invalid.ok).toBe(false);
+    await t.data.papers.remove(owner, copy.value);
+    await c.clearSlot(paperId, { groupKey: "g1", position: 3 });
+  });
 });
 
 describe.each([
@@ -117,6 +146,7 @@ describe.each([
       () => c().moveSlot(paperId, { groupKey: "g1", position: 2 }, { groupKey: "g1", position: 1 }),
     ],
     ["duplicate a question", () => c().duplicateSlot(paperId, { groupKey: "g1", position: 2 })],
+    ["duplicate it", () => c().duplicate(paperId, { title: "x", examKind: "SUPPLEMENTARY_ATKT" })],
     ["delete it", () => c().remove(paperId)],
     [
       "start a paper from the owner's private template",

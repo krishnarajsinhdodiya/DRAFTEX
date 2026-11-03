@@ -115,6 +115,11 @@ describe.each([
     ],
     ["duplicate a question", () => t.data.papers.duplicateSlot(who(), paperId, testSlot())],
     [
+      "duplicate the paper",
+      () =>
+        t.data.papers.duplicate(who(), paperId, { title: "Copy", examKind: "SUPPLEMENTARY_ATKT" }),
+    ],
+    [
       "record a compile",
       () => t.data.papers.recordCompile(who(), paperId, { kind: "PAPER", status: "QUEUED" }),
     ],

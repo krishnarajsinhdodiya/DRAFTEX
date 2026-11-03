@@ -49,6 +49,13 @@ export const newPaperSchema = z.object({
   examDate: z.coerce.date().nullable().default(null),
 });
 
+/** What the "Duplicate paper" dialog sends. */
+export const duplicatePaperSchema = z.object({
+  title: z.string().trim().min(1, "Give the copy a title.").max(200),
+  examKind: z.enum(ExamKind),
+  examDate: z.coerce.date().nullable().default(null),
+});
+
 /** Metadata the editor's header form can change. */
 export const paperDetailsSchema = paperMetaSchema
   .pick({
@@ -109,6 +116,14 @@ export function paperCommands(data: DataLayer, actor: Actor) {
         async () =>
           (await data.papers.saveSlot(actor, idSchema.parse(id), slotInputSchema.parse(input))).id,
       );
+    },
+
+    /** "Duplicate paper" (SPEC §1 ATKT flow); returns the copy's id. */
+    async duplicate(id: unknown, input: unknown): Promise<CommandResult<string>> {
+      return run(async () => {
+        const d = duplicatePaperSchema.parse(input);
+        return (await data.papers.duplicate(actor, idSchema.parse(id), d)).id;
+      });
     },
 
     async clearSlot(id: unknown, place: unknown): Promise<CommandResult> {

@@ -366,6 +366,99 @@ describe("papers", () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
+  it("answer keys are saved with the question and kept when a save leaves them out", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("K"));
+    const p = await t.data.papers.create(faculty, tpl.id, paperMeta());
+    const key = testSlot().content;
+    const criteria = [
+      { text: "Definition", marks: 1 },
+      { text: "Example", marks: 1 },
+    ];
+    const saved = await t.data.papers.saveSlot(
+      faculty,
+      p.id,
+      testSlot({ marks: 2, answerKey: key, keyCriteria: criteria }),
+    );
+    expect(saved.keyCriteria).toEqual(criteria);
+    const again = await t.data.papers.saveSlot(faculty, p.id, testSlot({ marks: 2 }));
+    expect(again.answerKey).toEqual(key);
+    expect(again.keyCriteria).toEqual(criteria);
+    const emptied = await t.data.papers.saveSlot(
+      faculty,
+      p.id,
+      testSlot({ answerKey: null, keyCriteria: [] }),
+    );
+    expect(emptied).toMatchObject({ answerKey: null, keyCriteria: null });
+    await expect(
+      t.data.papers.saveSlot(faculty, p.id, testSlot({ keyCriteria: [{ text: " ", marks: 1 }] })),
+    ).rejects.toThrow();
+  });
+
+  it("Advanced LaTeX in an answer key follows the same permission", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("KA"));
+    const p = await t.data.papers.create(faculty, tpl.id, paperMeta());
+    const adv = {
+      type: "doc" as const,
+      content: [{ type: "advancedLatex" as const, attrs: { latex: "\\textbf{k}" } }],
+    };
+    await expect(
+      t.data.papers.saveSlot(faculty, p.id, testSlot({ answerKey: adv })),
+    ).rejects.toThrow(ADVANCED_NOT_ALLOWED);
+    await t.data.users.setAdvancedLatex(admin, faculty.userId, true);
+    await t.data.papers.saveSlot(faculty, p.id, testSlot({ answerKey: adv }));
+    await t.data.users.setAdvancedLatex(admin, faculty.userId, false);
+    await t.data.papers.saveSlot(faculty, p.id, testSlot({ answerKey: adv }));
+    await t.data.papers.saveSlot(faculty, p.id, testSlot());
+    const kept = await t.data.papers.getWithSlots(faculty, p.id);
+    expect(kept.slots[0]?.answerKey).toEqual(adv);
+  });
+
+  it("a paper is duplicated with its questions and keys as an undated draft", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("D"));
+    const p = await t.data.papers.create(
+      faculty,
+      tpl.id,
+      paperMeta({ examDate: new Date("2027-04-01T00:00:00Z"), status: "FINAL" }),
+    );
+    await t.data.papers.saveSlot(
+      faculty,
+      p.id,
+      testSlot({ answerKey: testSlot().content, keyCriteria: [{ text: "All of it", marks: 1 }] }),
+    );
+    await t.data.papers.saveSlot(
+      faculty,
+      p.id,
+      testSlot({ groupKey: "g2", position: 2, marks: 2 }),
+    );
+    const copy = await t.data.papers.duplicate(faculty, p.id, {
+      title: "Test paper (ATKT)",
+      examKind: "SUPPLEMENTARY_ATKT",
+    });
+    expect(copy).toMatchObject({
+      ownerId: faculty.userId,
+      title: "Test paper (ATKT)",
+      examKind: "SUPPLEMENTARY_ATKT",
+      examDate: null,
+      status: "DRAFT",
+      derivedFromPaperId: p.id,
+      courseCode: p.courseCode,
+      version: 1,
+    });
+    const [a, b] = await Promise.all([
+      t.data.papers.getWithSlots(faculty, p.id),
+      t.data.papers.getWithSlots(faculty, copy.id),
+    ]);
+    const strip = ({ id, paperId, ...rest }: (typeof a.slots)[number]) => {
+      expect([id, paperId]).not.toEqual([undefined, undefined]);
+      return rest;
+    };
+    expect(b.slots.map(strip)).toEqual(a.slots.map(strip));
+    expect(b.snapshot).toEqual(a.snapshot);
+    await expect(
+      t.data.papers.duplicate(faculty, p.id, { title: " ", examKind: "END_SEMESTER" }),
+    ).rejects.toThrow();
+  });
+
   it(`keep the newest ${COMPILE_HISTORY} compile jobs`, async () => {
     const tpl = await t.data.templates.create(faculty, templateFields("H"));
     const p = await t.data.papers.create(faculty, tpl.id, paperMeta());
