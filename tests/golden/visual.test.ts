@@ -54,6 +54,10 @@ describe("reference template regenerated from JSON", () => {
     const diffs = diffPages(generated, handwritten);
     for (const d of diffs) {
       fs.writeFileSync(path.join(OUT, `reference-vs-handwritten-p${d.page}.png`), pngBytes(d.diff));
+      const g = generated[d.page - 1];
+      const h = handwritten[d.page - 1];
+      if (g) fs.writeFileSync(path.join(OUT, `reference-generated-p${d.page}.png`), pngBytes(g));
+      if (h) fs.writeFileSync(path.join(OUT, `reference-handwritten-p${d.page}.png`), pngBytes(h));
     }
     const report = diffs.map((d) => `p${d.page}: ${(d.ratio * 100).toFixed(3)}%`).join(", ");
     console.log(`reference vs hand-written: ${report}`);

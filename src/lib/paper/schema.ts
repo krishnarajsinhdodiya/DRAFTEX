@@ -4,6 +4,8 @@ import { z } from "zod";
 
 const key = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/, "Keys use letters, digits, - and _ only.");
 const inches = z.number().min(0).max(5);
+/** Vertical adjustments may be negative, as in the hand-written papers. */
+const gap = z.number().min(-1).max(2);
 
 // ---------- slot content (TipTap-shaped) ----------
 
@@ -167,6 +169,9 @@ export const groupSchema = z.object({
   marksEach: z.number().positive().max(100),
   objectiveLayout: z.enum(["TWO_COLUMN", "ONE_COLUMN", "FOUR_COLUMN"]).optional(),
   showCoTag: z.enum(["NONE", "GROUP", "SLOT"]).default("SLOT"),
+  /** Overrides style.spacing for this group's heading (inches). */
+  spaceBefore: gap.optional(),
+  spaceAfterHead: gap.optional(),
 });
 export type Group = z.infer<typeof groupSchema>;
 
@@ -193,6 +198,8 @@ export const headerLineSchema = z.object({
   text: z.string().min(1).max(200),
   size: z.enum(["small", "normal", "large"]).default("normal"),
   bold: z.boolean().default(false),
+  /** Line spacing follows this line's size (as with an unbraced \large in hand-written papers). */
+  ownLeading: z.boolean().default(false),
 });
 
 export const headerSchema = z.object({
@@ -230,13 +237,13 @@ export const styleSchema = z.object({
   logoWidth: z.number().min(0.05).max(0.3).default(0.1),
   spacing: z
     .object({
-      afterHeader: inches.default(0.04),
-      beforePart: inches.default(0.12),
-      afterPart: inches.default(0.12),
-      beforeGroup: inches.default(0.14),
-      afterGroupHead: inches.default(0.02),
+      afterHeader: gap.default(0.04),
+      beforePart: gap.default(0.12),
+      afterPart: gap.default(0.12),
+      beforeGroup: gap.default(0.14),
+      afterGroupHead: gap.default(0.02),
       beforeChoices: z.number().min(-1).max(1).default(-0.09),
-      beforeFooter: inches.default(0.35),
+      beforeFooter: gap.default(0.35),
     })
     .prefault({}),
 });

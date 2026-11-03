@@ -395,6 +395,26 @@ describe("serializePaper: template options", () => {
     );
   });
 
+  it("applies per-group spacing overrides, own-leading header lines and exact lengths", () => {
+    const tpl = withTemplate((t) => {
+      t.structure.parts[0]!.groups[1]!.spaceBefore = 0.2;
+      t.structure.parts[0]!.groups[2]!.spaceAfterHead = 0.03;
+      t.header.lines[2] = { text: "{{programLine}}", size: "large", bold: true, ownLeading: true };
+      t.style.spacing = { beforeGroup: 0.125, afterGroupHead: -0.035 };
+    });
+    const out = ok(
+      serializePaper(paperWith([p("x")], { template: tpl, meta: { programLine: "B.Pharm" } })),
+    ).tex;
+    expect(out).toContain(
+      "\\newcommand{\\dxGroupHead}[2]{\\dxGroupHeadAt{0.125in}{-0.035in}{#1}{#2}}",
+    );
+    expect(out).toContain("\\dxGroupHead{Q.1 ");
+    expect(out).toContain("\\dxGroupHeadAt{0.2in}{-0.035in}{Q.2 ");
+    expect(out).toContain("\\dxGroupHeadAt{0.125in}{0.03in}{Q.3 ");
+    expect(out).toContain("{\\large\\textbf{B.Pharm}\\par}");
+    expect(out).toContain("\\dxKeepWithNext");
+  });
+
   it("writes placeholders for empty slots unless told to omit them", () => {
     const r = ok(serializePaper({ ...paperWith([]), emptySlots: "PLACEHOLDER", slots: [] }));
     expect(r.tex.match(/Question not written yet/g)).toHaveLength(30);

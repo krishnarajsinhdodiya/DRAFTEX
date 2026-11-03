@@ -57,7 +57,8 @@ export function marksLabel(style: Structure["marksStyle"], marks: number): strin
   return `Marks: ${m}`;
 }
 
-const inch = (n: number) => `${formatMarks(Number(n.toFixed(3)))}in`;
+/** Lengths keep three decimals: hand-written papers use values like 0.125in. */
+const inch = (n: number) => `${Number(n.toFixed(3))}in`;
 
 class Writer {
   private readonly lines: string[] = [];
@@ -313,12 +314,31 @@ function preamble(w: Writer, style: Style, header: Header): void {
   w.line("%% numbering restarts at 1 in each group via \\dxQOffset.");
   w.line("\\newcount\\dxQOffset");
   w.line(
-    `\\newcommand{\\dxGroupHead}[2]{\\uplevel{\\vspace{${inch(s.beforeGroup)}}\\noindent\\textbf{#1}\\hfill\\textbf{#2}\\par\\vspace{${inch(s.afterGroupHead)}}}\\global\\dxQOffset=\\value{question}\\relax}`,
+    "%% Space before a heading sits outside the \\uplevel box so it vanishes at the top of a page;",
+  );
+  w.line(
+    "%% the box still starts with (zero) glue so line spacing around it matches \\uplevel{\\vspace{..}..};",
+  );
+  w.line(
+    "%% the heading stays with the first question after it, as LaTeX does for section titles.",
+  );
+  w.line(
+    "%% Not before the first question: there @nobreak would also drop the list's opening \\topsep.",
+  );
+  w.line(
+    "\\makeatletter\\newcommand{\\dxKeepWithNext}{\\ifnum\\value{question}>0 \\@nobreaktrue\\fi}\\makeatother",
+  );
+  w.line(
+    "\\newcommand{\\dxGroupHeadAt}[4]{\\par\\vspace{#1}\\uplevel{\\vspace{0pt}\\noindent\\textbf{#3}\\hfill\\textbf{#4}\\par\\vspace{#2}}\\global\\dxQOffset=\\value{question}\\relax\\dxKeepWithNext}",
+  );
+  w.line(
+    `\\newcommand{\\dxGroupHead}[2]{\\dxGroupHeadAt{${inch(s.beforeGroup)}}{${inch(s.afterGroupHead)}}{#1}{#2}}`,
   );
   w.line("\\renewcommand{\\questionlabel}{\\the\\numexpr\\value{question}-\\dxQOffset\\relax.}");
-  // A center environment would be a list item inside `questions`; \centering is not.
+  // Inside `questions` a center environment would need an \item and \centering
+  // is ignored by \uplevel, so the title is centred with \hfill on both sides.
   w.line(
-    `\\newcommand{\\dxPartHead}[1]{\\uplevel{\\par\\vspace{${inch(s.beforePart)}}{\\centering\\textbf{#1}\\par}\\vspace{${inch(s.afterPart)}}}}`,
+    `\\newcommand{\\dxPartHead}[1]{\\par\\vspace{${inch(s.beforePart)}}\\uplevel{\\vspace{0pt}\\noindent\\hfill\\textbf{#1}\\hfill\\null\\par\\vspace{${inch(s.afterPart)}}}\\dxKeepWithNext}`,
   );
   const tag = style.coTagStyle === "BOLD" ? "\\textbf{#1}" : "{\\footnotesize #1}";
   w.line(
@@ -342,9 +362,10 @@ function headerBlock(
   const lines = header.lines.map((l) => {
     const body = fill(l.text, meta, issues);
     const b = l.bold ? `\\textbf{${body}}` : body;
-    if (l.size === "large") return `  {\\large${l.bold ? "" : " "}${b}}\\par`;
-    if (l.size === "small") return `  {\\small ${b}}\\par`;
-    return `  ${b}\\par`;
+    const size =
+      l.size === "large" ? `\\large${l.bold ? "" : " "}` : l.size === "small" ? "\\small " : "";
+    if (!size) return `  ${b}\\par`;
+    return l.ownLeading ? `  {${size}${b}\\par}` : `  {${size}${b}}\\par`;
   });
   w.line("%% ---------- header ----------");
   if (header.logoLeft) {
@@ -469,9 +490,14 @@ function serializeParsed(paper: Paper): SerializeResult {
       w.line(
         `%% DX-GROUP id=${group.key} type=${group.type} slots=${group.slots} attempt=${group.attempt} marksEach=${formatMarks(group.marksEach)}`,
       );
-      w.line(
-        `\\dxGroupHead{${text(label, issues)} ${text(group.heading, issues)}}{${text(marksLabel(structure.marksStyle, group.attempt * group.marksEach), issues)}}`,
-      );
+      const head = `{${text(label, issues)} ${text(group.heading, issues)}}{${text(marksLabel(structure.marksStyle, group.attempt * group.marksEach), issues)}}`;
+      if (group.spaceBefore === undefined && group.spaceAfterHead === undefined) {
+        w.line(`\\dxGroupHead${head}`);
+      } else {
+        const before = inch(group.spaceBefore ?? style.spacing.beforeGroup);
+        const after = inch(group.spaceAfterHead ?? style.spacing.afterGroupHead);
+        w.line(`\\dxGroupHeadAt{${before}}{${after}}${head}`);
+      }
       const ctx: BlockContext = {
         issues,
         assets,
