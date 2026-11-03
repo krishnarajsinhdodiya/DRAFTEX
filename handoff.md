@@ -32,10 +32,11 @@ no chat history must be able to continue from this file alone.
 - `tests/break-ui/seed-worst-case.ts` fills a throwaway e2e database with 200 worst-case templates. It refuses paths outside the OS temp folder.
 
 ## In progress
-- Nothing half-done.
+- Nothing half-done. After Phase 4: "New template" asks for a title first (fix branch, merged); the templates e2e spec reuses one sign-in per person because the 20-per-15-minutes sign-in limit is real.
 
 ## Next steps (Phase 5, Paper editor; follow SPEC §13)
 1. Session start per the operating rules; branch `phase/5-paper-editor` from `main`.
+1a. Design direction first (owner decision, memory.md "UI primitives and visual identity"): write the token system and apply it to the library, template page and builder. Use `/apple-design-web` + `/emil-design-eng`, then `/apple-design` in improvement mode. Show the owner screenshots before building the editor screens. Avoid the default Tailwind-neutral/shadcn look.
 2. Re-verify the planned versions (TipTap, MathLive, sharp, resvg-js) before installing; approve their install scripts in `allowScripts` where needed (sharp).
 3. "New paper from this template" on the template page; the paper keeps `templateSnapshot`.
 4. Pass the course's lab hours to the checker for practical papers (D18).
@@ -48,7 +49,6 @@ no chat history must be able to continue from this file alone.
 
 ## Blockers / risks
 - **Numbering**: templates number groups today (Q.1 … Q.4 across two sections). Per-question numbering is decided for Phase 5 (next step 6).
-- **Untitled copies**: "New template" creates an "Untitled template" at once. If you leave without editing, it stays in "Mine" until you delete it.
 - **No pagination**: the library renders every visible template (212 rows rendered fine). Search and filters are the answer for now.
 - **Slow compile**: not simulated in the browser. The 20 s timeout message and the "Making the preview…" state are covered by unit tests and code reading only.
 - Unit titles are best effort (34 of 344 have no heading in the PDF).
@@ -85,8 +85,6 @@ no chat history must be able to continue from this file alone.
 - `.claude/launch.json` (git-ignored) has a `draftex-e2e` preview on port 3212. It gets a fresh throwaway data folder on every start; the test admin's sign-in is the `ADMIN` entry in `tests/e2e/support.ts` (run `/setup` once per start).
 
 ## Questions for owner
-- shadcn/ui: keep Radix + our own styles (current), or adopt the shadcn CLI components?
-- "New template": create an untitled copy at once (current), or ask for a title first?
 - Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`?
 - How does your father tag COs of elective options? The default is `BP607TAEC1.01`.
 - Later: should the app offer Times at all?
