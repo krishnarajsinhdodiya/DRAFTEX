@@ -282,7 +282,9 @@ describe("serializePaper: content nodes", () => {
         ]),
       ),
     );
-    expect(out.tex).toContain(`\\includegraphics[width=0.45\\linewidth]{assets/${sha}.png}`);
+    expect(out.tex).toContain(
+      `\\includegraphics[width=0.45\\linewidth,height=0.6\\textheight,keepaspectratio]{assets/${sha}.png}`,
+    );
     expect(out.tex).toContain(`\\includegraphics{assets/${sha}.jpg}`);
     expect(out.assets).toEqual([`assets/${sha}.jpg`, `assets/${sha}.png`]);
   });

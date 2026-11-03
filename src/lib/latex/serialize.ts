@@ -190,8 +190,9 @@ function leaf(b: LeafBlockNode, ctx: BlockContext): string {
     case "image": {
       const name = `assets/${b.attrs.sha256}.${b.attrs.ext}`;
       ctx.assets.add(name);
+      // A tall drawing at full width would run off the page; the height cap keeps its shape.
       const opt = b.attrs.widthPercent
-        ? `[width=${formatMarks(b.attrs.widthPercent / 100)}\\linewidth]`
+        ? `[width=${formatMarks(b.attrs.widthPercent / 100)}\\linewidth,height=0.6\\textheight,keepaspectratio]`
         : "";
       return `\\par\\smallskip\\begin{center}\\includegraphics${opt}{${name}}\\end{center}`;
     }
