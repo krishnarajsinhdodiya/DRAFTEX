@@ -394,6 +394,13 @@ export function usePaper(view: PaperEditorView) {
     [saveNow],
   );
 
+  /** Saves every question that has changes; true when all of them reached the server. */
+  const flushAll = useCallback(async () => {
+    const keys = [...slotsRef.current.entries()].filter(([, s]) => s.status !== "saved");
+    await Promise.all(keys.map(([k]) => flush(k)));
+    return [...slotsRef.current.values()].every((s) => s.status === "saved");
+  }, [flush]);
+
   const restore = useCallback(
     async (key: string, value: SlotValue) => {
       patchSlot(key, {
@@ -549,6 +556,7 @@ export function usePaper(view: PaperEditorView) {
     move,
     duplicate,
     undo,
+    flushAll,
     undoLabel: undoStack.at(-1)?.label ?? null,
     opError,
     dismissOpError: () => setOpError(null),

@@ -15,6 +15,7 @@ import { marksText } from "@/lib/templates/labels";
 import type { Problem } from "@/lib/paper/problems";
 import type { EditorGroup, PaperEditorView } from "@/server/paper-view";
 import { DetailsButton } from "./details";
+import { DuplicateButton, ExportButton } from "./export-duplicate";
 import { SlotCard } from "./slot-card";
 import { slotKey, usePaper } from "./use-paper";
 
@@ -190,6 +191,8 @@ export function PaperEditor({
           <Undo2 size={15} aria-hidden /> Undo
         </button>
         <DetailsButton view={view} />
+        <DuplicateButton paperId={view.id} title={view.title} examKind={view.examKind} />
+        <ExportButton paperId={view.id} flush={paper.flushAll} />
         <button
           type="button"
           className={buttonStyles.quiet}
