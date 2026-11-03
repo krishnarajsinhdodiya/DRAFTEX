@@ -17,11 +17,11 @@ export interface Diagnostic {
   slotId?: string;
 }
 
-const STDERR_LINE = /^(warning|error): (?:([^:\s][^:]*):(\d+): )?(.+)$/;
+const STDERR_LINE = /^(warning|error|caused by): (?:([^:\s][^:]*):(\d+): )?(.+)$/;
 const GENERIC = [
   /^warnings were issued by the TeX engine/,
-  /^something bad happened inside XeTeX/,
-  /^the XeTeX engine had an unrecoverable error/,
+  /^something bad happened inside (?:XeTeX|xdvipdfmx)/,
+  /^the (?:XeTeX|xdvipdfmx) engine had an unrecoverable error/,
   /^halted on potentially-recoverable error/,
 ];
 
@@ -37,7 +37,8 @@ export function parseStderr(stderr: string): Diagnostic[] {
   for (const raw of stderr.split(/\r?\n/)) {
     const m = STDERR_LINE.exec(raw.trim());
     if (!m) continue;
-    const level = m[1] as "warning" | "error";
+    // "caused by:" carries the real reason when xdvipdfmx fails.
+    const level = m[1] === "warning" ? "warning" : "error";
     const file = m[2];
     const line = m[3];
     const message = m[4] as string;
@@ -94,9 +95,13 @@ export function goldenFailures(diags: Diagnostic[]): Diagnostic[] {
   return diags.filter((d) => !(d.kind === "overfull" && (d.overfullPt ?? Infinity) <= 1));
 }
 
-const CACHE_MISS = /not found|not loadable|could not (?:find|locate|open)|unable to (?:find|open)/i;
+const CACHE_MISS =
+  /not found|not loadable|could not (?:find|locate|open)|unable to (?:find|open|generate)|cannot proceed without/i;
 
-/** With --only-cached, a missing-resource error means the cache lacks a file. */
+/**
+ * With --only-cached, a failed run whose messages mention a missing resource
+ * means the cache lacks a file (fonts surface as xdvipdfmx warnings).
+ */
 export function looksLikeCacheMiss(diags: Diagnostic[]): boolean {
-  return diags.some((d) => d.severity === "error" && CACHE_MISS.test(d.message));
+  return diags.some((d) => d.severity === "error") && diags.some((d) => CACHE_MISS.test(d.message));
 }

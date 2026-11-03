@@ -42,6 +42,14 @@ describe("parseStderr (real output)", () => {
     expect(looksLikeCacheMiss(parseStderr(fixture("e.stderr.txt")))).toBe(false);
   });
 
+  it("turns an xdvipdfmx font failure into an error and a cache miss", () => {
+    const d = parseStderr(fixture("font-miss.stderr.txt"));
+    expect(d.filter((x) => x.severity === "error").map((x) => x.message)).toEqual([
+      'Cannot proceed without .vf or "physical" font for PDF output...',
+    ]);
+    expect(looksLikeCacheMiss(d)).toBe(true);
+  });
+
   it("keeps non-TeX engine warnings", () => {
     const d = parseStderr(
       "warning: accessing absolute path `/etc/hosts`; build may not be reproducible\n",

@@ -61,6 +61,8 @@ export interface CompileServiceOptions {
   maxOutputBytes?: number;
   /** Retry once with the network when the offline cache misses a file. */
   allowNetwork?: boolean;
+  /** false = go online straight away (package warm-up). */
+  offlineFirst?: boolean;
   rateLimit?: { jobs: number; perMs: number };
   now?: () => number;
 }
@@ -82,6 +84,7 @@ export class CompileService {
   private readonly timeoutMs: number;
   private readonly maxOutputBytes: number;
   private readonly allowNetwork: boolean;
+  private readonly offlineFirst: boolean;
   private readonly rateLimit: { jobs: number; perMs: number };
   private readonly now: () => number;
   private readonly queue: Pending[] = [];
@@ -95,6 +98,7 @@ export class CompileService {
     this.timeoutMs = opts.timeoutMs ?? 20_000;
     this.maxOutputBytes = opts.maxOutputBytes ?? 20 * 1024 * 1024;
     this.allowNetwork = opts.allowNetwork ?? true;
+    this.offlineFirst = opts.offlineFirst ?? true;
     this.rateLimit = opts.rateLimit ?? { jobs: 30, perMs: 60_000 };
     this.now = opts.now ?? Date.now;
   }
@@ -167,9 +171,10 @@ export class CompileService {
         fs.copyFileSync(a.sourcePath, path.join(dir, a.name));
       }
 
-      let usedNetwork = false;
-      let attempt = await this.attempt(dir, true, job);
+      let usedNetwork = !this.offlineFirst;
+      let attempt = await this.attempt(dir, this.offlineFirst, job);
       if (
+        this.offlineFirst &&
         !attempt.ok &&
         !attempt.timedOut &&
         this.allowNetwork &&

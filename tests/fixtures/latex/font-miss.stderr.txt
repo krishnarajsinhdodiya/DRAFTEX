@@ -1,0 +1,11 @@
+warning: Tectonic unable to generate PK font "cmmi10.pfb" (dpi 600) on-the-fly
+warning: Could not locate a virtual/physical font for TFM "cmmi10".
+warning: >> This font is mapped to a physical font "cmmi10.pfb".
+warning: >> Please check if kpathsea library can find this font: cmmi10.pfb
+error: something bad happened inside xdvipdfmx; its output follows:
+
+===============================================================================
+
+===============================================================================
+error: the xdvipdfmx engine had an unrecoverable error
+caused by: Cannot proceed without .vf or "physical" font for PDF output...
