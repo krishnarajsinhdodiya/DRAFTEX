@@ -6,7 +6,7 @@ import { getData } from "@/lib/data";
 import { requireAdmin } from "@/server/auth";
 import { backupCommands } from "@/server/backup-commands";
 import { backupContext } from "@/server/backups";
-import { BackupNowButton, CancelRestoreButton, RestoreForm } from "./client";
+import { BackupNowButton, CancelRestoreButton, DeleteBackupButton, RestoreForm } from "./client";
 
 export const metadata: Metadata = { title: "Backups · DRAFTEX" };
 
@@ -32,8 +32,8 @@ export default async function BackupsPage() {
         <p className="max-w-prose text-ink-2">
           A backup holds every paper, answer key, template, picture and account. DRAFTEX makes one
           every day and keeps the last 14 of those. Other backups (made by hand, before an update or
-          before a restore) are never removed for you: delete old ones from the folder when you no
-          longer need them. They are saved in <span className="break-all text-ink">{folder}</span>.
+          before a restore) are kept until you delete them here. They are saved in{" "}
+          <span className="break-all text-ink">{folder}</span>.
         </p>
         <FormAlert kind="caution">
           Backups contain unreleased exam papers. Keep copies on a drive only you use, not in a
@@ -77,7 +77,7 @@ export default async function BackupsPage() {
                     Size
                   </th>
                   <th scope="col" className="px-4 py-2.5 font-medium">
-                    <span className="sr-only">Download</span>
+                    <span className="sr-only">Actions</span>
                   </th>
                 </tr>
               </thead>
@@ -92,14 +92,21 @@ export default async function BackupsPage() {
                       {size(r.bytes)}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <a
-                        href={`/api/admin/backups/${encodeURIComponent(r.name)}`}
-                        download={r.name}
-                        className={linkStyles}
-                        aria-label={`Download the backup made ${when.format(new Date(r.at))}`}
-                      >
-                        Download
-                      </a>
+                      <span className="inline-flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                        <a
+                          href={`/api/admin/backups/${encodeURIComponent(r.name)}`}
+                          download={r.name}
+                          className={linkStyles}
+                          aria-label={`Download the backup made ${when.format(new Date(r.at))}`}
+                        >
+                          Download
+                        </a>
+                        <DeleteBackupButton
+                          name={r.name}
+                          label={`the backup made ${when.format(new Date(r.at))}`}
+                          only={rows.length === 1}
+                        />
+                      </span>
                     </td>
                   </tr>
                 ))}

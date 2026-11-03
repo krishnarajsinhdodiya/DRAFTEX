@@ -62,6 +62,27 @@ describe("backups, for an administrator", () => {
   });
 });
 
+describe("deleting a backup", () => {
+  it("removes only that file, only by a name DRAFTEX made, and is audited", async () => {
+    const c = backupCommands(t.data, ctx, admin);
+    const keep = await c.backupNow();
+    const gone = await c.backupNow();
+    fs.writeFileSync(path.join(ctx.paths.backups, "notes.zip"), "x");
+    for (const bad of ["notes.zip", "../data.db", "DRAFTEX-backup-2026-01-01_000000-auto.zip"]) {
+      await expect(c.remove(bad)).rejects.toBeInstanceOf(NotFoundError);
+    }
+    await c.remove(gone);
+    const names = c.list().rows.map((r) => r.name);
+    expect(names).toContain(keep);
+    expect(names).not.toContain(gone);
+    expect(fs.existsSync(path.join(ctx.paths.backups, "notes.zip"))).toBe(true);
+    expect(fs.existsSync(ctx.paths.database)).toBe(true);
+    await expect(c.remove(gone)).rejects.toBeInstanceOf(NotFoundError);
+    const audit = await t.db.auditLog.findMany({ where: { action: "delete-backup" } });
+    expect(audit.map((a) => [a.entityId, a.actorId])).toEqual([[gone, admin.userId]]);
+  });
+});
+
 describe("backups, for faculty", () => {
   const c = () => backupCommands(t.data, ctx, faculty);
   it.each([
@@ -70,6 +91,7 @@ describe("backups, for faculty", () => {
     ["download one", () => c().file(fs.readdirSync(ctx.paths.backups)[0] as string)],
     ["stage a restore", () => c().stage(new Uint8Array([1]))],
     ["cancel a restore", () => c().cancel()],
+    ["delete one", () => c().remove(fs.readdirSync(ctx.paths.backups)[0] as string)],
   ])("cannot %s (not found)", async (_op, run) => {
     await expect((async () => run())()).rejects.toBeInstanceOf(NotFoundError);
   });
