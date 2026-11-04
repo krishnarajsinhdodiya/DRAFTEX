@@ -50,7 +50,7 @@ describe("config.json", () => {
   });
 
   it("needs a host name in server mode and refuses malformed names", () => {
-    expect(() => parseConfig({ mode: "server" })).toThrow(/server mode needs the name/);
+    expect(() => parseConfig({ mode: "server" })).toThrow(/Server mode needs the address/);
     expect(() => parseConfig({ hostNames: ["http://x"] })).toThrow(/host name/);
     expect(() => parseConfig({ hostNames: ["-bad.example"] })).toThrow(/host name/);
     expect(parseConfig({ mode: "server", hostNames: ["papers.college.edu"] }).mode).toBe("server");

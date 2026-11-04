@@ -33,7 +33,7 @@ export const configSchema = z
   })
   .refine((c) => c.mode !== "server" || c.hostNames.length > 0, {
     path: ["hostNames"],
-    message: "server mode needs the name people type to reach DRAFTEX",
+    message: "server mode needs the address people type to reach DRAFTEX",
   });
 export type AppConfig = z.output<typeof configSchema>;
 export type NetworkMode = AppConfig["mode"];
@@ -47,6 +47,8 @@ function describe(error: z.ZodError): string {
   const where = issue.path.join(".") || "the file";
   if (issue.path[0] === "mode") return "mode must be local, lan or server.";
   if (issue.path[0] === "port") return "port must be a whole number from 1024 to 65535.";
+  if (issue.code === "custom" && issue.path.length === 1 && issue.path[0] === "hostNames")
+    return `${issue.message[0]!.toUpperCase()}${issue.message.slice(1)}.`;
   return `${where} ${issue.message}.`;
 }
 
