@@ -292,6 +292,59 @@ test("someone else's paper and pictures do not exist for them, by any route", as
   await anonymous.close();
 });
 
+test("a deleted paper goes to Trash, comes back with Undo or Restore, and can be deleted forever (D51)", async ({
+  browser,
+}) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto(paperUrl);
+  await expect(page.getByRole("img", { name: /page 1 of/ })).toBeVisible({ timeout: 60_000 });
+  const id = paperUrl.split("/").pop() as string;
+
+  // Undo straight after deleting.
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: `Move “${TITLE}” to Trash?` })
+    .getByRole("button", { name: "Move to Trash" })
+    .click();
+  await expect(page).toHaveURL(/\/papers\?trashed=/);
+  await expect(page.getByText(`“${TITLE}” was moved to Trash.`)).toBeVisible();
+  expect((await page.request.get(`/api/papers/${id}/preview`)).status()).toBe(404);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page).toHaveURL(/\/papers$/);
+  await expect(
+    page.getByRole("link", { name: new RegExp(`^${TITLE} (Draft|Final)`) }),
+  ).toBeVisible();
+
+  // Delete again, then Restore from the Trash page.
+  await page.goto(paperUrl);
+  await expect(page.getByRole("img", { name: /page 1 of/ })).toBeVisible({ timeout: 60_000 });
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "Move to Trash" }).click();
+  await expect(page).toHaveURL(/\/papers\?trashed=/);
+  await page.getByRole("link", { name: "Trash (1)" }).click();
+  await expect(page.getByText("30 days left")).toBeVisible();
+  await page.getByRole("button", { name: `Restore ${TITLE}` }).click();
+  await expect(page.getByText("Trash is empty.")).toBeVisible();
+  expect((await page.goto(paperUrl))?.status()).toBe(200);
+
+  // A copy deleted for good is gone; the original stays.
+  await page.goto("/papers");
+  await page.getByRole("link", { name: new RegExp(`^${TITLE} \\(ATKT\\)`) }).click();
+  await expect(page.getByRole("img", { name: /page 1 of/ })).toBeVisible({ timeout: 60_000 });
+  const copyUrl = page.url();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "Move to Trash" }).click();
+  await page.goto("/papers/trash");
+  await page.getByRole("button", { name: `Delete ${TITLE} (ATKT) forever` }).click();
+  await page
+    .getByRole("dialog", { name: `Delete “${TITLE} (ATKT)” forever?` })
+    .getByRole("button", { name: "Delete forever" })
+    .click();
+  await expect(page.getByText("Trash is empty.")).toBeVisible();
+  expect((await page.goto(copyUrl))?.status()).toBe(404);
+  expect((await page.goto(paperUrl))?.status()).toBe(200);
+});
+
 test("no page broke the Content Security Policy (editor, MathLive, PDF preview)", () => {
   expect(cspViolations).toEqual([]);
 });

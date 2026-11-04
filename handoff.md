@@ -34,6 +34,7 @@ no chat history must be able to continue from this file alone.
 - `fix/carried-issues`: superseded previews answered 500 (cross-bundle `instanceof`) → now 409, with an e2e test; Turbopack whole-project tracing warning gone; admin header stays on one line down to 900 px; restore uploads are capped by real inflated size.
 - End user's laptop is Windows 11 (memory.md).
 - `fix/setup-network-retries`: first real install on the father's Windows 11 laptop failed at `npm ci` (ECONNRESET); setup now retries and warns about ZIP copies and Downloads folders; guide §13 says not to use Download ZIP and what to do on network errors. **The laptop copy must be redone as a `git clone` into `C:\DRAFTEX`.**
+- `fix/delete-and-uninstall` (owner request after the first real install worked): admins delete/restore built-in templates (D50, blank built-in stays), paper Trash with Undo, Restore, Delete forever and a 30-day purge (D51, migration `paper_trash`), and `uninstall-windows.bat` / `uninstall-macos.sh` that keep the data folder (D52). Gate 10 now also runs the uninstall. Guide §4, §8 and new §14.
 - `fix/sole-admin-lockout` (D49): offline password reset (`npm run reset-password -- <email>`, `reset-password-windows.bat`), applied at the next start; user guide §12 explains it.
 
 ## In progress
@@ -59,7 +60,7 @@ no chat history must be able to continue from this file alone.
 - D42–D48 (D43 amended: portable Node archive), Git not installed by setup, SIGHUP handling, ASCII-only Windows scripts and mid-run-safe update scripts, quiet warm-up notes, CI-only `cache/` from Next telemetry, screenshot script, icon, sole-admin recovery gap.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). Run `npm run db:migrate` once if not done since Phase 7 (migration `login_locks`).
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). Run `npm run db:migrate` once (new migration `paper_trash`); the father's laptop gets it through `update-windows.bat`.
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands (the dev checkout does not use `.runtime/`; `./setup-macos.sh` would create it).
 - `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215, LAN), `draftex-dev-throwaway` (3216, dev). E2E uses 3211, restore 3214, server mode 3218. Guide screenshots: `node scripts/e2e-server.ts 3210` then `node scripts/guide-screenshots.ts http://127.0.0.1:3210` (only when the real app is not running).
 - Throwaway install test leftovers may exist in `/tmp/draftex-install-test`, `/tmp/draftex-install-data`, `/tmp/draftex-moved` (safe to delete).
