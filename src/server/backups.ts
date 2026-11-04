@@ -51,4 +51,21 @@ export function scheduleDailyBackups(hasUsers: () => Promise<boolean>): void {
   globalForBackups.draftexBackupTimer = setInterval(() => void tick(), HOUR);
   globalForBackups.draftexBackupTimer.unref();
 }
+const globalForTrash = globalThis as unknown as { draftexTrashTimer?: NodeJS.Timeout };
+
+/** Removes papers that have been in Trash for 30 days (D51): at startup, then every hour. */
+export function scheduleTrashPurge(purge: () => Promise<number>): void {
+  const tick = async () => {
+    try {
+      const n = await purge();
+      if (n > 0) console.log(`[trash] Removed ${n} paper(s) that had been in Trash for 30 days.`);
+    } catch (e) {
+      console.error(`[trash] Emptying old Trash failed: ${(e as Error).message}`);
+    }
+  };
+  void tick();
+  clearInterval(globalForTrash.draftexTrashTimer);
+  globalForTrash.draftexTrashTimer = setInterval(() => void tick(), HOUR);
+  globalForTrash.draftexTrashTimer.unref();
+}
 /* v8 ignore stop */

@@ -30,6 +30,10 @@ function describe(action: string, entity: string): string {
     "change-password": "Changed own password",
     "reset-password": "Set a password for an account",
     "reset-password-offline": "Reset a password on the DRAFTEX computer",
+    trash: "Moved a paper to Trash",
+    "empty-trash": "Emptied Trash",
+    "purge-trash": "Removed papers that were in Trash for 30 days",
+    "restore-built-ins": "Restored the built-in templates",
     "advanced-latex:on": "Allowed Advanced LaTeX",
     "advanced-latex:off": "Stopped Advanced LaTeX",
     redeem: "Joined with an invite",
@@ -51,6 +55,7 @@ function describe(action: string, entity: string): string {
     copy: "Copied",
     duplicate: "Duplicated",
     revoke: "Withdrew",
+    restore: "Restored",
   };
   if (verb[action]) return entity ? `${verb[action]} ${thing}` : `${verb[action]} something`;
   // An action this screen has no words for yet: still readable.

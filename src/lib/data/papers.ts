@@ -94,7 +94,8 @@ function nullableJson(value: unknown): Prisma.InputJsonValue | typeof Prisma.DbN
 
 export function papers(db: Db) {
   async function findOwn(actor: Actor, id: string) {
-    const p = await db.paper.findFirst({ where: { id, ownerId: actor.userId } });
+    // A paper in Trash (D51) is "not found" to everything but the Trash itself.
+    const p = await db.paper.findFirst({ where: { id, ownerId: actor.userId, deletedAt: null } });
     if (!p) throw new NotFoundError(WHAT);
     return p;
   }
@@ -172,7 +173,7 @@ export function papers(db: Db) {
   return {
     list(actor: Actor) {
       return db.paper.findMany({
-        where: { ownerId: actor.userId },
+        where: { ownerId: actor.userId, deletedAt: null },
         orderBy: { updatedAt: "desc" },
       });
     },
@@ -182,7 +183,7 @@ export function papers(db: Db) {
     /** The paper with its slots, e.g. to compile or export it. */
     async getWithSlots(actor: Actor, id: string) {
       const p = await db.paper.findFirst({
-        where: { id, ownerId: actor.userId },
+        where: { id, ownerId: actor.userId, deletedAt: null },
         include: {
           slots: { orderBy: [{ partKey: "asc" }, { groupKey: "asc" }, { position: "asc" }] },
         },
@@ -232,7 +233,7 @@ export function papers(db: Db) {
       await checkCourse(m.courseId);
       const { instructionsOverride, ...rest } = m;
       const { count } = await db.paper.updateMany({
-        where: { id, ownerId: actor.userId, version },
+        where: { id, ownerId: actor.userId, deletedAt: null, version },
         data: {
           ...rest,
           ...(instructionsOverride !== undefined && {
@@ -246,10 +247,64 @@ export function papers(db: Db) {
       return findOwn(actor, id);
     },
 
+    /** Moves the paper to Trash (D51); restore brings it back, purge removes it for good. */
     async remove(actor: Actor, id: string) {
       await findOwn(actor, id);
-      await db.paper.delete({ where: { id } });
+      await db.paper.update({ where: { id }, data: { deletedAt: new Date() } });
+      await writeAudit(db, { actorId: actor.userId, action: "trash", entity: WHAT, entityId: id });
+    },
+
+    /** The actor's papers in Trash, most recently deleted first, with the days each has left. */
+    async listTrash(actor: Actor, now: Date = new Date()) {
+      const rows = await db.paper.findMany({
+        where: { ownerId: actor.userId, deletedAt: { not: null } },
+        orderBy: { deletedAt: "desc" },
+        select: { id: true, title: true, courseCode: true, examKind: true, deletedAt: true },
+      });
+      return rows.map((p) => {
+        const deletedAt = p.deletedAt ?? now;
+        const left = deletedAt.getTime() + TRASH_DAYS * 86_400_000 - now.getTime();
+        return { ...p, deletedAt, daysLeft: Math.max(0, Math.ceil(left / 86_400_000)) };
+      });
+    },
+
+    async restore(actor: Actor, id: string) {
+      const { count } = await db.paper.updateMany({
+        where: { id, ownerId: actor.userId, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+      if (count === 0) throw new NotFoundError(WHAT);
+      await writeAudit(db, {
+        actorId: actor.userId,
+        action: "restore",
+        entity: WHAT,
+        entityId: id,
+      });
+    },
+
+    /** Deletes a paper in Trash for good, with its questions. */
+    async purge(actor: Actor, id: string) {
+      const { count } = await db.paper.deleteMany({
+        where: { id, ownerId: actor.userId, deletedAt: { not: null } },
+      });
+      if (count === 0) throw new NotFoundError(WHAT);
       await writeAudit(db, { actorId: actor.userId, action: "delete", entity: WHAT, entityId: id });
+    },
+
+    /** Deletes every paper in the actor's Trash for good; returns how many. */
+    async emptyTrash(actor: Actor): Promise<number> {
+      const { count } = await db.paper.deleteMany({
+        where: { ownerId: actor.userId, deletedAt: { not: null } },
+      });
+      if (count > 0) {
+        await writeAudit(db, {
+          actorId: actor.userId,
+          action: "empty-trash",
+          entity: WHAT,
+          detail: String(count),
+        });
+      }
+      return count;
     },
 
     /**
@@ -304,7 +359,7 @@ export function papers(db: Db) {
      */
     async duplicate(actor: Actor, id: string, input: DuplicateInput) {
       const src = await db.paper.findFirst({
-        where: { id, ownerId: actor.userId },
+        where: { id, ownerId: actor.userId, deletedAt: null },
         include: { slots: true },
       });
       if (!src) throw new NotFoundError(WHAT);
@@ -482,4 +537,22 @@ export function papers(db: Db) {
       });
     },
   };
+}
+
+/** How long a paper stays in Trash before it is removed for good (D51). */
+export const TRASH_DAYS = 30;
+
+/** System only: removes papers that have been in Trash for TRASH_DAYS. */
+export async function purgeOldTrash(db: Db, now: Date): Promise<number> {
+  const before = new Date(now.getTime() - TRASH_DAYS * 86_400_000);
+  const { count } = await db.paper.deleteMany({ where: { deletedAt: { not: null, lte: before } } });
+  if (count > 0) {
+    await writeAudit(db, {
+      actorId: null,
+      action: "purge-trash",
+      entity: WHAT,
+      detail: String(count),
+    });
+  }
+  return count;
 }

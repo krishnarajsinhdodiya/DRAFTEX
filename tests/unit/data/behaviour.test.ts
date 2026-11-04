@@ -244,6 +244,83 @@ describe("papers", () => {
     await expect(t.data.papers.get(faculty, p.id)).rejects.toBeInstanceOf(NotFoundError);
   });
 
+  it("a deleted paper waits in Trash, where it can be restored or deleted for good (D51)", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("Trash"));
+    const p = await t.data.papers.create(faculty, tpl.id, paperMeta({ title: "Trash me" }));
+    await t.data.papers.saveSlot(faculty, p.id, testSlot());
+    await t.data.papers.remove(faculty, p.id);
+
+    // Gone from everything but Trash.
+    expect((await t.data.papers.list(faculty)).map((x) => x.id)).not.toContain(p.id);
+    for (const run of [
+      () => t.data.papers.get(faculty, p.id),
+      () => t.data.papers.getWithSlots(faculty, p.id),
+      () => t.data.papers.update(faculty, p.id, 1, { title: "x" }),
+      () => t.data.papers.saveSlot(faculty, p.id, testSlot()),
+      () => t.data.papers.duplicate(faculty, p.id, { title: "c", examKind: "SUPPLEMENTARY_ATKT" }),
+      () => t.data.papers.remove(faculty, p.id),
+    ]) {
+      await expect(run()).rejects.toBeInstanceOf(NotFoundError);
+    }
+    const now = new Date();
+    const [inTrash] = (await t.data.papers.listTrash(faculty, now)).filter((x) => x.id === p.id);
+    expect(inTrash).toMatchObject({ title: "Trash me", daysLeft: 30 });
+    const later = new Date(now.getTime() + 29.5 * 86_400_000);
+    expect(
+      (await t.data.papers.listTrash(faculty, later)).find((x) => x.id === p.id)?.daysLeft,
+    ).toBe(1);
+
+    // Restore brings it back with its questions.
+    await t.data.papers.restore(faculty, p.id);
+    expect((await t.data.papers.getWithSlots(faculty, p.id)).slots).toHaveLength(1);
+    await expect(t.data.papers.restore(faculty, p.id)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(t.data.papers.purge(faculty, p.id)).rejects.toBeInstanceOf(NotFoundError);
+
+    // Delete forever only works from Trash, and takes the questions with it.
+    await t.data.papers.remove(faculty, p.id);
+    await t.data.papers.purge(faculty, p.id);
+    expect(await t.db.paper.count({ where: { id: p.id } })).toBe(0);
+    expect(await t.db.slot.count({ where: { paperId: p.id } })).toBe(0);
+
+    // Empty Trash removes only the actor's own trashed papers.
+    const a = await t.data.papers.create(faculty, tpl.id, paperMeta({ title: "A" }));
+    const b = await t.data.papers.create(faculty, tpl.id, paperMeta({ title: "B" }));
+    const adminTpl = await t.data.templates.create(admin, templateFields("Admin's"));
+    const theirs = await t.data.papers.create(admin, adminTpl.id, paperMeta({ title: "Theirs" }));
+    await t.data.papers.remove(admin, theirs.id);
+    await t.data.papers.remove(faculty, a.id);
+    await t.data.papers.remove(faculty, b.id);
+    expect(await t.data.papers.emptyTrash(faculty)).toBeGreaterThanOrEqual(2);
+    expect(await t.data.papers.listTrash(faculty)).toEqual([]);
+    expect(await t.data.papers.emptyTrash(faculty)).toBe(0);
+    expect((await t.data.papers.listTrash(admin)).map((x) => x.id)).toEqual([theirs.id]);
+    const actions = (await t.db.auditLog.findMany({ where: { entityId: p.id } })).map(
+      (r) => r.action,
+    );
+    expect(actions).toEqual(expect.arrayContaining(["trash", "restore", "delete"]));
+  });
+
+  it("papers in Trash for 30 days are removed by the system purge (D51)", async () => {
+    const tpl = await t.data.templates.create(faculty, templateFields("Purge"));
+    const old = await t.data.papers.create(faculty, tpl.id, paperMeta({ title: "Old" }));
+    const fresh = await t.data.papers.create(faculty, tpl.id, paperMeta({ title: "Fresh" }));
+    const kept = await t.data.papers.create(faculty, tpl.id, paperMeta({ title: "Kept" }));
+    const now = new Date();
+    await t.db.paper.update({
+      where: { id: old.id },
+      data: { deletedAt: new Date(now.getTime() - 30 * 86_400_000 - 1) },
+    });
+    await t.db.paper.update({
+      where: { id: fresh.id },
+      data: { deletedAt: new Date(now.getTime() - 29 * 86_400_000) },
+    });
+    expect(await t.data.system.purgeOldTrash(now)).toBe(1);
+    expect(await t.db.paper.count({ where: { id: old.id } })).toBe(0);
+    expect(await t.db.paper.count({ where: { id: { in: [fresh.id, kept.id] } } })).toBe(2);
+    expect(await t.data.system.purgeOldTrash(now)).toBe(0);
+    expect(await t.db.auditLog.count({ where: { action: "purge-trash" } })).toBe(1);
+  });
+
   it("slots are replaced in place, validated, and removable", async () => {
     const tpl = await t.data.templates.create(faculty, templateFields("S"));
     const p = await t.data.papers.create(faculty, tpl.id, paperMeta());

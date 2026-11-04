@@ -100,6 +100,7 @@ describe.each([
 ])("a paper, seen by %s", (_label, who) => {
   it("is missing from lists", async () => {
     expect((await t.data.papers.list(who())).map((p) => p.id)).not.toContain(paperId);
+    expect((await t.data.papers.listTrash(who())).map((p) => p.id)).not.toContain(paperId);
   });
 
   it.each([
@@ -107,6 +108,8 @@ describe.each([
     ["load for compile or export", () => t.data.papers.getWithSlots(who(), paperId)],
     ["update", () => t.data.papers.update(who(), paperId, 1, { title: "x" })],
     ["delete", () => t.data.papers.remove(who(), paperId)],
+    ["restore from Trash", () => t.data.papers.restore(who(), paperId)],
+    ["delete forever", () => t.data.papers.purge(who(), paperId)],
     ["write a question", () => t.data.papers.saveSlot(who(), paperId, testSlot())],
     ["clear a question", () => t.data.papers.clearSlot(who(), paperId, testSlot())],
     [

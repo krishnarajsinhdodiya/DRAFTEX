@@ -12,7 +12,7 @@ import { ConfigError, readConfig } from "@/lib/config";
 import { getData } from "@/lib/data";
 import { takeReset } from "@/lib/auth/offline-reset";
 import { DataDirError, dataPaths, getDataDir } from "@/lib/paths";
-import { backupContext, runMigrations, scheduleDailyBackups } from "./backups";
+import { backupContext, runMigrations, scheduleDailyBackups, scheduleTrashPurge } from "./backups";
 import { getCompileService } from "./compile";
 
 function stop(message: string): never {
@@ -95,6 +95,7 @@ export async function startup(): Promise<void> {
       );
     }
     scheduleDailyBackups(() => data.auth.hasUsers());
+    scheduleTrashPurge(() => data.system.purgeOldTrash(new Date()));
   } catch {
     stop(
       `The database in ${paths.root} is not up to date. Run "npm run db:migrate", then start DRAFTEX again.`,

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/badge";
-import { FormAlert } from "@/components/form";
+import { Trash2 } from "lucide-react";
 import { buttonStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
 import { actorOf } from "@/lib/auth/service";
 import { getData } from "@/lib/data";
 import { paperSnapshotSchema } from "@/lib/paper/snapshot";
 import { EXAM_KIND_LABEL, durationText, marksText } from "@/lib/templates/labels";
 import { requireUser } from "@/server/auth";
+import { TrashedNotice } from "./trash-buttons";
 
 export const metadata: Metadata = { title: "Papers · DRAFTEX" };
 
@@ -16,20 +17,30 @@ const when = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: 
 export default async function PapersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deleted?: string }>;
+  searchParams: Promise<{ trashed?: string }>;
 }) {
   const { user } = await requireUser();
-  const { deleted } = await searchParams;
-  const rows = await (await getData()).papers.list(actorOf(user));
+  const { trashed } = await searchParams;
+  const data = await getData();
+  const actor = actorOf(user);
+  const [rows, trash] = await Promise.all([data.papers.list(actor), data.papers.listTrash(actor)]);
+  const justTrashed = trashed ? trash.find((p) => p.id === trashed) : undefined;
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitleStyles}>Papers</h1>
-        <Link href="/templates" className={buttonStyles.primary}>
-          New paper from a template
-        </Link>
+        <span className="flex flex-wrap items-center gap-2">
+          {trash.length > 0 ? (
+            <Link href="/papers/trash" className={buttonStyles.quiet}>
+              <Trash2 size={15} aria-hidden /> Trash ({trash.length})
+            </Link>
+          ) : null}
+          <Link href="/templates" className={buttonStyles.primary}>
+            New paper from a template
+          </Link>
+        </span>
       </div>
-      {deleted ? <FormAlert kind="notice">The paper was deleted.</FormAlert> : null}
+      {justTrashed ? <TrashedNotice id={justTrashed.id} title={justTrashed.title} /> : null}
       {rows.length === 0 ? (
         <div className={`${sheetStyles} px-6 py-12 text-center`}>
           <p className="font-medium">You have no papers yet.</p>
