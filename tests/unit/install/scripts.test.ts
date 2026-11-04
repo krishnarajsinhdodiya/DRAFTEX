@@ -50,6 +50,16 @@ describe("setup scripts", () => {
     }
   });
 
+  it("uninstall removes only the app's own folders, never the data folder (D52)", () => {
+    for (const f of ["uninstall-windows.ps1", "uninstall-macos.sh"]) {
+      const text = read(f);
+      expect(text).toContain("uninstall-check.ts");
+      expect(text).toMatch(/\.next.*node_modules.*cache.*\.runtime/);
+      expect(text).not.toMatch(/(Remove-Item|rm -rf)[^\n]*(DATA_DIR|dataDir)/);
+      expect(text).not.toMatch(/git\s+(clean|reset)/);
+    }
+  });
+
   it("back up before pulling, and pull fast-forward only", () => {
     for (const f of ["update-windows.ps1", "update-macos.sh"]) {
       const text = read(f);
@@ -80,6 +90,8 @@ describe("setup scripts", () => {
       "update-windows.bat",
       "start-windows.bat",
       "reset-password-windows.bat",
+      "uninstall-windows.bat",
+      "uninstall-windows.ps1",
       "setup-windows.ps1",
       "update-windows.ps1",
     ]) {
@@ -94,7 +106,12 @@ describe("setup scripts", () => {
     ]) {
       expect(attributes).toContain(rule);
     }
-    for (const f of ["setup-macos.sh", "update-macos.sh", "start-macos.command"]) {
+    for (const f of [
+      "setup-macos.sh",
+      "update-macos.sh",
+      "start-macos.command",
+      "uninstall-macos.sh",
+    ]) {
       expect(read(f)).not.toContain("\r");
       expect(read(f).startsWith("#!/bin/bash\n")).toBe(true);
       if (process.platform !== "win32") expect(fs.statSync(f).mode & 0o111).not.toBe(0);
