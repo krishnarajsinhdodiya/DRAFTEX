@@ -52,6 +52,7 @@ const config = [
       "next-env.d.ts",
       "reference_papers/**",
       "src/generated/**",
+      ".runtime/**",
     ],
   },
 ];

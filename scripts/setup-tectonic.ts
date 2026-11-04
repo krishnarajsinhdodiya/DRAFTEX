@@ -1,6 +1,6 @@
 // Installs the pinned LaTeX engine into <dataDir>/tools and warms its package
 // cache so DRAFTEX compiles offline afterwards. Safe to run again.
-// Usage: node scripts/setup-tectonic.ts [--skip-remote-check]
+// Usage: node scripts/setup-tectonic.ts [--skip-remote-check] [--verbose]
 import { CompileService, type CompileResult } from "../src/lib/latex/compile.ts";
 import { tectonicEngine } from "../src/lib/latex/engine.ts";
 import { goldenFailures } from "../src/lib/latex/log.ts";
@@ -19,6 +19,7 @@ import {
 import { dataPaths, getDataDir } from "../src/lib/paths.ts";
 
 const log = (msg: string) => console.log(`[setup] ${msg}`);
+const verbose = process.argv.includes("--verbose");
 
 function fail(msg: string): never {
   console.error(`[setup] FAILED: ${msg}`);
@@ -29,8 +30,12 @@ function report(name: string, r: CompileResult): void {
   const errors = r.diagnostics.filter((d) => d.severity === "error");
   if (!r.ok) fail(`${name} did not compile:\n${errors.map((e) => `  ${e.message}`).join("\n")}`);
   const notes = goldenFailures(r.diagnostics);
-  log(`${name}: ok in ${r.durationMs} ms${notes.length ? ` (${notes.length} warnings)` : ""}`);
-  for (const n of notes) log(`  warning: ${n.message}`);
+  // The warm-up documents touch every font size and shape on purpose, so
+  // substitution and box notes are expected; list them only with --verbose.
+  log(
+    `${name}: ok in ${r.durationMs} ms${notes.length ? ` (${notes.length} expected notes)` : ""}`,
+  );
+  if (verbose) for (const n of notes) log(`  note: ${n.message}`);
 }
 
 async function main(): Promise<void> {
