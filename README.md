@@ -83,12 +83,13 @@ Do not run `next dev` while building or running e2e: both use `.next`.
 
 ## End-user install (what the scripts do)
 
-|                  | Windows                                          | macOS                                                      |
-| ---------------- | ------------------------------------------------ | ---------------------------------------------------------- |
-| Set up           | `setup-windows.bat` → `setup-windows.ps1`        | `setup-macos.sh`                                           |
-| Start            | `start-windows.bat` (desktop shortcut `DRAFTEX`) | `start-macos.command` (`~/Desktop/DRAFTEX.command`)        |
-| Update           | `update-windows.bat` → `update-windows.ps1`      | `update-macos.sh`                                          |
-| Reset a password | `reset-password-windows.bat`                     | `.runtime/node/bin/node scripts/reset-password.ts <email>` |
+|                                   | Windows                                           | macOS                                                      |
+| --------------------------------- | ------------------------------------------------- | ---------------------------------------------------------- |
+| Set up                            | `setup-windows.bat` → `setup-windows.ps1`         | `setup-macos.sh`                                           |
+| Start                             | `start-windows.bat` (desktop shortcut `DRAFTEX`)  | `start-macos.command` (`~/Desktop/DRAFTEX.command`)        |
+| Update                            | `update-windows.bat` → `update-windows.ps1`       | `update-macos.sh`                                          |
+| Reset a password                  | `reset-password-windows.bat`                      | `.runtime/node/bin/node scripts/reset-password.ts <email>` |
+| Uninstall (keeps the data folder) | `uninstall-windows.bat` → `uninstall-windows.ps1` | `uninstall-macos.sh`                                       |
 
 Setup: download Node.js 24.22.2 from nodejs.org, check its pinned SHA-256,
 unpack into `.runtime/node` (no admin rights, nothing system-wide) →

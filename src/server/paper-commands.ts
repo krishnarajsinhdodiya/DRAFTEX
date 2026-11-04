@@ -160,6 +160,24 @@ export function paperCommands(data: DataLayer, actor: Actor) {
         return null;
       });
     },
+
+    async restore(id: unknown): Promise<CommandResult> {
+      return run(async () => {
+        await data.papers.restore(actor, idSchema.parse(id));
+        return null;
+      });
+    },
+
+    async purge(id: unknown): Promise<CommandResult> {
+      return run(async () => {
+        await data.papers.purge(actor, idSchema.parse(id));
+        return null;
+      });
+    },
+
+    async emptyTrash(): Promise<CommandResult<number>> {
+      return run(() => data.papers.emptyTrash(actor));
+    },
   };
 }
 

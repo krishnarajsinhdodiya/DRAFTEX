@@ -26,6 +26,7 @@ The pictures in this guide use made-up names and questions.
 11. [Updating DRAFTEX](#11-updating-draftex)
 12. [When something goes wrong](#12-when-something-goes-wrong)
 13. [For the person who installs DRAFTEX](#13-for-the-person-who-installs-draftex)
+14. [Uninstalling DRAFTEX](#14-uninstalling-draftex)
 
 ---
 
@@ -161,6 +162,15 @@ is marked and the message says what to change.
 **Details** changes the title, course, exam date and status (Draft or
 Final).
 
+### Deleting a paper
+
+Open the paper and click **Delete**, then **Move to Trash**. The Papers page
+shows **Undo** straight away. Later, **Trash** on the Papers page lists your
+deleted papers: **Restore** brings one back with all its questions and its
+answer key; **Delete forever** removes it now. Papers left in Trash are
+deleted for good after 30 days. Files you already exported stay in the
+exports folder. Only you see your own Trash.
+
 ---
 
 ## 5. The answer key
@@ -214,6 +224,11 @@ questions and the answer key; then change what you need.
 - **Built-in** templates cannot be changed. To change a layout, open one and
   click **Make a copy**: the copy is yours and opens in the template
   builder, with a live preview.
+- **Deleting a template:** open it and click **Delete**. You can delete your
+  own templates. An administrator can also delete a built-in one; it then
+  disappears for everyone, and **Restore built-in templates** at the top of
+  the Templates page brings all deleted built-ins back. The *Blank template*
+  cannot be deleted, because **New template** starts from it.
 - **New template** (on the Templates page) asks for a title and starts from a
   blank template.
 - Your own templates are private until you make them **Global**; then
@@ -471,3 +486,28 @@ with `./update-macos.sh`.
 
 The end user's laptop has not been timed yet; on a slower laptop or network
 expect 10–15 minutes for step 4.
+
+---
+
+## 14. Uninstalling DRAFTEX
+
+Uninstalling removes the program but **keeps your papers**, backups and
+settings in the data folder (`C:\Users\<your name>\DRAFTEX-data`).
+
+1. Close DRAFTEX (close the black window).
+2. Open the DRAFTEX folder (`C:\DRAFTEX`) and double-click
+   **uninstall-windows.bat**. (On a Mac: `./uninstall-macos.sh`.)
+3. Answer **y** to uninstall. It removes the desktop shortcut and the
+   program files. If other computers were allowed in (section 10), it offers
+   to remove that Windows Firewall rule too; Windows asks for permission.
+   It also asks whether to remove the saved GitHub sign-in used for updates.
+4. When it says "DRAFTEX is uninstalled", close the window and delete the
+   `C:\DRAFTEX` folder.
+
+To use DRAFTEX again later, install it as in section 13: it finds the papers
+in the data folder again.
+
+**To remove the papers as well**, first make a backup (section 9) and copy it
+somewhere safe if you may need the papers again, then delete the data folder
+yourself. DRAFTEX never deletes it.
+

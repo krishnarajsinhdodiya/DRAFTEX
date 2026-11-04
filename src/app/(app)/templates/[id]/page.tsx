@@ -70,6 +70,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
             access={t.access}
             visibility={t.visibility}
             editHref={`/templates/${t.id}/edit`}
+            builtIn={t.builtIn}
           />
         </div>
         {t.builtIn ? (

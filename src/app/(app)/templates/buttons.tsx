@@ -1,13 +1,14 @@
 "use client";
 // Template action buttons. Each calls a server action and shows its message.
 import * as Dialog from "@radix-ui/react-dialog";
-import { Copy, Globe, Lock, Plus, Trash2 } from "lucide-react";
+import { Copy, Globe, Lock, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { type ReactNode, useState, useTransition } from "react";
 import { FormAlert, buttonStyles } from "@/components/form";
 import type { CommandResult } from "@/server/template-commands";
 import {
   copyTemplateAction,
   deleteTemplateAction,
+  restoreBuiltInsAction,
   setTemplateVisibilityAction,
 } from "@/server/template-actions";
 
@@ -122,12 +123,14 @@ export function TemplateActions({
   access,
   visibility,
   editHref,
+  builtIn = false,
 }: {
   id: string;
   title: string;
   access: { edit: boolean; copy: boolean; publish: boolean; unpublish: boolean; remove: boolean };
   visibility: "PRIVATE" | "GLOBAL";
   editHref: string;
+  builtIn?: boolean;
 }) {
   const { pending, error, run } = useCommand();
   return (
@@ -171,7 +174,11 @@ export function TemplateActions({
         </button>
       ) : null}
       {access.remove ? (
-        <ConfirmDelete title={title} onConfirm={() => run(() => deleteTemplateAction(id))}>
+        <ConfirmDelete
+          title={title}
+          builtIn={builtIn}
+          onConfirm={() => run(() => deleteTemplateAction(id))}
+        >
           <button type="button" className={`${buttonStyles.secondary} text-danger`}>
             <Trash2 aria-hidden size={16} />
             Delete
@@ -185,10 +192,12 @@ export function TemplateActions({
 
 function ConfirmDelete({
   title,
+  builtIn,
   onConfirm,
   children,
 }: {
   title: string;
+  builtIn: boolean;
   onConfirm: () => void;
   children: ReactNode;
 }) {
@@ -202,8 +211,9 @@ function ConfirmDelete({
             Delete “{title}”?
           </Dialog.Title>
           <Dialog.Description className="mt-2 text-small text-ink-2">
-            It disappears from the library. Papers already made from it keep their own copy and are
-            not changed.
+            {builtIn
+              ? "It disappears from the library for everyone. Papers already made from it keep their own copy and are not changed. “Restore built-in templates” on the Templates page brings it back."
+              : "It disappears from the library. Papers already made from it keep their own copy and are not changed."}
           </Dialog.Description>
           <div className="mt-6 flex justify-end gap-2">
             <Dialog.Close className={buttonStyles.secondary}>Cancel</Dialog.Close>
@@ -218,5 +228,29 @@ function ConfirmDelete({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+/** Administrators only: shown while some built-in templates are deleted (D50). */
+export function RestoreBuiltInsButton({ count }: { count: number }) {
+  const { pending, error, run } = useCommand();
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-md border border-rule bg-sunk px-4 py-3 text-small">
+      <span className="text-ink-2">
+        {count === 1
+          ? "1 built-in template is deleted."
+          : `${count} built-in templates are deleted.`}
+      </span>
+      <button
+        type="button"
+        className={buttonStyles.quiet}
+        disabled={pending}
+        onClick={() => run(() => restoreBuiltInsAction())}
+      >
+        <RotateCcw aria-hidden size={14} />
+        Restore built-in templates
+      </button>
+      <Failure error={error} />
+    </div>
   );
 }

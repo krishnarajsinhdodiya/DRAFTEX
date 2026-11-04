@@ -241,6 +241,37 @@ test("previews that replace each other answer 409, never a server error", async 
   ).toBe(true);
 });
 
+test("an admin deletes a built-in for everyone and restores it (D50)", async ({ browser }) => {
+  const admin = await asUser(browser, ADMIN, ADMIN.password);
+  await openTemplate(admin, "KSV Legacy");
+  await admin.getByRole("button", { name: "Delete" }).click();
+  const ask = admin.getByRole("dialog", { name: /^Delete “KSV Legacy/ });
+  await expect(ask.getByText(/for everyone/)).toBeVisible();
+  await ask.getByRole("button", { name: "Delete template" }).click();
+  await expect(admin).toHaveURL(/\/templates\?deleted=1$/);
+  await expect(admin.getByText("1 built-in template is deleted.")).toBeVisible();
+  await expect(admin.getByRole("link", { name: /KSV Legacy/ })).toHaveCount(0);
+
+  // Faculty no longer see it, cannot delete built-ins and are not offered the restore.
+  const faculty = await asUser(browser, FACULTY, FACULTY.own);
+  await faculty.goto("/templates");
+  await expect(faculty.getByRole("link", { name: /KSV Legacy/ })).toHaveCount(0);
+  await expect(faculty.getByText(/built-in templates? (is|are) deleted/)).toHaveCount(0);
+  await openTemplate(faculty, "PCI 2026 · B.Pharm · Theory · End-Semester · 4 credits");
+  await expect(faculty.getByRole("button", { name: "Delete" })).toHaveCount(0);
+
+  // The blank built-in, which New template copies, cannot be deleted.
+  await admin.goto("/templates");
+  await admin.getByRole("link", { name: /Blank/ }).first().click();
+  await expect(admin.getByRole("button", { name: "Make a copy" })).toBeVisible();
+  await expect(admin.getByRole("button", { name: "Delete" })).toHaveCount(0);
+
+  await admin.goto("/templates");
+  await admin.getByRole("button", { name: "Restore built-in templates" }).click();
+  await expect(admin.getByRole("link", { name: /KSV Legacy/ })).toBeVisible();
+  await expect(admin.getByText(/built-in templates? (is|are) deleted/)).toHaveCount(0);
+});
+
 test("no page broke the Content Security Policy (editor, MathLive, PDF preview)", () => {
   expect(cspViolations).toEqual([]);
 });

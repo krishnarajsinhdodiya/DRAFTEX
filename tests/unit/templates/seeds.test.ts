@@ -144,6 +144,26 @@ describe("syncBuiltInTemplates", () => {
     expect(repaired).toMatchObject({ visibility: "GLOBAL", description: first?.description });
   });
 
+  it("leaves a built-in an administrator deleted deleted, even when its seed changes (D50)", async () => {
+    const [first, ...rest] = BUILT_IN_TEMPLATES;
+    const row = await t.db.template.findUniqueOrThrow({ where: { seedKey: first?.seedKey } });
+    await t.db.template.update({ where: { id: row.id }, data: { deletedAt: new Date() } });
+    const changed = [{ ...(first as (typeof BUILT_IN_TEMPLATES)[number]), description: "Newer" }];
+    expect(await syncBuiltInTemplates(t.db, [...changed, ...rest])).toMatchObject({
+      created: 0,
+      updated: 0,
+    });
+    const still = await t.db.template.findUniqueOrThrow({ where: { id: row.id } });
+    expect(still.deletedAt).not.toBeNull();
+    // Restored (deletedAt cleared), the next sync brings it up to date.
+    await t.db.template.update({ where: { id: row.id }, data: { deletedAt: null } });
+    expect(await syncBuiltInTemplates(t.db, [...changed, ...rest])).toMatchObject({ updated: 1 });
+    expect(await t.db.template.findUniqueOrThrow({ where: { id: row.id } })).toMatchObject({
+      description: "Newer",
+      deletedAt: null,
+    });
+  });
+
   it("refuses a seed the checker calls broken", async () => {
     const [first] = BUILT_IN_TEMPLATES;
     await expect(

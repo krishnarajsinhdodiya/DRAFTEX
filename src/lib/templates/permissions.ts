@@ -11,13 +11,21 @@ export interface TemplateAccess {
 }
 
 export function templateAccess(
-  t: { ownerId: string; builtIn: boolean; visibility: Visibility },
+  t: { ownerId: string; builtIn: boolean; visibility: Visibility; seedKey?: string | null },
   actor: { userId: string; role: Role },
 ): TemplateAccess {
   const owner = t.ownerId === actor.userId;
   const admin = actor.role === "ADMIN";
+  // Built-ins stay locked, except that an administrator may delete one (D50);
+  // the blank one is what New template copies, so it stays.
   if (t.builtIn)
-    return { edit: false, copy: true, publish: false, unpublish: false, remove: false };
+    return {
+      edit: false,
+      copy: true,
+      publish: false,
+      unpublish: false,
+      remove: admin && t.seedKey !== "blank",
+    };
   return {
     edit: owner,
     copy: true,

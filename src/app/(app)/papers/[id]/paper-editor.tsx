@@ -15,6 +15,7 @@ import { EXAM_KIND_LABEL, marksText } from "@/lib/templates/labels";
 import type { Problem } from "@/lib/paper/problems";
 import type { EditorGroup, PaperEditorView } from "@/server/paper-view";
 import { DetailsButton } from "./details";
+import { DeletePaperButton } from "./delete-paper";
 import { DuplicateButton, ExportButton } from "./export-duplicate";
 import { SlotCard } from "./slot-card";
 import { slotKey, usePaper } from "./use-paper";
@@ -194,6 +195,7 @@ export function PaperEditor({
         <DetailsButton view={view} />
         <DuplicateButton paperId={view.id} title={view.title} examKind={view.examKind} />
         <ExportButton paperId={view.id} flush={paper.flushAll} onExported={setExported} />
+        <DeletePaperButton paperId={view.id} title={view.title} flush={paper.flushAll} />
         <button
           type="button"
           className={buttonStyles.quiet}

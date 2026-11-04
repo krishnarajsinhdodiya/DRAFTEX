@@ -169,6 +169,18 @@ jobs:
             Start-Sleep -Seconds 2
           }
           throw "DRAFTEX did not start after the update"
+      - name: Run uninstall-windows.bat (D52) and check the papers stay
+        shell: cmd
+        run: uninstall-windows.bat -Yes
+      - name: Check only the app's own files were removed
+        shell: powershell
+        run: |
+          foreach ($name in @(".runtime", "node_modules", ".next")) {
+            if (Test-Path $name) { throw "uninstall left $name behind" }
+          }
+          if (Test-Path (Join-Path ([Environment]::GetFolderPath("Desktop")) "DRAFTEX.lnk")) { throw "uninstall left the shortcut" }
+          if (-not (Test-Path (Join-Path $env:DRAFTEX_DATA_DIR "data.db"))) { throw "uninstall touched the data folder" }
+          if (-not (Test-Path "setup-windows.bat")) { throw "uninstall removed the app folder itself" }
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -49,3 +49,10 @@ export async function deleteTemplateAction(id: string): Promise<CommandResult> {
   revalidatePath("/templates");
   redirect("/templates?deleted=1");
 }
+
+/** Brings back the built-in templates an administrator deleted (D50). */
+export async function restoreBuiltInsAction(): Promise<CommandResult<number>> {
+  const r = await (await commands()).restoreBuiltIns();
+  if (r.ok) revalidatePath("/templates");
+  return r;
+}

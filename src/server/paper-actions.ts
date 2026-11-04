@@ -69,9 +69,28 @@ export async function duplicateSlotAction(
   return (await commands()).duplicateSlot(id, place);
 }
 
+/** Moves a paper to Trash (D51) and goes back to the list, which offers Undo. */
 export async function deletePaperAction(id: string): Promise<CommandResult> {
   const r = await (await commands()).remove(id);
   if (!r.ok) return r;
   revalidatePath("/papers");
-  redirect("/papers?deleted=1");
+  redirect(`/papers?trashed=${encodeURIComponent(id)}`);
+}
+
+export async function restorePaperAction(id: string): Promise<CommandResult> {
+  const r = await (await commands()).restore(id);
+  if (r.ok) revalidatePath("/papers");
+  return r;
+}
+
+export async function purgePaperAction(id: string): Promise<CommandResult> {
+  const r = await (await commands()).purge(id);
+  if (r.ok) revalidatePath("/papers/trash");
+  return r;
+}
+
+export async function emptyTrashAction(): Promise<CommandResult<number>> {
+  const r = await (await commands()).emptyTrash();
+  if (r.ok) revalidatePath("/papers/trash");
+  return r;
 }
