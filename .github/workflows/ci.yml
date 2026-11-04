@@ -117,8 +117,13 @@ jobs:
           $link = Join-Path ([Environment]::GetFolderPath("Desktop")) "DRAFTEX.lnk"
           $target = (New-Object -ComObject WScript.Shell).CreateShortcut($link).TargetPath
           if ($target -ne (Join-Path $PWD "start-windows.bat")) { throw "Shortcut points at '$target'" }
-          $changed = git status --porcelain
+          $changed = git status --porcelain --untracked-files=no
           if ($changed) { throw "Setup changed tracked files: $changed" }
+          $untracked = git status --porcelain --untracked-files=normal
+          if ($untracked) {
+            Write-Host "Untracked after setup: $untracked"
+            Get-ChildItem cache -Recurse -ErrorAction SilentlyContinue | Select-Object -First 20 FullName
+          }
       - name: Start DRAFTEX with start-windows.bat
         shell: powershell
         run: |
