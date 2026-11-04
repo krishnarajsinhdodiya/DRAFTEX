@@ -69,6 +69,7 @@ describe("setup scripts", () => {
       "setup-windows.bat",
       "update-windows.bat",
       "start-windows.bat",
+      "reset-password-windows.bat",
       "setup-windows.ps1",
       "update-windows.ps1",
     ]) {

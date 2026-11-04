@@ -184,12 +184,13 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-04 · `next telemetry disable` writes `<repo>/cache/config.json` only when the CI variable is set (Next keeps telemetry config in the project under CI); harmless, reported by the gate 10 job, not on end-user machines · observed in CI
 - 2026-11-04 · User-guide screenshots are made by `scripts/guide-screenshots.ts` against a fresh `e2e-server.ts` on port 3210 (invented data, light mode, palette PNGs) · reproducible; no real paper text
 - 2026-11-04 · The desktop shortcut icon is `assets/draftex.ico`, rendered from `assets/draftex-icon.svg` by `scripts/make-icon.ts` · a sheet with the marks margin, the app's signature element
-- 2026-11-04 · If the only administrator forgets the password there is no recovery path in the app or a script; the user guide tells the owner to keep a second administrator · open question for Phase 9
+- 2026-11-04 · If the only administrator forgets the password there is no recovery path in the app or a script; the user guide tells the owner to keep a second administrator · open question for Phase 9 [SUPERSEDED 2026-11-04 → see "D49"]
 - 2026-11-04 · E2E and the screenshot script find the equation field as `math-field[aria-label="Equation"]`, never `getByLabel("Equation")` · MathLive copies the label onto its shadow keyboard sink once started, so the label matched two elements at random; failed `main` CI on windows-latest after the restore-config merge (run 41773473540)
 - 2026-11-04 · Errors thrown by a service that lives on globalThis (CompileService) are recognised by name and reason (`isCompileRejected`), never `instanceof` · Next bundles compile.ts more than once; superseded previews answered 500 and logged a stack (reproduced: 3 of 5 concurrent previews)
 - 2026-11-04 · Filesystem calls on data-folder paths inside code the app bundles carry `/* turbopackIgnore: true */` · otherwise Turbopack plans to trace the whole project
 - 2026-11-04 · The header hides the signed-in name below 1280 px (truncated above) so the six admin links stay on one line down to 900 px · a Windows laptop at 125–150 % scaling is about 1000–1100 px wide
 - 2026-11-04 · Restore uploads are inflated as a stream with real bytes counted against the caps (`unzipCapped`), and unpacked names must match the zip directory · declared sizes in a zip are attacker-controlled
+- 2026-11-04 · D49: offline password reset. `npm run reset-password -- <email>` (or `reset-password-windows.bat`) runs with DRAFTEX stopped, prints a temporary password (3×5 characters without 0/o/1/l/i), and stages `<data>/reset-password.json` (argon2id hash only, mode 0600); the next start applies it through `data.system.resetPasswordOffline` (unlocks, signs out, must change password, audited with no actor) and deletes the file whatever happens · the only administrator forgetting the password had no way back in; scripts cannot load the data layer's `@/` imports, so the bundled app applies it (same pattern as D28); owner approved ("Yes, build it")
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -209,7 +210,7 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
-- Should Phase 9 add an offline admin password reset (`npm run reset-password -- <email>`, run on the DRAFTEX computer with the app stopped)? Today a forgotten sole-admin password cannot be recovered.
+- Should Phase 9 add an offline admin password reset (`npm run reset-password -- <email>`, run on the DRAFTEX computer with the app stopped)? Today a forgotten sole-admin password cannot be recovered. [ANSWERED 2026-11-04 → see "D49"]
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
 - Should restoring a backup keep this computer's config.json (network settings) instead of the backup's? [ANSWERED 2026-11-04 → see "Restore keeps config"]
 - Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable.

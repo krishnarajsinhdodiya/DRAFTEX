@@ -9,7 +9,7 @@ import { courses, syncCatalogue } from "./courses";
 import { papers } from "./papers";
 import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import { syncBuiltInTemplates, templates } from "./templates";
-import { users } from "./users";
+import { resetPasswordOffline, users } from "./users";
 
 export type { Actor } from "./actor";
 export type { CourseFilter, SyncResult } from "./courses";
@@ -31,6 +31,9 @@ export function dataLayer(db: Db) {
     system: {
       syncCatalogue: () => syncCatalogue(db, bpharmCatalogue()),
       syncBuiltInTemplates: () => syncBuiltInTemplates(db, BUILT_IN_TEMPLATES),
+      /** Applies `npm run reset-password` (D49); see users.resetPasswordOffline. */
+      resetPasswordOffline: (email: string, passwordHash: string) =>
+        resetPasswordOffline(db, email, passwordHash),
     },
   };
 }

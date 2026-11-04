@@ -66,27 +66,29 @@ builds the app; use it to test the end-user path.
 
 Useful scripts:
 
-| Command                                                       | Does                                                            |
-| ------------------------------------------------------------- | --------------------------------------------------------------- |
-| `npm run lint` · `npm run typecheck` · `npm run format:check` | Gate 1                                                          |
-| `npm test`                                                    | Unit tests with coverage thresholds (gate 2)                    |
-| `npm run test:golden`                                         | Compile, visual regression and fuzz (gates 3–7; needs Tectonic) |
-| `npm run test:e2e`                                            | Playwright on a throwaway data folder, port 3211 (gate 9)       |
-| `npm run build` · `npm start`                                 | Production build; the supervisor that restarts on exit code 75  |
-| `npm run backup` · `npm run restore -- <zip>`                 | Backup now; restore into a stopped app or empty folder          |
-| `npm run move-data -- <folder>`                               | Move the data folder                                            |
-| `npm run catalogue:parse` · `catalogue:check`                 | Rebuild / verify the catalogue from the syllabus PDF            |
-| `node scripts/e2e-server.ts [port] [local\|lan] [start\|dev]` | Run the built app on a throwaway data folder                    |
+| Command                                                       | Does                                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run lint` · `npm run typecheck` · `npm run format:check` | Gate 1                                                                                     |
+| `npm test`                                                    | Unit tests with coverage thresholds (gate 2)                                               |
+| `npm run test:golden`                                         | Compile, visual regression and fuzz (gates 3–7; needs Tectonic)                            |
+| `npm run test:e2e`                                            | Playwright on a throwaway data folder, port 3211 (gate 9)                                  |
+| `npm run build` · `npm start`                                 | Production build; the supervisor that restarts on exit code 75                             |
+| `npm run backup` · `npm run restore -- <zip>`                 | Backup now; restore into a stopped app or empty folder                                     |
+| `npm run move-data -- <folder>`                               | Move the data folder                                                                       |
+| `npm run reset-password -- <email>`                           | New temporary password from the DRAFTEX computer (app stopped; applied at next start, D49) |
+| `npm run catalogue:parse` · `catalogue:check`                 | Rebuild / verify the catalogue from the syllabus PDF                                       |
+| `node scripts/e2e-server.ts [port] [local\|lan] [start\|dev]` | Run the built app on a throwaway data folder                                               |
 
 Do not run `next dev` while building or running e2e: both use `.next`.
 
 ## End-user install (what the scripts do)
 
-|        | Windows                                          | macOS                                               |
-| ------ | ------------------------------------------------ | --------------------------------------------------- |
-| Set up | `setup-windows.bat` → `setup-windows.ps1`        | `setup-macos.sh`                                    |
-| Start  | `start-windows.bat` (desktop shortcut `DRAFTEX`) | `start-macos.command` (`~/Desktop/DRAFTEX.command`) |
-| Update | `update-windows.bat` → `update-windows.ps1`      | `update-macos.sh`                                   |
+|                  | Windows                                          | macOS                                                      |
+| ---------------- | ------------------------------------------------ | ---------------------------------------------------------- |
+| Set up           | `setup-windows.bat` → `setup-windows.ps1`        | `setup-macos.sh`                                           |
+| Start            | `start-windows.bat` (desktop shortcut `DRAFTEX`) | `start-macos.command` (`~/Desktop/DRAFTEX.command`)        |
+| Update           | `update-windows.bat` → `update-windows.ps1`      | `update-macos.sh`                                          |
+| Reset a password | `reset-password-windows.bat`                     | `.runtime/node/bin/node scripts/reset-password.ts <email>` |
 
 Setup: download Node.js 24.22.2 from nodejs.org, check its pinned SHA-256,
 unpack into `.runtime/node` (no admin rights, nothing system-wide) →

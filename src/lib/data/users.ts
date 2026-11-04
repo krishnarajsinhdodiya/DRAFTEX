@@ -178,3 +178,35 @@ export function users(db: Db) {
     },
   };
 }
+
+/**
+ * Offline reset staged by `npm run reset-password` (D49), applied at startup
+ * with no signed-in actor. Same effect as an admin reset: unlocks the
+ * account, signs it out, asks for a new password at sign-in.
+ */
+export async function resetPasswordOffline(
+  db: Db,
+  email: string,
+  passwordHash: string,
+): Promise<"reset" | "unknown" | "inactive"> {
+  const parsed = emailSchema.safeParse(email);
+  if (!parsed.success) return "unknown";
+  const u = await db.user.findUnique({
+    where: { email: parsed.data },
+    select: { id: true, isActive: true },
+  });
+  if (!u) return "unknown";
+  if (!u.isActive) return "inactive";
+  await db.$transaction([
+    db.user.update({ where: { id: u.id }, data: { passwordHash, mustChangePassword: true } }),
+    db.loginLock.deleteMany({ where: { userId: u.id } }),
+    db.session.deleteMany({ where: { userId: u.id } }),
+  ]);
+  await writeAudit(db, {
+    actorId: null,
+    action: "reset-password-offline",
+    entity: WHAT,
+    entityId: u.id,
+  });
+  return "reset";
+}

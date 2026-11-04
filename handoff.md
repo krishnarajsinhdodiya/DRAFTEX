@@ -33,6 +33,7 @@ no chat history must be able to continue from this file alone.
 - `fix/e2e-equation-locator`: the Windows e2e failure on `main` after the restore-config merge was a test race (MathLive copies the "Equation" label into its shadow input); tests now select `math-field[aria-label="Equation"]`.
 - `fix/carried-issues`: superseded previews answered 500 (cross-bundle `instanceof`) → now 409, with an e2e test; Turbopack whole-project tracing warning gone; admin header stays on one line down to 900 px; restore uploads are capped by real inflated size.
 - End user's laptop is Windows 11 (memory.md).
+- `fix/sole-admin-lockout` (D49): offline password reset (`npm run reset-password -- <email>`, `reset-password-windows.bat`), applied at the next start; user guide §12 explains it.
 
 ## In progress
 - Nothing half-done.
@@ -41,7 +42,6 @@ no chat history must be able to continue from this file alone.
 1. Session start per the operating rules; branch `phase/9-polish` from `main`.
 2. `/apple-design` full review and `/break-ui` across all screens; close findings or log them with reasons.
 3. Performance: editor input latency < 50 ms, preview < 3 s warm; measure and record.
-4. Carried item worth deciding in Phase 9: admin password recovery (open question).
 5. Owner tasks before handing the laptop over (not code): install on the real Windows laptop with the guide's §13 and time it; try the firewall helper once (UAC prompt, rule created, rule removed); try one real `update-windows.bat` with the token.
 
 ## Failing tests
@@ -49,7 +49,7 @@ no chat history must be able to continue from this file alone.
 
 ## Blockers / risks
 - **Not tried on a real Windows machine:** double-click flow (execution policy bypass, console window, `rundll32` browser open, closing the console window → SIGHUP), Git Credential Manager with a fine-grained token, real `git pull` on Windows, and the UAC firewall step. CI covers the scripts headless.
-- **Sole-admin password loss is unrecoverable** today (no reset script). Guide advises a second administrator.
+- Offline password reset (D49) is tested on macOS and by unit tests; `reset-password-windows.bat` has not been run on Windows (CI checks it is ASCII only).
 - **LAN mode is plain HTTP** (D40). **Server mode locks out direct access**; recovery documented (set `"mode": "local"` in `config.json`).
 - The GitHub token on the end user's machine expires; updates then fail with "could not be downloaded" (guide explains renewal).
 - Carried over: restore needs a restart; long chemical names in 2/4-column choices; cramped phone editor; same question in two windows is last-write-wins; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); ESLint 10 overrides; `ubuntu-latest` moves to Ubuntu 26; npm warns that `fsevents` has unapproved install scripts (macOS optional dependency, harmless).
@@ -64,7 +64,6 @@ no chat history must be able to continue from this file alone.
 - Throwaway install test leftovers may exist in `/tmp/draftex-install-test`, `/tmp/draftex-install-data`, `/tmp/draftex-moved` (safe to delete).
 
 ## Questions for owner
-- Phase 9: add an offline admin password reset command?
 - Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`?
 - How does your father tag COs of elective options? The default is `BP607TAEC1.01`.
 - Later: should the app offer Times at all?

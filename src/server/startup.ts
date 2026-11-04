@@ -10,6 +10,7 @@ import {
 } from "@/lib/backup/run";
 import { ConfigError, readConfig } from "@/lib/config";
 import { getData } from "@/lib/data";
+import { takeReset } from "@/lib/auth/offline-reset";
 import { DataDirError, dataPaths, getDataDir } from "@/lib/paths";
 import { backupContext, runMigrations, scheduleDailyBackups } from "./backups";
 import { getCompileService } from "./compile";
@@ -58,6 +59,22 @@ export async function startup(): Promise<void> {
     const data = await getData();
     await data.auth.deleteExpiredSessions(new Date());
     await data.auth.deleteStaleLoginLocks(new Date());
+    // A password reset staged by `npm run reset-password` (D49); the file is single-use.
+    const reset = takeReset(paths.root);
+    if (reset === "invalid") {
+      console.log(
+        "[reset-password] The staged password reset could not be read and was removed. Run the command again.",
+      );
+    } else if (reset) {
+      const r = await data.system.resetPasswordOffline(reset.email, reset.passwordHash);
+      console.log(
+        r === "reset"
+          ? `[reset-password] The password of ${reset.email} was reset. Sign in with the temporary password, then choose a new one.`
+          : r === "inactive"
+            ? `[reset-password] ${reset.email} is deactivated; nothing was changed. An administrator can activate it on People.`
+            : `[reset-password] No account has the email ${reset.email}; nothing was changed. Check the spelling and run the command again.`,
+      );
+    }
     if (restoredFrom) {
       await data.audit.record({
         actorId: null,

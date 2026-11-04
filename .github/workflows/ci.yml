@@ -147,14 +147,25 @@ jobs:
       - name: Run update-windows.bat (no git pull on a CI checkout)
         shell: cmd
         run: update-windows.bat -NoPull -NoShortcut
-      - name: Check the update made a backup and DRAFTEX starts again
+      - name: Stage a password reset with reset-password-windows.bat (D49)
+        shell: cmd
+        run: echo admin@example.test| reset-password-windows.bat
+      - name: Check the update made a backup and DRAFTEX starts again and applies the reset
         shell: powershell
         run: |
           $backups = @(Get-ChildItem (Join-Path $env:DRAFTEX_DATA_DIR "backups") -Filter "*before-update*")
           if ($backups.Count -ne 1) { throw "Expected one before-update backup, found $($backups.Count)" }
+          $reset = Join-Path $env:DRAFTEX_DATA_DIR "reset-password.json"
+          if (-not (Test-Path $reset)) { throw "reset-password-windows.bat staged nothing" }
           Start-Process -FilePath cmd.exe -ArgumentList "/c", "start-windows.bat" -WindowStyle Hidden
           for ($i = 0; $i -lt 90; $i++) {
-            try { if ((Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3210/login).StatusCode -eq 200) { Get-Process node | Stop-Process -Force; exit 0 } } catch {}
+            try {
+              if ((Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3210/login).StatusCode -eq 200) {
+                Get-Process node | Stop-Process -Force
+                if (Test-Path $reset) { throw "The staged reset was not applied at startup" }
+                exit 0
+              }
+            } catch [System.Net.WebException] {}
             Start-Sleep -Seconds 2
           }
           throw "DRAFTEX did not start after the update"
