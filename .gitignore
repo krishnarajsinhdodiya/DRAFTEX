@@ -23,6 +23,8 @@ draftex.local.json
 
 # Dependencies and build output
 node_modules/
+# Node.js unpacked by the setup scripts (D43)
+.runtime/
 .next/
 out/
 build/
