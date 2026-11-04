@@ -51,7 +51,10 @@ function describe(action: string, entity: string): string {
     duplicate: "Duplicated",
     revoke: "Withdrew",
   };
-  return verb[action] ? `${verb[action]} ${thing}` : `${action} (${thing})`;
+  if (verb[action]) return entity ? `${verb[action]} ${thing}` : `${verb[action]} something`;
+  // An action this screen has no words for yet: still readable.
+  const words = action.replace(/[-:_]+/g, " ").trim();
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}${entity ? ` (${thing})` : ""}`;
 }
 
 function detailOf(action: string, detail: string | null): string {
@@ -88,6 +91,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
     data.audit.actions(actor),
     data.users.list(actor),
   ]);
+  const names = new Map(people.map((p) => [p.id, p.name]));
   const href = (page: number) => {
     const q = new URLSearchParams({
       ...(action && { action }),
@@ -125,9 +129,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
             <option value="">Everything</option>
             {actions.map((a) => (
               <option key={a} value={a}>
-                {describe(a, "")
-                  .replace(/ $/, "")
-                  .replace(/ \(\)$/, "")}
+                {describe(a, "")}
               </option>
             ))}
           </select>
@@ -161,6 +163,11 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
             <tbody className="divide-y divide-rule">
               {log.rows.map((r) => {
                 const detail = detailOf(r.action, r.detail);
+                // Which account, when the row is about someone other than the person who did it.
+                const about =
+                  r.entity === "User" && r.entityId && r.entityId !== r.actor?.id
+                    ? names.get(r.entityId)
+                    : undefined;
                 return (
                   <tr key={r.id}>
                     <td className="px-4 py-2.5 whitespace-nowrap text-ink-2 tabular-nums">
@@ -171,6 +178,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Sea
                     </td>
                     <td className="px-4 py-2.5">
                       {describe(r.action, r.entity)}
+                      {about ? <span>: {about}</span> : null}
                       {detail ? <span className="text-ink-2"> · {detail}</span> : null}
                     </td>
                   </tr>

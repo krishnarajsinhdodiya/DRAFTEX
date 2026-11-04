@@ -64,6 +64,16 @@ export function NetworkForm({
     setResult(null);
   };
   const changed = (Object.keys(saved) as (keyof Settings)[]).some((k) => saved[k] !== form[k]);
+  // Field errors sit next to their field; anything else next to Save.
+  const failed = result && !result.ok ? result.message : null;
+  const fieldError = (prefix: string) => (failed?.startsWith(prefix) ? failed : undefined);
+  const formError =
+    failed &&
+    !["Port", "Address name", "Server mode", "Listen address", "Proxy address"].some((p) =>
+      failed.startsWith(p),
+    )
+      ? failed
+      : null;
 
   return (
     <form
@@ -100,13 +110,15 @@ export function NetworkForm({
         ))}
       </fieldset>
 
-      <div className="max-w-40">
+      <div className="max-w-sm">
         <Field
           label="Port"
           name="port"
           inputMode="numeric"
+          className="max-w-32"
           value={form.port}
           onChange={(e) => set({ port: e.target.value })}
+          error={fieldError("Port")}
           hint="Usually 3210."
         />
       </div>
@@ -119,6 +131,7 @@ export function NetworkForm({
             placeholder="papers.college.edu"
             value={form.hostNames}
             onChange={(e) => set({ hostNames: e.target.value })}
+            error={fieldError("Address name") ?? fieldError("Server mode")}
             hint="The name the secure web server answers to. Separate several with commas."
           />
           <Field
@@ -126,6 +139,7 @@ export function NetworkForm({
             name="bindAddress"
             value={form.bindAddress}
             onChange={(e) => set({ bindAddress: e.target.value })}
+            error={fieldError("Listen address")}
             hint="Where the secure web server reaches DRAFTEX. Keep 127.0.0.1 when it runs on this computer."
           />
           <Field
@@ -133,12 +147,16 @@ export function NetworkForm({
             name="trustedProxies"
             value={form.trustedProxies}
             onChange={(e) => set({ trustedProxies: e.target.value })}
+            error={fieldError("Proxy address")}
             hint="Only requests from these addresses are accepted."
           />
           <FormAlert kind="caution">
-            After the restart DRAFTEX answers only through https://
-            {form.hostNames.split(/[\s,]+/).filter(Boolean)[0] || "your address"}. To undo this
-            without that server, set “mode” back to “local” in config.json in the data folder.
+            After the restart DRAFTEX answers only through{" "}
+            <span className="break-all">
+              https://{form.hostNames.split(/[\s,]+/).filter(Boolean)[0] || "your address"}
+            </span>
+            . To undo this without that server, set “mode” back to “local” in config.json in the
+            data folder.
           </FormAlert>
         </div>
       ) : null}
@@ -154,9 +172,13 @@ export function NetworkForm({
         <button type="submit" className={buttonStyles.primary} disabled={pending || !changed}>
           {pending ? "Saving…" : "Save"}
         </button>
-        {result && !result.ok ? (
+        {formError ? (
           <span role="alert" className="text-small text-danger">
-            {result.message}
+            {formError}
+          </span>
+        ) : failed ? (
+          <span role="alert" className="text-small text-danger">
+            Not saved: check the field marked above.
           </span>
         ) : null}
         {result?.ok ? (
