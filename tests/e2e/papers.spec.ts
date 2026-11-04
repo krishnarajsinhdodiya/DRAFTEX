@@ -81,7 +81,9 @@ test("questions take text, choices, an equation, a table and a picture", async (
   await page.keyboard.type("Simplify ");
   await page.getByRole("button", { name: "Insert" }).click();
   await page.getByRole("menuitem", { name: "Equation", exact: true }).click();
-  const field = page.getByLabel("Equation", { exact: true });
+  // MathLive copies the label onto its own input inside the field once it has
+  // started, so getByLabel can match two elements; the field itself is the host.
+  const field = page.locator('math-field[aria-label="Equation"]');
   await expect(field).toBeFocused();
   await page.keyboard.type("x^2");
   await page.keyboard.press("ArrowRight");

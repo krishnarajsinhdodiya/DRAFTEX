@@ -94,7 +94,7 @@ await page
 await write("Q.2(1)", "Simplify ");
 await page.getByRole("button", { name: "Insert" }).click();
 await page.getByRole("menuitem", { name: "Equation", exact: true }).click();
-const field = page.getByLabel("Equation", { exact: true });
+const field = page.locator('math-field[aria-label="Equation"]');
 await expect(field).toBeFocused();
 await page.keyboard.type("x^2");
 await page.keyboard.press("ArrowRight");

@@ -185,6 +185,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-04 · User-guide screenshots are made by `scripts/guide-screenshots.ts` against a fresh `e2e-server.ts` on port 3210 (invented data, light mode, palette PNGs) · reproducible; no real paper text
 - 2026-11-04 · The desktop shortcut icon is `assets/draftex.ico`, rendered from `assets/draftex-icon.svg` by `scripts/make-icon.ts` · a sheet with the marks margin, the app's signature element
 - 2026-11-04 · If the only administrator forgets the password there is no recovery path in the app or a script; the user guide tells the owner to keep a second administrator · open question for Phase 9
+- 2026-11-04 · E2E and the screenshot script find the equation field as `math-field[aria-label="Equation"]`, never `getByLabel("Equation")` · MathLive copies the label onto its shadow keyboard sink once started, so the label matched two elements at random; failed `main` CI on windows-latest after the restore-config merge (run 41773473540)
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
