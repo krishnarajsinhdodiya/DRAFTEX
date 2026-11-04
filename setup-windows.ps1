@@ -115,6 +115,14 @@ function New-DesktopShortcut {
 
 Set-Location $Root
 Say "Setting up DRAFTEX in $Root"
+if (-not (Test-Path (Join-Path $Root ".git"))) {
+  Say "WARNING: this folder was not made with 'git clone' (for example it came from Download ZIP),"
+  Say "         so update-windows.bat cannot update it later. See the user guide, section 13."
+}
+if ($Root -match "\\(Downloads|Desktop|Documents|OneDrive)(\\|$)") {
+  Say "WARNING: DRAFTEX is inside Downloads, Desktop, Documents or OneDrive. A folder such as"
+  Say "         C:\DRAFTEX is safer: these folders are often cleaned up or synced to the internet."
+}
 
 Say "Part 1 of 3: Node.js"
 Install-Node
@@ -123,8 +131,21 @@ $env:CHECKPOINT_DISABLE = "1"
 $env:NEXT_TELEMETRY_DISABLED = "1"
 
 Say "Part 2 of 3: The app's packages (npm ci; a few minutes the first time)"
-Invoke-Native (Join-Path $NodeDir "npm.cmd") @("ci", "--no-audit", "--no-fund")
-if ($script:NativeExit -ne 0) { Stop-Setup "The packages could not be installed. The messages above say why; check the internet connection and run setup again." }
+# A dropped connection is the usual failure (ECONNRESET); npm keeps what it has
+# downloaded in its cache, so a retry continues instead of starting over.
+$env:NPM_CONFIG_UPDATE_NOTIFIER = "false"
+$npmArgs = @("ci", "--no-audit", "--no-fund", "--loglevel=error", "--fetch-retries=5", "--fetch-retry-mintimeout=20000", "--fetch-retry-maxtimeout=120000")
+for ($try = 1; $try -le 3; $try++) {
+  if ($try -gt 1) {
+    Say "The download was interrupted. Trying again in 15 seconds (attempt $try of 3); what is already downloaded is kept."
+    Start-Sleep -Seconds 15
+  }
+  Invoke-Native (Join-Path $NodeDir "npm.cmd") ($npmArgs + $(if ($try -gt 1) { @("--prefer-offline") } else { @() }))
+  if ($script:NativeExit -eq 0) { break }
+}
+if ($script:NativeExit -ne 0) {
+  Stop-Setup "The packages could not be downloaded after 3 tries. This is almost always the network: try another Wi-Fi or a phone hotspot, or pause the antivirus's web protection during setup, then run setup again. What was downloaded is kept."
+}
 
 Say "Part 3 of 3: Database, LaTeX engine and app"
 Invoke-Native $NodeExe @((Join-Path $Root "scripts\install.ts"))
