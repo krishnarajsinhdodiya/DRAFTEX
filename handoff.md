@@ -33,7 +33,7 @@ no chat history must be able to continue from this file alone.
 - `fix/e2e-equation-locator`: the Windows e2e failure on `main` after the restore-config merge was a test race (MathLive copies the "Equation" label into its shadow input); tests now select `math-field[aria-label="Equation"]`.
 - `fix/carried-issues`: superseded previews answered 500 (cross-bundle `instanceof`) → now 409, with an e2e test; Turbopack whole-project tracing warning gone; admin header stays on one line down to 900 px; restore uploads are capped by real inflated size.
 - End user's laptop is Windows 11 (memory.md).
-- `feat/reset-password` (D49): offline password reset (`npm run reset-password -- <email>`, `reset-password-windows.bat`), applied at the next start; user guide §12 explains it.
+- `fix/sole-admin-lockout` (D49): offline password reset (`npm run reset-password -- <email>`, `reset-password-windows.bat`), applied at the next start; user guide §12 explains it.
 
 ## In progress
 - Nothing half-done.
