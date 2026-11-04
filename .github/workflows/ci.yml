@@ -87,3 +87,76 @@ jobs:
           name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 7
+
+  # SPEC §10 gate 10 (D47): a clean checkout is set up by the end user's own
+  # scripts (Node.js download included), started by start-windows.bat, passes
+  # the smoke and installed-copy e2e, then updated (without git pull) and
+  # started again. The runner's own Node.js only creates the data folder.
+  install:
+    name: install (windows-latest)
+    runs-on: windows-latest
+    env:
+      DRAFTEX_NO_PAUSE: "1"
+      DRAFTEX_NO_BROWSER: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create the data folder
+        run: node scripts/ci-data-dir.mjs
+      - name: Cache the LaTeX engine and package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/draftex-data/tools
+          key: tectonic-0.17.0-6ffe0558-${{ runner.os }}-${{ hashFiles('src/lib/latex/warmup.ts', 'src/lib/latex/pins.ts') }}
+          restore-keys: tectonic-0.17.0-6ffe0558-${{ runner.os }}-
+      - name: Run setup-windows.bat
+        shell: cmd
+        run: setup-windows.bat
+      - name: Check the desktop shortcut and the unchanged checkout
+        shell: powershell
+        run: |
+          $link = Join-Path ([Environment]::GetFolderPath("Desktop")) "DRAFTEX.lnk"
+          $target = (New-Object -ComObject WScript.Shell).CreateShortcut($link).TargetPath
+          if ($target -ne (Join-Path $PWD "start-windows.bat")) { throw "Shortcut points at '$target'" }
+          $changed = git status --porcelain
+          if ($changed) { throw "Setup changed tracked files: $changed" }
+      - name: Start DRAFTEX with start-windows.bat
+        shell: powershell
+        run: |
+          Start-Process -FilePath cmd.exe -ArgumentList "/c", "start-windows.bat" -WindowStyle Hidden
+          for ($i = 0; $i -lt 90; $i++) {
+            try { if ((Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3210/login).StatusCode -eq 200) { exit 0 } } catch {}
+            Start-Sleep -Seconds 2
+          }
+          throw "DRAFTEX did not answer on port 3210"
+      - name: Install Playwright browser
+        run: .runtime\node\node.exe node_modules\@playwright\test\cli.js install chromium
+      - name: Smoke and installed-copy e2e
+        run: .runtime\node\node.exe node_modules\@playwright\test\cli.js test tests/e2e/smoke.spec.ts tests/e2e/installed.spec.ts
+        env:
+          DRAFTEX_E2E_URL: http://127.0.0.1:3210
+      - name: Stop DRAFTEX
+        shell: powershell
+        run: |
+          Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+      - name: Run update-windows.bat (no git pull on a CI checkout)
+        shell: cmd
+        run: update-windows.bat -NoPull -NoShortcut
+      - name: Check the update made a backup and DRAFTEX starts again
+        shell: powershell
+        run: |
+          $backups = @(Get-ChildItem (Join-Path $env:DRAFTEX_DATA_DIR "backups") -Filter "*before-update*")
+          if ($backups.Count -ne 1) { throw "Expected one before-update backup, found $($backups.Count)" }
+          Start-Process -FilePath cmd.exe -ArgumentList "/c", "start-windows.bat" -WindowStyle Hidden
+          for ($i = 0; $i -lt 90; $i++) {
+            try { if ((Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3210/login).StatusCode -eq 200) { Get-Process node | Stop-Process -Force; exit 0 } } catch {}
+            Start-Sleep -Seconds 2
+          }
+          throw "DRAFTEX did not start after the update"
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-install
+          path: playwright-report/
+          retention-days: 7
