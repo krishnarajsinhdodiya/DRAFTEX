@@ -78,7 +78,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Every page renders per request (`dynamic = "force-dynamic"` in the root layout) · pages depend on the signed-in user; prerendering touched the database at build time
 - 2026-11-03 · `CompileJob.id` is an autoincrement integer · "keep newest 20" was wrong when two jobs shared a millisecond (found by test)
 - 2026-11-03 · Session cookie `draftex_session` (httpOnly, SameSite=Lax, Secure in server mode, Max-Age 7 d) is re-sent by `src/proxy.ts` on GET page loads; the database row is the authority on idle expiry · server components cannot set cookies
-- 2026-11-03 · Next 16 fills `x-forwarded-for` from the socket only when the client sent none (`??=` in base-server.js), so the per-address sign-in/invite limits trust a client header; harmless while only local mode exists, Phase 7 must fix it before LAN mode ships · verified in node_modules/next
+- 2026-11-03 · Next 16 fills `x-forwarded-for` from the socket only when the client sent none (`??=` in base-server.js), so the per-address sign-in/invite limits trust a client header; harmless while only local mode exists, Phase 7 must fix it before LAN mode ships · verified in node_modules/next [SUPERSEDED 2026-11-04 → see "D36"]
 - 2026-11-03 · Admin-created accounts and admin password resets set `mustChangePassword`; the user is sent to /change-password until they choose their own · the admin knows the temporary password
 - 2026-11-03 · Built-in templates cannot be edited, toggled or deleted through the data layer, by anyone; Phase 4 seeds them directly · SPEC §7 "read-only"
 - 2026-11-03 · Admin pages answer 404 to faculty; private records of others answer "not found" to everyone, admins included · SPEC §7 (404 not 403)
@@ -162,6 +162,10 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-04 · D40: LAN mode stays plain HTTP in v1; banner and docs say "only on a network you trust"; server mode behind HTTPS is the route for college-wide use · self-signed certificates on every device are not workable for the end user; owner approved
 - 2026-11-04 · D41: the documented CSP exception is `style-src 'unsafe-inline'` (MathLive injects style elements, React writes style attributes); scripts use a per-request nonce; no `unsafe-eval` outside dev · MathLive's bundle has no eval/new Function (checked); owner approved
 - 2026-11-04 · "Move data folder" admin action moves to Phase 8 (installer decides the data folder) · keeps Phase 7 on security; owner approved with "go"
+- 2026-11-04 · Prisma error messages (even with errorFormat "minimal") repeat the query's arguments; `openDatabase` wraps the client in an extension that rethrows validation errors as their last line only and request errors as code + field names · SPEC §11.7, Next logs unexpected errors (found by test)
+- 2026-11-04 · The app reads the running mode/port from env set by server.ts (`src/lib/net/runtime.ts`), never from config.json mid-run · a saved but not yet applied mode must not change cookie flags or the banner
+- 2026-11-04 · Restoring a backup restores its config.json (D30), so its network mode applies at the next restart · open question for the owner
+- 2026-11-04 · The e2e server writes a config.json (mode, port) into its throwaway folder and runs under the supervisor; the network e2e uses port 3218 for a server-mode copy · Restart and server mode are tested end to end
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -182,6 +186,7 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 
 ## Open questions for the owner
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
+- Should restoring a backup keep this computer's config.json (network settings) instead of the backup's? Advisor recommends keeping this computer's (changes D30).
 - Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable.
 - How are COs of elective options tagged on real papers? Default `BP607TAEC1.01` (see `coTag`).
 - Backups made by hand, before an update or before a restore are never pruned (D31) and the Backups screen has no Delete; each update adds one. Keep that, prune "before-update" to the newest 5, or add a Delete button? [ANSWERED 2026-11-04 → see "Delete backups"]
