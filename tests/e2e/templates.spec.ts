@@ -3,7 +3,7 @@
 // answer "not found" for someone else's private template, whatever the ID.
 // Runs after auth.spec.ts, which creates the accounts used here.
 import { type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, asUser } from "./support";
+import { ADMIN, FACULTY, asUser, cspViolations } from "./support";
 
 test.describe.configure({ mode: "serial" });
 
@@ -216,4 +216,8 @@ test("the preview route refuses other sites and signed-out callers", async ({ pl
   ).toBe(401);
   expect((await anon.get(`/api/templates/${copyId}/preview`)).status()).toBe(401);
   await anon.dispose();
+});
+
+test("no page broke the Content Security Policy (editor, MathLive, PDF preview)", () => {
+  expect(cspViolations).toEqual([]);
 });

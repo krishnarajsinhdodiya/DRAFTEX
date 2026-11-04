@@ -29,10 +29,12 @@ export async function startup(): Promise<void> {
     throw e;
   }
   // A restore staged by an administrator is applied before anything opens the database (D28).
+  let restoredFrom: string | null = null;
   try {
     const ctx = backupContext();
     const restored = await applyPendingRestore(ctx, () => runMigrations(ctx.repoRoot));
     if (restored) {
+      restoredFrom = restored.summary.manifest.createdAt;
       console.log(
         `[restore] Restored the backup of ${restored.summary.manifest.createdAt}.` +
           (restored.safety ? ` The data it replaced is in backups/${restored.safety.name}.` : ""),
@@ -55,6 +57,15 @@ export async function startup(): Promise<void> {
   try {
     const data = await getData();
     await data.auth.deleteExpiredSessions(new Date());
+    await data.auth.deleteStaleLoginLocks(new Date());
+    if (restoredFrom) {
+      await data.audit.record({
+        actorId: null,
+        action: "restore-applied",
+        entity: "Backup",
+        detail: restoredFrom,
+      });
+    }
     const synced = await data.system.syncCatalogue();
     if (synced.created || synced.updated) {
       console.log(`[catalogue] Courses added: ${synced.created}, updated: ${synced.updated}.`);

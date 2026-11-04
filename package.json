@@ -1,6 +1,6 @@
 {
   "name": "draftex",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "Local-first question-paper builder that compiles to PDF through LaTeX.",
   "type": "module",
@@ -8,9 +8,9 @@
     "node": ">=24.22.2 <25"
   },
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1 --port 3210",
+    "dev": "node scripts/start.ts --dev",
     "build": "next build",
-    "start": "next start --hostname 127.0.0.1 --port 3210",
+    "start": "node scripts/start.ts",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",

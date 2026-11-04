@@ -10,20 +10,33 @@ const when = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: 
 
 type Person = Awaited<ReturnType<Awaited<ReturnType<typeof getData>>["users"]["list"]>>[number];
 
-/** What the table shows; a lock that has already ended is not shown. */
+/** The latest active lock (D38: one per computer); a lock that has already ended is not shown. */
+function lockOf(p: Person, now: number): { until: Date; computers: number } | null {
+  const active = p.loginLocks
+    .map((l) => l.lockedUntil)
+    .filter((d): d is Date => d !== null && d.getTime() > now);
+  if (active.length === 0) return null;
+  return { until: new Date(Math.max(...active.map((d) => d.getTime()))), computers: active.length };
+}
+
+/** What the table shows. */
 function personViews(people: Person[], youId: string): PersonView[] {
   const now = Date.now();
-  return people.map((p) => ({
-    id: p.id,
-    name: p.name,
-    email: p.email,
-    role: p.role,
-    isActive: p.isActive,
-    mustChangePassword: p.mustChangePassword,
-    allowAdvancedLatex: p.allowAdvancedLatex,
-    lockedUntil: p.lockedUntil && p.lockedUntil.getTime() > now ? when.format(p.lockedUntil) : null,
-    isYou: p.id === youId,
-  }));
+  return people.map((p) => {
+    const lock = lockOf(p, now);
+    return {
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      role: p.role,
+      isActive: p.isActive,
+      mustChangePassword: p.mustChangePassword,
+      allowAdvancedLatex: p.allowAdvancedLatex,
+      lockedUntil: lock ? when.format(lock.until) : null,
+      lockedComputers: lock?.computers ?? 0,
+      isYou: p.id === youId,
+    };
+  });
 }
 
 export default async function UsersPage() {

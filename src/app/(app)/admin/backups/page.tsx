@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { FormAlert } from "@/components/form";
 import { eyebrowStyles, linkStyles, pageTitleStyles } from "@/components/styles";
+import { RestartButton } from "@/components/restart-button";
 import { actorOf } from "@/lib/auth/service";
 import { getData } from "@/lib/data";
+import { runningFrom } from "@/lib/net/runtime";
 import { requireAdmin } from "@/server/auth";
 import { backupCommands } from "@/server/backup-commands";
 import { backupContext } from "@/server/backups";
@@ -24,6 +26,7 @@ export default async function BackupsPage() {
     backupContext(),
     actorOf(user),
   ).list();
+  const supervised = runningFrom(process.env)?.supervised === true;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-10">
@@ -47,10 +50,14 @@ export default async function BackupsPage() {
           className="flex flex-wrap items-center gap-3 rounded-lg border-l-4 border-caution bg-caution-soft px-4 py-3"
         >
           <p id="pending" className="min-w-0 flex-1 text-small">
-            <span className="font-semibold">A restore is waiting.</span> Stop DRAFTEX and start it
-            again to finish it. Until then nothing has changed.
+            <span className="font-semibold">A restore is waiting.</span>{" "}
+            {supervised
+              ? "Restart DRAFTEX to finish it."
+              : "Stop DRAFTEX and start it again to finish it."}{" "}
+            Until then nothing has changed.
           </p>
           <CancelRestoreButton />
+          {supervised ? <RestartButton label="Restart now" variant="primary" /> : null}
         </section>
       ) : null}
 

@@ -5,7 +5,6 @@
 // Runs after papers.spec.ts, whose paper it checks. Test data only.
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
@@ -20,7 +19,6 @@ test.describe.configure({ mode: "serial", timeout: 120_000 });
 const TITLE = "Invented Pharmacology Paper";
 const PORT = 3214;
 const SECOND = `http://127.0.0.1:${PORT}`;
-const require = createRequire(import.meta.url);
 const realTools = path.join(os.tmpdir(), "draftex-e2e-3211", "tools");
 
 let before: Record<string, Uint8Array> = {};
@@ -175,18 +173,11 @@ test("a restore waiting in an empty folder is applied at start, and the paper is
 }) => {
   pendingDir = emptyFolder("restore-pending");
   fs.copyFileSync(backupFile, path.join(pendingDir, "restore-pending.zip"));
-  server = spawn(
-    process.execPath,
-    [
-      require.resolve("next/dist/bin/next"),
-      "start",
-      "--hostname",
-      "127.0.0.1",
-      "--port",
-      String(PORT),
-    ],
-    { env: env(pendingDir), stdio: "ignore" },
-  );
+  fs.writeFileSync(path.join(pendingDir, "config.json"), JSON.stringify({ port: PORT }));
+  server = spawn(process.execPath, [path.resolve("server.ts")], {
+    env: env(pendingDir),
+    stdio: "ignore",
+  });
   const api = await request.newContext({ baseURL: SECOND });
   await expect
     .poll(async () => (await api.get("/login").catch(() => null))?.status(), { timeout: 90_000 })

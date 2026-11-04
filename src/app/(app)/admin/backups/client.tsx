@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { FormAlert } from "@/components/form";
 import { buttonStyles, inputStyles } from "@/components/styles";
@@ -71,6 +72,7 @@ const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many
 
 export function RestoreForm({ disabled }: { disabled: boolean }) {
   const id = useId();
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -94,6 +96,8 @@ export function RestoreForm({ disabled }: { disabled: boolean }) {
       }
       setStaged(body as Staged);
       setConfirming(false);
+      // Shows the "restore is waiting" strip with its Restart button.
+      router.refresh();
     } catch {
       setError(UNREACHABLE);
     } finally {
@@ -106,8 +110,8 @@ export function RestoreForm({ disabled }: { disabled: boolean }) {
       <FormAlert kind="notice">
         The backup made {new Date(staged.createdAt).toLocaleString()} (
         {n(staged.users, "person", "people")}, {n(staged.papers, "paper", "papers")},{" "}
-        {n(staged.pictures, "picture", "pictures")}) is checked and ready. Stop DRAFTEX and start it
-        again to finish the restore.
+        {n(staged.pictures, "picture", "pictures")}) is checked and ready. Restart DRAFTEX to finish
+        the restore.
       </FormAlert>
     );
   }

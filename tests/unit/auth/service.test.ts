@@ -120,7 +120,7 @@ describe("sign-in", () => {
     expect(WRONG_PASSWORD).toMatch(/do not match/);
   });
 
-  it(`locks the account for 15 minutes after ${LOCKOUT_FAILURES} wrong passwords`, async () => {
+  it(`locks that address out for 15 minutes after ${LOCKOUT_FAILURES} wrong passwords`, async () => {
     for (let i = 1; i < LOCKOUT_FAILURES; i++) {
       expect(
         await auth.signIn({ email: "admin@example.com", password: `wrong ${i}` }, ADDR),
@@ -141,9 +141,42 @@ describe("sign-in", () => {
     });
     advance(LOCKOUT_MS);
     expect((await auth.signIn({ email: "admin@example.com", password: PW }, ADDR)).ok).toBe(true);
-    const u = await t.db.user.findFirstOrThrow();
-    expect(u).toMatchObject({ failedLogins: 0, lockedUntil: null });
-    expect(await t.db.auditLog.count({ where: { action: "lockout" } })).toBe(1);
+    expect(await t.db.loginLock.count()).toBe(0);
+    expect(await t.db.auditLog.count({ where: { action: "lockout", detail: ADDR } })).toBe(1);
+    expect(await t.db.auditLog.count({ where: { action: "sign-in-failed", detail: ADDR } })).toBe(
+      LOCKOUT_FAILURES,
+    );
+  });
+
+  it("a lockout from one computer leaves the account open everywhere else (D38)", async () => {
+    for (let i = 0; i < LOCKOUT_FAILURES; i++) {
+      await auth.signIn({ email: "admin@example.com", password: "wrong" }, "192.168.1.66");
+    }
+    expect(
+      await auth.signIn({ email: "admin@example.com", password: PW }, "192.168.1.66"),
+    ).toMatchObject({ reason: "locked" });
+    expect((await auth.signIn({ email: "admin@example.com", password: PW }, "127.0.0.1")).ok).toBe(
+      true,
+    );
+    // The laptop's success does not unlock the other computer.
+    expect(
+      await auth.signIn({ email: "admin@example.com", password: PW }, "192.168.1.66"),
+    ).toMatchObject({ reason: "locked" });
+  });
+
+  it("forgets stale failure counts but keeps active locks", async () => {
+    await auth.signIn({ email: "admin@example.com", password: "x" }, "10.1.1.1");
+    for (let i = 0; i < LOCKOUT_FAILURES; i++) {
+      await auth.signIn({ email: "admin@example.com", password: "x" }, "10.1.1.2");
+    }
+    const later = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    await t.db.loginLock.updateMany({ data: { updatedAt: new Date(0) } });
+    await t.db.loginLock.updateMany({
+      where: { address: "10.1.1.2" },
+      data: { lockedUntil: new Date(later.getTime() + 60_000) },
+    });
+    expect(await t.data.auth.deleteStaleLoginLocks(later)).toBe(1);
+    expect((await t.db.loginLock.findMany()).map((l) => l.address)).toEqual(["10.1.1.2"]);
   });
 
   it("a success resets the failure count", async () => {

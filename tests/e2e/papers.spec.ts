@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import { unzipSync } from "fflate";
 import { type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, asUser } from "./support";
+import { ADMIN, FACULTY, asUser, cspViolations } from "./support";
 
 // These tests include real LaTeX compiles; on the Windows runner one takes up to ~25 s.
 test.describe.configure({ mode: "serial", timeout: 120_000 });
@@ -288,4 +288,8 @@ test("someone else's paper and pictures do not exist for them, by any route", as
   expect((await anonymous.request.get(`/api/papers/${id}/preview`)).status()).toBe(401);
   expect((await anonymous.request.get(pictureUrl)).status()).toBe(401);
   await anonymous.close();
+});
+
+test("no page broke the Content Security Policy (editor, MathLive, PDF preview)", () => {
+  expect(cspViolations).toEqual([]);
 });

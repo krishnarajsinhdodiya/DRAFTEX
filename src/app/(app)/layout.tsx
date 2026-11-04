@@ -5,11 +5,28 @@ import { buttonStyles } from "@/components/styles";
 import { appInfo, creditLine } from "@/lib/app-info";
 import { signOutAction } from "@/server/actions";
 import { requireUser } from "@/server/auth";
+import { lanBannerUrls } from "@/server/network";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = await requireUser();
+  const lanUrls = lanBannerUrls();
   return (
     <div className="flex min-h-screen flex-col">
+      {lanUrls ? (
+        <div
+          role="note"
+          aria-label="Network"
+          className="flex flex-wrap items-center gap-x-2 border-b border-caution/40 bg-caution-soft px-6 py-1.5 text-small text-ink"
+        >
+          <span className="font-medium">Open to this network</span>
+          {lanUrls.length ? (
+            <span>
+              at <span className="font-mono break-all select-all">{lanUrls.join(" · ")}</span>
+            </span>
+          ) : null}
+          <span className="text-ink-2">Use only on a network you trust.</span>
+        </div>
+      ) : null}
       <header className="border-b border-rule bg-surface">
         <div className="flex min-h-14 flex-wrap items-center gap-x-6 px-6">
           <Link
@@ -25,6 +42,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               <>
                 <NavLink href="/admin/users">People</NavLink>
                 <NavLink href="/admin/backups">Backups</NavLink>
+                <NavLink href="/admin/network">Network</NavLink>
+                <NavLink href="/admin/activity">Activity</NavLink>
               </>
             ) : null}
           </nav>

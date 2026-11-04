@@ -19,6 +19,17 @@ export const JOINER = {
   password: "joiner test password",
 };
 
+/** Content Security Policy violations seen on any page these helpers opened (SPEC §11.6). */
+export const cspViolations: string[] = [];
+
+/** Collects CSP violations Chromium reports on this page's console. */
+export function watchCsp(page: Page): Page {
+  page.on("console", (m) => {
+    if (/Content Security Policy/i.test(m.text())) cspViolations.push(`${page.url()}: ${m.text()}`);
+  });
+  return page;
+}
+
 export async function signIn(page: Page, email: string, password: string) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
@@ -31,7 +42,7 @@ export async function signedIn(
   who: { email: string; name: string },
   password: string,
 ): Promise<Page> {
-  const page = await (await browser.newContext()).newPage();
+  const page = watchCsp(await (await browser.newContext()).newPage());
   await signIn(page, who.email, password);
   await expect(page.getByRole("heading", { name: `Welcome, ${who.name}` })).toBeVisible();
   return page;
@@ -50,7 +61,7 @@ export async function asUser(
   password: string,
 ): Promise<Page> {
   const saved = sessions.get(who.email);
-  if (saved) return (await browser.newContext({ storageState: saved })).newPage();
+  if (saved) return watchCsp(await (await browser.newContext({ storageState: saved })).newPage());
   const page = await signedIn(browser, who, password);
   sessions.set(who.email, await page.context().storageState());
   return page;

@@ -27,9 +27,9 @@ export async function sessionToken(): Promise<string | undefined> {
 }
 
 /**
- * Client address for rate limits. Next fills x-forwarded-for from the socket
- * only when the client sent none, so it is trustworthy in local mode
- * (127.0.0.1 only); Phase 7 must harden this before LAN mode ships.
+ * Client address for rate limits and lockouts. The custom server (server.ts,
+ * D36) replaces any client-sent x-forwarded-for with the socket address, or
+ * in server mode with the address its trusted proxy reported.
  */
 export async function clientAddress(): Promise<string> {
   const h = await headers();
