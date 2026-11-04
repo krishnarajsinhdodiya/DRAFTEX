@@ -123,7 +123,7 @@ describe("templates", () => {
     expect(copy.structure).toEqual(tpl.structure);
   });
 
-  it("built-ins cannot be edited, toggled or deleted, even by their owner", async () => {
+  it("built-ins cannot be edited or toggled, and only an admin deletes or restores them (D50)", async () => {
     const tpl = await t.data.templates.create(admin, templateFields("Built-in"));
     await t.db.template.update({
       where: { id: tpl.id },
@@ -132,12 +132,25 @@ describe("templates", () => {
     for (const run of [
       () => t.data.templates.update(admin, tpl.id, 1, { title: "x" }),
       () => t.data.templates.setVisibility(admin, tpl.id, "PRIVATE"),
-      () => t.data.templates.remove(admin, tpl.id),
+      () => t.data.templates.remove(faculty, tpl.id),
+      () => t.data.templates.restoreBuiltIns(faculty),
     ]) {
       await expect(run()).rejects.toBeInstanceOf(ForbiddenError);
     }
     const listed = await t.data.templates.list(faculty, { program: "B_PHARM" });
     expect(listed[0]?.id).toBe(tpl.id);
+
+    await t.data.templates.remove(admin, tpl.id);
+    await expect(t.data.templates.get(faculty, tpl.id)).rejects.toBeInstanceOf(NotFoundError);
+    expect(await t.data.templates.deletedBuiltInCount(admin)).toBe(1);
+    expect(await t.data.templates.deletedBuiltInCount(faculty)).toBe(0);
+    expect(await t.data.templates.restoreBuiltIns(admin)).toBe(1);
+    expect((await t.data.templates.get(faculty, tpl.id)).id).toBe(tpl.id);
+    expect(await t.data.templates.restoreBuiltIns(admin)).toBe(0);
+    const audit = await t.db.auditLog.count({ where: { action: "restore-built-ins" } });
+    expect(audit).toBe(1);
+    await t.db.template.update({ where: { id: tpl.id }, data: { seedKey: "blank" } });
+    await expect(t.data.templates.remove(admin, tpl.id)).rejects.toThrow(/New template/);
   });
 
   it("an admin may unpublish and delete a GLOBAL template but not publish someone's", async () => {

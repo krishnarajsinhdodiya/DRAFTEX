@@ -11,7 +11,7 @@ import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import { requireUser } from "@/server/auth";
 import { summary } from "@/server/template-view";
 import { AutoSelect } from "./auto-select";
-import { NewTemplateButton } from "./buttons";
+import { NewTemplateButton, RestoreBuiltInsButton } from "./buttons";
 
 const SCOPES = [
   { value: "ALL", label: "All" },
@@ -39,7 +39,7 @@ export default async function TemplatesPage({
   const actor = actorOf(user);
   const f = filterSchema.parse(await searchParams);
   const data = await getData();
-  const [rows, builtIns] = await Promise.all([
+  const [rows, builtIns, deletedBuiltIns] = await Promise.all([
     data.templates.list(actor, {
       search: f.q,
       program: f.program,
@@ -47,6 +47,7 @@ export default async function TemplatesPage({
       scope: f.scope,
     }),
     data.templates.list(actor, { scope: "BUILT_IN" }),
+    data.templates.deletedBuiltInCount(actor),
   ]);
   const blank = builtIns.find((t) => t.seedKey === "blank");
   // Built-ins first, in the order they are designed; then the newest changes.
@@ -74,6 +75,7 @@ export default async function TemplatesPage({
         {blank ? <NewTemplateButton blankId={blank.id} /> : null}
       </div>
       {f.deleted ? <FormAlert kind="notice">The template was deleted.</FormAlert> : null}
+      {deletedBuiltIns > 0 ? <RestoreBuiltInsButton count={deletedBuiltIns} /> : null}
 
       <nav aria-label="Which templates" className="flex flex-wrap gap-1 border-b border-rule">
         {SCOPES.map((s) => {

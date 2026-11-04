@@ -1,7 +1,9 @@
 // Templates, scoped by the permission table in SPEC §7:
 // GLOBAL ones are visible to everyone, PRIVATE ones to their owner only
 // (others get "not found"). Only the owner edits in place; anyone who can
-// see a template may save a copy. Admins may unpublish and delete GLOBAL ones.
+// see a template may save a copy. Admins may unpublish and delete GLOBAL ones,
+// built-ins included (D50); a deleted built-in stays deleted until an admin
+// restores the built-ins.
 import type { z } from "zod";
 import type { Visibility } from "@/generated/prisma/enums";
 import type { CourseKind, ExamKind, Program } from "@/generated/prisma/enums";
@@ -9,7 +11,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { Db } from "@/lib/db/client";
 import { type TemplateFields, templateFieldsSchema } from "@/lib/templates/fields";
 import { checkTemplateFields, ruleSetIdFor } from "@/lib/templates/check";
-import type { Actor } from "./actor";
+import { type Actor, requireAdmin } from "./actor";
 import { writeAudit } from "./audit";
 import { assertOwnsAssets, headerUploads, shareAssets } from "./assets";
 import { parsePatch } from "./patch";
@@ -22,6 +24,8 @@ import {
 } from "./errors";
 
 const WHAT = "Template";
+/** The built-in that New template copies; it cannot be deleted. */
+export const BLANK_SEED = "blank";
 
 export { templateFieldsSchema };
 export type { TemplateFields };
@@ -248,15 +252,52 @@ export function templates(db: Db) {
       return updated;
     },
 
-    /** Soft delete: owner, or an admin for any template they can see. Papers keep their snapshot. */
+    /**
+     * Soft delete: owner, or an admin for any template they can see, built-ins
+     * included (D50). Papers keep their snapshot.
+     */
     async remove(actor: Actor, id: string) {
       const t = await findVisible(actor, id);
-      if (t.builtIn) throw new ForbiddenError("Built-in templates cannot be deleted.");
+      if (t.builtIn && actor.role !== "ADMIN") {
+        throw new ForbiddenError("Only an administrator can delete a built-in template.");
+      }
+      if (t.builtIn && t.seedKey === BLANK_SEED) {
+        throw new ForbiddenError(
+          "The blank template is what New template starts from; it cannot be deleted.",
+        );
+      }
       if (t.ownerId !== actor.userId && actor.role !== "ADMIN") {
         throw new ForbiddenError("Only the owner can delete this template.");
       }
       await db.template.update({ where: { id }, data: { deletedAt: new Date() } });
       await writeAudit(db, { actorId: actor.userId, action: "delete", entity: WHAT, entityId: id });
+    },
+
+    /** How many built-ins an administrator has deleted (0 for everyone else). */
+    async deletedBuiltInCount(actor: Actor): Promise<number> {
+      if (actor.role !== "ADMIN") return 0;
+      return db.template.count({ where: { builtIn: true, deletedAt: { not: null } } });
+    },
+
+    /**
+     * Brings back every deleted built-in (D50); the next built-in sync then
+     * brings their contents up to the current version. Admin only.
+     */
+    async restoreBuiltIns(actor: Actor): Promise<number> {
+      requireAdmin(actor);
+      const { count } = await db.template.updateMany({
+        where: { builtIn: true, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+      if (count > 0) {
+        await writeAudit(db, {
+          actorId: actor.userId,
+          action: "restore-built-ins",
+          entity: WHAT,
+          detail: String(count),
+        });
+      }
+      return count;
     },
   };
 }
@@ -276,7 +317,8 @@ const comparable = (f: ParsedFields) => JSON.stringify(createData(f));
 /**
  * Brings the built-in templates in line with the seeds: adds missing ones and
  * rewrites changed ones in place (version + 1). Papers keep their snapshot,
- * so changing a seed never changes a paper. Built-ins are never deleted.
+ * so changing a seed never changes a paper. Built-ins are never deleted here,
+ * and one an administrator deleted (D50) is left deleted.
  * They belong to the first administrator (D15); before setup this does nothing.
  */
 export async function syncBuiltInTemplates(
@@ -303,6 +345,10 @@ export async function syncBuiltInTemplates(
   await db.$transaction(async (tx) => {
     for (const { seedKey, fields } of parsed) {
       const old = existing.get(seedKey);
+      if (old?.builtIn && old.deletedAt !== null) {
+        result.unchanged++;
+        continue;
+      }
       const fixed = { builtIn: true, visibility: "GLOBAL" as const, deletedAt: null };
       if (!old) {
         await tx.template.create({

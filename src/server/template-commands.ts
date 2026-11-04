@@ -92,5 +92,13 @@ export function templateCommands(data: DataLayer, actor: Actor) {
         return fail(e);
       }
     },
+
+    async restoreBuiltIns(): Promise<CommandResult<number>> {
+      try {
+        return { ok: true, value: await data.templates.restoreBuiltIns(actor) };
+      } catch (e) {
+        return fail(e);
+      }
+    },
   };
 }

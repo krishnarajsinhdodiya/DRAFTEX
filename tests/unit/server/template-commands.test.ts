@@ -80,6 +80,15 @@ describe("PRIVATE template", () => {
 describe("GLOBAL template", () => {
   it("another faculty member: view and copy only; the copy is theirs, private and linked", async () => {
     const tpl = await make("GLOBAL");
+    const builtIn = { ...tpl, builtIn: true, visibility: "GLOBAL" as const };
+    expect(templateAccess(builtIn, { userId: "someone", role: "ADMIN" }).remove).toBe(true);
+    expect(templateAccess(builtIn, { userId: builtIn.ownerId, role: "FACULTY" }).remove).toBe(
+      false,
+    );
+    expect(templateAccess(builtIn, { userId: "x", role: "ADMIN" }).edit).toBe(false);
+    expect(
+      templateAccess({ ...builtIn, seedKey: "blank" }, { userId: "x", role: "ADMIN" }).remove,
+    ).toBe(false);
     expect(templateAccess(tpl, other)).toEqual({
       edit: false,
       copy: true,
