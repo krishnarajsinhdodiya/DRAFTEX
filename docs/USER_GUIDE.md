@@ -92,9 +92,10 @@ network settings.
 
 - Use a password of at least 10 characters. A short sentence is easy to
   remember and hard to guess.
-- **Write the password down and keep it somewhere safe.** If the only
-  administrator forgets it, nobody can reset it from inside DRAFTEX. A
-  second administrator account (section 10) is a good spare key.
+- **Write the password down and keep it somewhere safe.** If it is
+  forgotten, it can only be reset on the DRAFTEX computer itself
+  (section 12). A second administrator account (section 10) is an easier
+  spare key.
 
 After that you see the home page:
 
@@ -346,6 +347,24 @@ stays on screen meanwhile.
 
 **I forgot my password.** Another administrator can give you a new temporary
 password on **People** → **Set password**.
+
+**I am the only administrator and forgot my password.** This works only on
+the DRAFTEX computer itself:
+
+1. Close DRAFTEX (close the black window).
+2. Open the DRAFTEX folder (`C:\DRAFTEX`) and double-click
+   **reset-password-windows.bat**. Type the account's email and press Enter.
+   (On a Mac, in Terminal in the DRAFTEX folder:
+   `.runtime/node/bin/node scripts/reset-password.ts you@example.com`.)
+3. It shows a **temporary password** such as `k7mpq-x3vta-9hcer`. Write it
+   down; it is shown only once.
+4. Start DRAFTEX. The black window says "The password of … was reset".
+5. Sign in with the temporary password; DRAFTEX asks you to choose a new one
+   straight away.
+
+If the window says no account has that email, check the spelling and repeat
+from step 1. Anyone who can sit at the DRAFTEX computer can do this, which is
+one more reason to lock the computer when you leave it.
 
 **Moving the data folder** (for example to a bigger drive): close DRAFTEX,
 then the person who installs DRAFTEX runs, in the DRAFTEX folder,
