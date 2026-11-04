@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </div>
       ) : null}
       <header className="border-b border-rule bg-surface">
-        <div className="flex min-h-14 flex-wrap items-center gap-x-6 px-6">
+        <div className="flex min-h-14 flex-wrap items-center gap-x-4 px-6 xl:gap-x-6">
           <Link
             href="/"
             className="rounded-sm font-paper text-lead font-semibold tracking-[0.08em] text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -48,7 +48,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             ) : null}
           </nav>
           <div className="ml-auto flex items-center gap-1">
-            <span className="mr-2 hidden text-small text-ink-2 sm:inline">{user.name}</span>
+            {/* The name gives way first, so the six admin links stay on one line on a
+                laptop at 125–150 % display scaling (about 1000–1100 px wide). */}
+            <span className="mr-2 hidden max-w-48 truncate text-small text-ink-2 xl:inline">
+              {user.name}
+            </span>
             <Link href="/change-password" className={buttonStyles.quiet}>
               Change password
             </Link>
