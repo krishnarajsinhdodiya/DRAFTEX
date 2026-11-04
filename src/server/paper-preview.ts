@@ -3,7 +3,7 @@
 // say which question caused each problem. Recent results are cached by LaTeX hash.
 import { createHash } from "node:crypto";
 import type { Actor, DataLayer } from "@/lib/data";
-import { CompileRejected, type CompileService } from "@/lib/latex/compile";
+import { type CompileService, isCompileRejected } from "@/lib/latex/compile";
 import { type KeySlot, serializeKey } from "@/lib/latex/key";
 import { type SerializeResult, serializePaper } from "@/lib/latex/serialize";
 import { paperInput } from "@/lib/paper/assemble";
@@ -178,7 +178,7 @@ export async function paperPreview(
     deps.cache.set(`${actor.userId}:${key}`, { pdf: res.pdf, problems });
     return { ok: true, pdf: res.pdf, problems, cached: false };
   } catch (e) {
-    if (e instanceof CompileRejected) {
+    if (isCompileRejected(e)) {
       if (e.reason === "superseded")
         return { ok: false, status: 409, message: e.message, problems: [] };
       if (e.reason === "rate-limit")

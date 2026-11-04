@@ -1,7 +1,7 @@
 // Backup zips (D28–D31): what goes in, how they are named, and the checks a
 // zip must pass before anything in it is trusted. Pure: no file system.
 import { createHash } from "node:crypto";
-import { type Unzipped, type Zippable, unzipSync, zipSync } from "fflate";
+import { Unzip, UnzipInflate, type Unzipped, type Zippable, unzipSync, zipSync } from "fflate";
 import { z } from "zod";
 
 export const BACKUP_FORMAT = 1;
@@ -109,6 +109,57 @@ export type CheckedBackup =
 
 const NOT_OURS = "This file is not a DRAFTEX backup.";
 
+class TooLarge extends Error {}
+
+/**
+ * Unpacks `zip` while counting the bytes that actually come out, so a zip that
+ * declares small sizes but inflates to gigabytes is stopped at the cap instead
+ * of filling memory. Throws TooLarge past a cap, anything else when damaged.
+ */
+export function unzipCapped(
+  zip: Uint8Array,
+  capFor: (name: string) => number,
+  totalCap: number,
+): Unzipped {
+  const out: Unzipped = {};
+  let total = 0;
+  let failure: unknown = null;
+  const unzip = new Unzip((file) => {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const cap = capFor(file.name);
+    file.ondata = (err, chunk, final) => {
+      if (failure) return;
+      if (err) {
+        failure = err;
+        return;
+      }
+      size += chunk.length;
+      total += chunk.length;
+      if (size > cap || total > totalCap) {
+        failure = new TooLarge();
+        file.terminate();
+        return;
+      }
+      chunks.push(chunk);
+      if (final) {
+        const whole = new Uint8Array(size);
+        let at = 0;
+        for (const c of chunks) {
+          whole.set(c, at);
+          at += c.length;
+        }
+        out[file.name] = whole;
+      }
+    };
+    file.start();
+  });
+  unzip.register(UnzipInflate);
+  unzip.push(zip, true);
+  if (failure) throw failure;
+  return out;
+}
+
 /**
  * Opens a zip that may come from anywhere. Entry names are checked before
  * anything is unpacked (so no path can leave the data folder), sizes are
@@ -134,8 +185,17 @@ export function checkBackup(zip: Uint8Array, knownMigrations: string[]): Checked
     if (total > MAX_BACKUP_BYTES || db.size > MAX_DB_BYTES || man.size > MAX_MANIFEST_BYTES) {
       return { ok: false, message: "The backup is too large." };
     }
-    files = unzipSync(zip);
-  } catch {
+    // The sizes above are what the zip claims; the real ones are counted while unpacking.
+    const caps: Record<string, number> = {
+      "data.db": MAX_DB_BYTES,
+      "manifest.json": MAX_MANIFEST_BYTES,
+    };
+    files = unzipCapped(zip, (name) => caps[name] ?? MAX_BACKUP_BYTES, MAX_BACKUP_BYTES);
+    const listed = entries.map((e) => e.name).sort();
+    if (Object.keys(files).sort().join("\n") !== listed.join("\n"))
+      return { ok: false, message: NOT_OURS };
+  } catch (e) {
+    if (e instanceof TooLarge) return { ok: false, message: "The backup is too large." };
     return { ok: false, message: "The backup file is damaged and cannot be opened." };
   }
   let manifest: Manifest;

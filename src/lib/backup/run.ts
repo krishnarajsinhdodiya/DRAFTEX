@@ -263,7 +263,8 @@ export async function applyRestore(
     for (const name of ["data.db", "assets"]) {
       const from = path.join(work, name);
       if (!fs.existsSync(from)) continue;
-      fs.renameSync(from, path.join(paths.root, name));
+      // The data folder is outside the app; there is nothing here for the build to trace.
+      fs.renameSync(from, path.join(/* turbopackIgnore: true */ paths.root, name));
       placed.push(name);
     }
   } catch (e) {

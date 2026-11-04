@@ -218,6 +218,29 @@ test("the preview route refuses other sites and signed-out callers", async ({ pl
   await anon.dispose();
 });
 
+test("previews that replace each other answer 409, never a server error", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const page = await asUser(browser, ADMIN, ADMIN.password);
+  await page.goto("/templates");
+  const hrefs = await page
+    .locator('a[href^="/templates/"]')
+    .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
+  const ids = [...new Set(hrefs.map((h) => /^\/templates\/([^/?]+)$/.exec(h)?.[1]))].filter(
+    (id): id is string => Boolean(id),
+  );
+  expect(ids.length).toBeGreaterThanOrEqual(5);
+  // One preview queue per person: each request replaces the ones still waiting.
+  const statuses = await Promise.all(
+    ids
+      .slice(0, 5)
+      .map((id) => page.request.get(`/api/templates/${id}/preview`).then((r) => r.status())),
+  );
+  expect(
+    statuses.every((s) => s === 200 || s === 409),
+    statuses.join(","),
+  ).toBe(true);
+});
+
 test("no page broke the Content Security Policy (editor, MathLive, PDF preview)", () => {
   expect(cspViolations).toEqual([]);
 });
