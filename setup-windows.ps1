@@ -130,8 +130,13 @@ Say "Part 3 of 3: Database, LaTeX engine and app"
 Invoke-Native $NodeExe @((Join-Path $Root "scripts\install.ts"))
 if ($script:NativeExit -ne 0) { Stop-Setup "Setup did not finish. The messages above say why." }
 
-if ($NoShortcut) { Say "No desktop shortcut (-NoShortcut)." } else { New-DesktopShortcut }
-
-$took = [int]((Get-Date) - $Started).TotalMinutes
-Say "DRAFTEX is set up (took about $took min). Double-click DRAFTEX on the desktop to start it."
+$minutes = [int]((Get-Date) - $Started).TotalMinutes
+if ($minutes -lt 1) { $took = "under a minute" } else { $took = "about $minutes min" }
+if ($NoShortcut) {
+  Say "No desktop shortcut (-NoShortcut)."
+  Say "DRAFTEX is set up (took $took). Start it with start-windows.bat in $Root"
+} else {
+  New-DesktopShortcut
+  Say "DRAFTEX is set up (took $took). Double-click DRAFTEX on the desktop to start it."
+}
 exit 0

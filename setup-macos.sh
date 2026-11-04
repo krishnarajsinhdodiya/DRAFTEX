@@ -79,6 +79,12 @@ say "Part 2 of 3: The app's packages (npm ci; a few minutes the first time)"
 say "Part 3 of 3: Database, LaTeX engine and app"
 "$NODE" "$ROOT/scripts/install.ts" || stop "Setup did not finish. The messages above say why."
 
-if [ "$SHORTCUT" = 1 ]; then desktop_shortcut; else say "No desktop shortcut (--no-shortcut)."; fi
-
-say "DRAFTEX is set up (took about $((($(date +%s) - STARTED + 30) / 60)) min). Double-click DRAFTEX on the desktop to start it."
+took=$((($(date +%s) - STARTED + 30) / 60))
+if [ "$took" -lt 1 ]; then took="under a minute"; else took="about $took min"; fi
+if [ "$SHORTCUT" = 1 ]; then
+  desktop_shortcut
+  say "DRAFTEX is set up (took $took). Double-click DRAFTEX on the desktop to start it."
+else
+  say "No desktop shortcut (--no-shortcut)."
+  say "DRAFTEX is set up (took $took). Start it with start-macos.command in $ROOT"
+fi
