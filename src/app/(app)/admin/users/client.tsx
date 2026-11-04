@@ -24,12 +24,17 @@ export interface PersonView {
   mustChangePassword: boolean;
   allowAdvancedLatex: boolean;
   lockedUntil: string | null;
+  /** Computers locked out after wrong passwords (D38). */
+  lockedComputers: number;
   isYou: boolean;
 }
 
 function status(p: PersonView): string {
   if (!p.isActive) return "Deactivated";
-  if (p.lockedUntil) return `Locked until ${p.lockedUntil}`;
+  if (p.lockedUntil) {
+    const where = p.lockedComputers === 1 ? "one computer" : `${p.lockedComputers} computers`;
+    return `Locked out on ${where} until ${p.lockedUntil}`;
+  }
   if (p.mustChangePassword) return "Has not chosen a password yet";
   return "Active";
 }

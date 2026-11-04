@@ -37,7 +37,7 @@ export const publicUserSelect = {
   isActive: true,
   mustChangePassword: true,
   allowAdvancedLatex: true,
-  lockedUntil: true,
+  loginLocks: { select: { lockedUntil: true } },
   createdAt: true,
 } as const;
 
@@ -138,8 +138,9 @@ export function users(db: Db) {
       await db.$transaction([
         db.user.update({
           where: { id: userId },
-          data: { passwordHash, mustChangePassword: true, failedLogins: 0, lockedUntil: null },
+          data: { passwordHash, mustChangePassword: true },
         }),
+        db.loginLock.deleteMany({ where: { userId } }),
         db.session.deleteMany({ where: { userId } }),
       ]);
       await writeAudit(db, {
@@ -167,7 +168,7 @@ export function users(db: Db) {
     async unlock(actor: Actor, userId: string) {
       requireAdmin(actor);
       await findUser(userId);
-      await db.user.update({ where: { id: userId }, data: { failedLogins: 0, lockedUntil: null } });
+      await db.loginLock.deleteMany({ where: { userId } });
       await writeAudit(db, {
         actorId: actor.userId,
         action: "unlock",

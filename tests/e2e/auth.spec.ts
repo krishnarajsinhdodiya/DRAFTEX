@@ -133,7 +133,7 @@ test("five wrong passwords lock the account until an admin unlocks it", async ({
 
   const admin = await adminPage(browser);
   const row = admin.getByRole("row").filter({ hasText: FACULTY.email });
-  await expect(row).toContainText("Locked until");
+  await expect(row).toContainText("Locked out on one computer until");
   await row.getByRole("button", { name: "Unlock" }).click();
   await expect(row).toContainText("Active");
 

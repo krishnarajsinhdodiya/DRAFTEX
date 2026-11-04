@@ -16,7 +16,7 @@ const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
 export { SESSION_IDLE_MS, SESSION_RENEW_AFTER_MS } from "./constants";
-/** SPEC §11.3: 5 wrong passwords in a row lock the account for 15 minutes. */
+/** SPEC §11.3, D38: 5 wrong passwords in a row from one address lock it out of that account for 15 minutes. */
 export const LOCKOUT_FAILURES = 5;
 export const LOCKOUT_MS = 15 * MINUTE;
 /** Per client address, across all accounts, so one machine cannot try many emails. */
@@ -120,13 +120,15 @@ export function createAuth(deps: AuthDeps) {
         await verifyPassword(await dummyHash(), password);
         return { ok: false, reason: "invalid" };
       }
-      if (user.lockedUntil && user.lockedUntil.getTime() > ms()) {
-        return { ok: false, reason: "locked", retryAfterMs: user.lockedUntil.getTime() - ms() };
+      const locked = await data.auth.lockedUntil(user.id, address, now());
+      if (locked) {
+        return { ok: false, reason: "locked", retryAfterMs: locked.getTime() - ms() };
       }
       const matches = await verifyPassword(user.passwordHash, password);
       if (!matches) {
         const lockedUntil = await data.auth.recordFailedLogin(
           user.id,
+          address,
           now(),
           LOCKOUT_FAILURES,
           LOCKOUT_MS,
@@ -137,7 +139,7 @@ export function createAuth(deps: AuthDeps) {
       }
       // A deactivated account looks exactly like a wrong password.
       if (!user.isActive) return { ok: false, reason: "invalid" };
-      await data.auth.recordSuccessfulLogin(user.id);
+      await data.auth.recordSuccessfulLogin(user.id, address);
       return {
         ok: true,
         ...(await startSession(user.id)),

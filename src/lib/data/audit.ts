@@ -6,6 +6,8 @@ export interface AuditEntry {
   action: string;
   entity: string;
   entityId?: string | null;
+  /** Short, non-confidential context: a client address, a network mode. */
+  detail?: string | null;
 }
 
 type AuditDb = Pick<Db, "auditLog">;
@@ -17,6 +19,7 @@ export async function writeAudit(db: AuditDb, entry: AuditEntry): Promise<void> 
       action: entry.action,
       entity: entry.entity,
       entityId: entry.entityId ?? null,
+      detail: entry.detail ?? null,
     },
   });
 }

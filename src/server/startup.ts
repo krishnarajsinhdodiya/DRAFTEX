@@ -55,6 +55,7 @@ export async function startup(): Promise<void> {
   try {
     const data = await getData();
     await data.auth.deleteExpiredSessions(new Date());
+    await data.auth.deleteStaleLoginLocks(new Date());
     const synced = await data.system.syncCatalogue();
     if (synced.created || synced.updated) {
       console.log(`[catalogue] Courses added: ${synced.created}, updated: ${synced.updated}.`);

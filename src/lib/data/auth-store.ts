@@ -57,51 +57,69 @@ export function authStore(db: Db) {
           id: true,
           passwordHash: true,
           isActive: true,
-          lockedUntil: true,
           mustChangePassword: true,
         },
       });
     },
 
+    /** When this address is locked out of this account (D38), if it is. */
+    async lockedUntil(userId: string, address: string, now: Date): Promise<Date | null> {
+      const lock = await db.loginLock.findUnique({
+        where: { userId_address: { userId, address } },
+        select: { lockedUntil: true },
+      });
+      return lock?.lockedUntil && lock.lockedUntil > now ? lock.lockedUntil : null;
+    },
+
     /**
-     * Counts a failed password. On the `max`-th failure in a row the account
-     * locks until `now + lockMs` and the count starts again. Returns the lock end, if any.
+     * Counts a failed password from one address (D38). On the `max`-th failure
+     * in a row that address is locked out of the account until `now + lockMs`
+     * and the count starts again. Returns the lock end, if any.
      */
     async recordFailedLogin(
       userId: string,
+      address: string,
       now: Date,
       max: number,
       lockMs: number,
     ): Promise<Date | null> {
       return db.$transaction(async (tx) => {
-        const u = await tx.user.update({
-          where: { id: userId },
-          data: { failedLogins: { increment: 1 } },
-          select: { failedLogins: true },
+        const key = { userId_address: { userId, address } };
+        const lock = await tx.loginLock.upsert({
+          where: key,
+          create: { userId, address, failures: 1 },
+          update: { failures: { increment: 1 } },
+          select: { failures: true },
         });
-        if (u.failedLogins < max) return null;
+        await writeAudit(tx, {
+          actorId: null,
+          action: "sign-in-failed",
+          entity: "User",
+          entityId: userId,
+          detail: address,
+        });
+        if (lock.failures < max) return null;
         const until = new Date(now.getTime() + lockMs);
-        await tx.user.update({
-          where: { id: userId },
-          data: { failedLogins: 0, lockedUntil: until },
-        });
+        await tx.loginLock.update({ where: key, data: { failures: 0, lockedUntil: until } });
         await writeAudit(tx, {
           actorId: null,
           action: "lockout",
           entity: "User",
           entityId: userId,
+          detail: address,
         });
         return until;
       });
     },
 
-    async recordSuccessfulLogin(userId: string): Promise<void> {
-      await db.user.update({ where: { id: userId }, data: { failedLogins: 0, lockedUntil: null } });
+    async recordSuccessfulLogin(userId: string, address: string): Promise<void> {
+      await db.loginLock.deleteMany({ where: { userId, address } });
       await writeAudit(db, {
         actorId: userId,
         action: "sign-in",
         entity: "User",
         entityId: userId,
+        detail: address,
       });
     },
 
@@ -153,6 +171,19 @@ export function authStore(db: Db) {
 
     async deleteExpiredSessions(now: Date): Promise<number> {
       return (await db.session.deleteMany({ where: { expiresAt: { lte: now } } })).count;
+    },
+
+    /** Forgets failure counts untouched for a day whose lock (if any) has ended. */
+    async deleteStaleLoginLocks(now: Date): Promise<number> {
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      return (
+        await db.loginLock.deleteMany({
+          where: {
+            updatedAt: { lt: dayAgo },
+            OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }],
+          },
+        })
+      ).count;
     },
 
     // ---------- invites ----------

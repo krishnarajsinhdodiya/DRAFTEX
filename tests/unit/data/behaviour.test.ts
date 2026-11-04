@@ -580,20 +580,20 @@ describe("users", () => {
     expect((await t.data.users.setActive(admin, u.id, true)).isActive).toBe(true);
 
     await t.data.auth.createSession("s2", u.id, future);
-    await t.db.user.update({ where: { id: u.id }, data: { lockedUntil: future, failedLogins: 3 } });
+    const lock = (address: string) =>
+      t.db.loginLock.create({ data: { userId: u.id, address, failures: 0, lockedUntil: future } });
+    await lock("10.0.0.1");
     await t.data.users.resetPassword(admin, u.id, "h2");
     const after = await t.db.user.findUniqueOrThrow({ where: { id: u.id } });
-    expect(after).toMatchObject({
-      passwordHash: "h2",
-      mustChangePassword: true,
-      failedLogins: 0,
-      lockedUntil: null,
-    });
+    expect(after).toMatchObject({ passwordHash: "h2", mustChangePassword: true });
+    expect(await t.db.loginLock.count({ where: { userId: u.id } })).toBe(0);
     expect(await t.db.session.count({ where: { userId: u.id } })).toBe(0);
 
-    await t.db.user.update({ where: { id: u.id }, data: { lockedUntil: future } });
+    await lock("10.0.0.1");
+    await lock("10.0.0.2");
+    expect((await t.data.users.list(admin)).find((p) => p.id === u.id)?.loginLocks).toHaveLength(2);
     await t.data.users.unlock(admin, u.id);
-    expect((await t.db.user.findUniqueOrThrow({ where: { id: u.id } })).lockedUntil).toBeNull();
+    expect(await t.db.loginLock.count({ where: { userId: u.id } })).toBe(0);
     await expect(t.data.users.unlock(admin, "missing")).rejects.toBeInstanceOf(NotFoundError);
   });
 
@@ -630,10 +630,13 @@ describe("audit log", () => {
         "action",
         "actorId",
         "at",
+        "detail",
         "entity",
         "entityId",
         "id",
       ]);
+      // Detail is a short token (an address, a mode), never free text.
+      if (r.detail !== null) expect(r.detail).toMatch(/^[\w.:\[\]-]{1,64}$/);
     }
   });
 });
