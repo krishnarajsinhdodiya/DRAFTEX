@@ -183,6 +183,10 @@ test("a restore waiting in an empty folder is applied at start, and the paper is
     .poll(async () => (await api.get("/login").catch(() => null))?.status(), { timeout: 90_000 })
     .toBe(200);
   expect(fs.existsSync(path.join(pendingDir, "restore-pending.zip"))).toBe(false);
+  // This computer's settings stay; the backup's (port 3211) are not restored.
+  expect(JSON.parse(fs.readFileSync(path.join(pendingDir, "config.json"), "utf8"))).toEqual({
+    port: PORT,
+  });
   await api.dispose();
 
   const ctx = await browser.newContext({ baseURL: SECOND });
