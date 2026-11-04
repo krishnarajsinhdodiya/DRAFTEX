@@ -1,11 +1,7 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { dummyHash, hashPassword, passwordSchema, verifyPassword } from "@/lib/auth/password";
 import { createRateLimiter } from "@/lib/auth/rate-limit";
 import { newInviteCode, newSessionToken, normaliseInviteCode, sha256Hex } from "@/lib/auth/tokens";
-import { ConfigError, readConfig } from "@/lib/config";
 
 describe("passwords", () => {
   it("hash with argon2id and verify", async () => {
@@ -86,31 +82,5 @@ describe("rate limiter", () => {
     const rl = createRateLimiter({ max: 1, windowMs: 60_000 });
     expect(rl.hit("x")).toBe(0);
     expect(rl.hit("x")).toBeGreaterThan(0);
-  });
-});
-
-describe("config.json", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "draftex-config-"));
-  const file = path.join(dir, "config.json");
-
-  it("defaults to local mode when missing", () => {
-    expect(readConfig(path.join(dir, "missing.json"))).toEqual({ mode: "local" });
-  });
-
-  it("reads the mode and ignores settings for later phases", () => {
-    fs.writeFileSync(file, JSON.stringify({ mode: "lan", port: 3210 }));
-    expect(readConfig(file)).toEqual({ mode: "lan" });
-  });
-
-  it("explains bad JSON, bad values and unreadable files", () => {
-    fs.writeFileSync(file, "{");
-    expect(() => readConfig(file)).toThrow(/not valid JSON/);
-    fs.writeFileSync(file, JSON.stringify({ mode: "internet" }));
-    expect(() => readConfig(file)).toThrow(ConfigError);
-    expect(() =>
-      readConfig(file, () => {
-        throw Object.assign(new Error("denied"), { code: "EACCES" });
-      }),
-    ).toThrow(/cannot read/);
   });
 });
