@@ -29,6 +29,11 @@ no chat history must be able to continue from this file alone.
 - windows-latest, clean checkout: setup **2.8 min** with the LaTeX cache restored (Node download 6 s); update 1.6 min. A first install adds the 4–5 min LaTeX download.
 - Father's laptop: **not timed** (owner to do; guide says expect 10–15 min).
 
+## After the phase (fixes on `main`)
+- `fix/e2e-equation-locator`: the Windows e2e failure on `main` after the restore-config merge was a test race (MathLive copies the "Equation" label into its shadow input); tests now select `math-field[aria-label="Equation"]`.
+- `fix/carried-issues`: superseded previews answered 500 (cross-bundle `instanceof`) → now 409, with an e2e test; Turbopack whole-project tracing warning gone; admin header stays on one line down to 900 px; restore uploads are capped by real inflated size.
+- End user's laptop is Windows 11 (memory.md).
+
 ## In progress
 - Nothing half-done.
 
@@ -36,7 +41,7 @@ no chat history must be able to continue from this file alone.
 1. Session start per the operating rules; branch `phase/9-polish` from `main`.
 2. `/apple-design` full review and `/break-ui` across all screens; close findings or log them with reasons.
 3. Performance: editor input latency < 50 ms, preview < 3 s warm; measure and record.
-4. Carried items worth deciding in Phase 9: admin password recovery (open question), admin nav wrapping below ~1100 px, superseded-compile `CompileRejected` stack in the server log, Turbopack tracing warning for `src/lib/backup/run.ts`.
+4. Carried item worth deciding in Phase 9: admin password recovery (open question).
 5. Owner tasks before handing the laptop over (not code): install on the real Windows laptop with the guide's §13 and time it; try the firewall helper once (UAC prompt, rule created, rule removed); try one real `update-windows.bat` with the token.
 
 ## Failing tests
@@ -47,7 +52,7 @@ no chat history must be able to continue from this file alone.
 - **Sole-admin password loss is unrecoverable** today (no reset script). Guide advises a second administrator.
 - **LAN mode is plain HTTP** (D40). **Server mode locks out direct access**; recovery documented (set `"mode": "local"` in `config.json`).
 - The GitHub token on the end user's machine expires; updates then fail with "could not be downloaded" (guide explains renewal).
-- Carried over: restore needs a restart; zip bombs only caught after inflating; long chemical names in 2/4-column choices; cramped phone editor; same question in two windows is last-write-wins; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); ESLint 10 overrides; `ubuntu-latest` moves to Ubuntu 26; npm warns that `fsevents` has unapproved install scripts (macOS optional dependency, harmless).
+- Carried over: restore needs a restart; long chemical names in 2/4-column choices; cramped phone editor; same question in two windows is last-write-wins; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); ESLint 10 overrides; `ubuntu-latest` moves to Ubuntu 26; npm warns that `fsevents` has unapproved install scripts (macOS optional dependency, harmless).
 
 ## Decisions made (copied to memory.md)
 - D42–D48 (D43 amended: portable Node archive), Git not installed by setup, SIGHUP handling, ASCII-only Windows scripts and mid-run-safe update scripts, quiet warm-up notes, CI-only `cache/` from Next telemetry, screenshot script, icon, sole-admin recovery gap.

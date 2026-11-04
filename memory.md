@@ -186,6 +186,10 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-04 · The desktop shortcut icon is `assets/draftex.ico`, rendered from `assets/draftex-icon.svg` by `scripts/make-icon.ts` · a sheet with the marks margin, the app's signature element
 - 2026-11-04 · If the only administrator forgets the password there is no recovery path in the app or a script; the user guide tells the owner to keep a second administrator · open question for Phase 9
 - 2026-11-04 · E2E and the screenshot script find the equation field as `math-field[aria-label="Equation"]`, never `getByLabel("Equation")` · MathLive copies the label onto its shadow keyboard sink once started, so the label matched two elements at random; failed `main` CI on windows-latest after the restore-config merge (run 41773473540)
+- 2026-11-04 · Errors thrown by a service that lives on globalThis (CompileService) are recognised by name and reason (`isCompileRejected`), never `instanceof` · Next bundles compile.ts more than once; superseded previews answered 500 and logged a stack (reproduced: 3 of 5 concurrent previews)
+- 2026-11-04 · Filesystem calls on data-folder paths inside code the app bundles carry `/* turbopackIgnore: true */` · otherwise Turbopack plans to trace the whole project
+- 2026-11-04 · The header hides the signed-in name below 1280 px (truncated above) so the six admin links stay on one line down to 900 px · a Windows laptop at 125–150 % scaling is about 1000–1100 px wide
+- 2026-11-04 · Restore uploads are inflated as a stream with real bytes counted against the caps (`unzipCapped`), and unpacked names must match the zip directory · declared sizes in a zip are attacker-controlled
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
