@@ -46,11 +46,16 @@ function migratedTemplate(): string {
   return file;
 }
 
+/** Writes a fully migrated database to `file` by copying the per-worker template. */
+export function copyMigratedDatabase(file: string): void {
+  fs.copyFileSync(migratedTemplate(), file);
+}
+
 export async function createTestDb(): Promise<TestDb> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "draftex-db-"));
   const file = path.join(dir, "data.db");
   // Replaying every migration per test took over 10 s on the Windows runner; a copy does not.
-  fs.copyFileSync(migratedTemplate(), file);
+  copyMigratedDatabase(file);
   const db = await openDatabase(file);
   return {
     db,

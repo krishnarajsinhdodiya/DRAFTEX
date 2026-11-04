@@ -40,6 +40,16 @@ describe("setup scripts", () => {
     expect(read("setup-macos.sh")).toContain("scripts/install.ts");
   });
 
+  it("retry a dropped package download and warn about copies that cannot update", () => {
+    for (const f of ["setup-windows.ps1", "setup-macos.sh"]) {
+      const text = read(f);
+      expect(text).toContain("--fetch-retries=5");
+      expect(text).toContain("--prefer-offline");
+      expect(text).toMatch(/attempt \$try of 3/);
+      expect(text).toContain("Download ZIP");
+    }
+  });
+
   it("back up before pulling, and pull fast-forward only", () => {
     for (const f of ["update-windows.ps1", "update-macos.sh"]) {
       const text = read(f);

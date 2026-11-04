@@ -66,6 +66,14 @@ desktop_shortcut() {
 
 cd "$ROOT"
 say "Setting up DRAFTEX in $ROOT"
+if [ ! -e "$ROOT/.git" ]; then
+  say "WARNING: this folder was not made with 'git clone' (for example it came from Download ZIP),"
+  say "         so update-macos.sh cannot update it later. See the user guide, section 13."
+fi
+case "$ROOT" in
+  */Downloads/* | */Desktop/* | */Documents/* | */Library/Mobile\ Documents/*)
+    say "WARNING: DRAFTEX is inside Downloads, Desktop or Documents; a folder such as ~/DRAFTEX is safer." ;;
+esac
 
 say "Part 1 of 3: Node.js"
 install_node
@@ -73,8 +81,25 @@ export PATH="$NODE_DIR/bin:$PATH"
 export CHECKPOINT_DISABLE=1 NEXT_TELEMETRY_DISABLED=1
 
 say "Part 2 of 3: The app's packages (npm ci; a few minutes the first time)"
-"$NODE_DIR/bin/npm" ci --no-audit --no-fund \
-  || stop "The packages could not be installed. The messages above say why; check the internet connection and run setup again."
+# A dropped connection is the usual failure (ECONNRESET); npm keeps what it has
+# downloaded in its cache, so a retry continues instead of starting over.
+export NPM_CONFIG_UPDATE_NOTIFIER=false
+npm_ok=0
+for try in 1 2 3; do
+  extra=()
+  if [ "$try" -gt 1 ]; then
+    say "The download was interrupted. Trying again in 15 seconds (attempt $try of 3); what is already downloaded is kept."
+    sleep 15
+    extra=(--prefer-offline)
+  fi
+  if "$NODE_DIR/bin/npm" ci --no-audit --no-fund --loglevel=error --fetch-retries=5 \
+    --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 "${extra[@]+"${extra[@]}"}"; then
+    npm_ok=1
+    break
+  fi
+done
+[ "$npm_ok" = 1 ] \
+  || stop "The packages could not be downloaded after 3 tries. This is almost always the network: try another Wi-Fi or a phone hotspot, then run setup again. What was downloaded is kept."
 
 say "Part 3 of 3: Database, LaTeX engine and app"
 "$NODE" "$ROOT/scripts/install.ts" || stop "Setup did not finish. The messages above say why."

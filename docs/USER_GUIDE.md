@@ -418,6 +418,11 @@ Times measured on 2026-11-04 (see the table at the end).
    in Windows Credential Manager for later updates. Keep the folder outside
    OneDrive, Desktop and Documents; `C:\DRAFTEX` is a good place.
    *About 1 min.*
+
+   **Do not use GitHub's "Download ZIP"** instead. A ZIP copy has no link
+   back to GitHub, so `update-windows.bat` can never update it, and it
+   unpacks into Downloads with a doubled folder name
+   (`Downloads\DRAFTEX-main\DRAFTEX-main`). Setup warns when it sees one.
 4. **Run setup:** open `C:\DRAFTEX` and double-click **setup-windows.bat**.
    It downloads Node.js 24.22.2 and checks its fingerprint, installs the
    app's packages, prepares the database, downloads the LaTeX engine and its
@@ -427,6 +432,16 @@ Times measured on 2026-11-04 (see the table at the end).
    with its owner (section 3). *About 1 min.*
 6. **Make a first backup** (Backups → Back up now) and check that a
    template preview appears. *About 1 min.*
+
+**If setup stops while installing the app's packages** (messages such as
+`ECONNRESET`, `ETIMEDOUT` or "network"): the internet connection dropped
+during the large download. Setup already tries three times. Run
+**setup-windows.bat** again; what was downloaded is kept, so it goes faster.
+If it keeps failing, use another connection (a phone hotspot works), or
+pause the antivirus's web or HTTPS protection until setup finishes; some
+antivirus programs reset long downloads. `EPERM ... rmdir` lines printed
+next to such an error are npm failing to tidy up after the dropped download
+and can be ignored.
 
 When the token expires, updates stop with "could not be downloaded". Make a
 new token the same way and replace the old one in *Windows Credential
