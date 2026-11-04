@@ -24,7 +24,7 @@ import {
   writeLock,
 } from "@/lib/backup/run";
 import { type DataPaths, dataPaths } from "@/lib/paths";
-import { applyMigrations } from "../../support/db";
+import { copyMigratedDatabase } from "../../support/db";
 
 const REPO = process.cwd();
 const SHA = "b".repeat(64);
@@ -35,7 +35,8 @@ let paths: DataPaths;
 function makeDataFolder(dir: string, userName = "Teacher"): DataPaths {
   fs.mkdirSync(dir, { recursive: true });
   const p = dataPaths(dir);
-  applyMigrations(p.database);
+  // A copy of one migrated database: replaying every migration per test passed 10 s on Windows CI.
+  copyMigratedDatabase(p.database);
   const db = new Database(p.database);
   db.pragma("journal_mode = WAL");
   db.exec(
