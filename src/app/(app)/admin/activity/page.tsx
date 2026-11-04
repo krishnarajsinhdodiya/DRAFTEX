@@ -29,6 +29,7 @@ function describe(action: string, entity: string): string {
     "setup-admin": "Set up DRAFTEX",
     "change-password": "Changed own password",
     "reset-password": "Set a password for an account",
+    "reset-password-offline": "Reset a password on the DRAFTEX computer",
     "advanced-latex:on": "Allowed Advanced LaTeX",
     "advanced-latex:off": "Stopped Advanced LaTeX",
     redeem: "Joined with an invite",

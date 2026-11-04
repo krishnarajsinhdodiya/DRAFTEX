@@ -597,6 +597,34 @@ describe("users", () => {
     await expect(t.data.users.unlock(admin, "missing")).rejects.toBeInstanceOf(NotFoundError);
   });
 
+  it("an offline reset (D49) works without a signed-in actor and only for active accounts", async () => {
+    const u = await t.data.users.create(admin, {
+      name: "Offline",
+      email: "offline@example.com",
+      passwordHash: "h",
+    });
+    const future = new Date(Date.now() + 60_000);
+    await t.data.auth.createSession("off-1", u.id, future);
+    await t.db.loginLock.create({
+      data: { userId: u.id, address: "10.0.0.9", failures: 5, lockedUntil: future },
+    });
+    expect(await t.data.system.resetPasswordOffline("  Offline@Example.com ", "h3")).toBe("reset");
+    const after = await t.db.user.findUniqueOrThrow({ where: { id: u.id } });
+    expect(after).toMatchObject({ passwordHash: "h3", mustChangePassword: true });
+    expect(await t.db.loginLock.count({ where: { userId: u.id } })).toBe(0);
+    expect(await t.db.session.count({ where: { userId: u.id } })).toBe(0);
+    const row = await t.db.auditLog.findFirstOrThrow({
+      where: { action: "reset-password-offline", entityId: u.id },
+    });
+    expect(row.actorId).toBeNull();
+
+    expect(await t.data.system.resetPasswordOffline("nobody@example.com", "h4")).toBe("unknown");
+    expect(await t.data.system.resetPasswordOffline("not an email", "h4")).toBe("unknown");
+    await t.data.users.setActive(admin, u.id, false);
+    expect(await t.data.system.resetPasswordOffline("offline@example.com", "h4")).toBe("inactive");
+    expect((await t.db.user.findUniqueOrThrow({ where: { id: u.id } })).passwordHash).toBe("h3");
+  });
+
   it("Advanced LaTeX is off until an admin allows it, and can be turned off again", async () => {
     const u = await t.data.users.create(admin, {
       name: "Adv",
