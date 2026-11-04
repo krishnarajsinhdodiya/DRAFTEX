@@ -6,7 +6,7 @@ no chat history must be able to continue from this file alone.
 ## Status
 - **Date:** 2026-11-04
 - **Current phase:** 7 Network modes + hardening: done. Next: Phase 8 Installers + docs.
-- **Branch:** `main` only (Phase 7 merged with `--no-ff` from `phase/7-network-hardening`, tagged `v0.7.0`; branch deleted locally and on GitHub)
+- **Branch:** `main` only (Phase 7 merged with `--no-ff` from `phase/7-network-hardening`, tagged `v0.7.0`; then `fix/restore-keeps-config` merged with `--no-ff`; both branches deleted locally and on GitHub)
 - **Last green commit:** latest `main`
 - **CI:** `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)`, green on the phase branch before the merge.
 
@@ -32,6 +32,9 @@ no chat history must be able to continue from this file alone.
 8. **Backups are plain zips** — Backups screen says so (caution); user guide (Phase 8) must repeat it.
 9. **Confidentiality** — `.gitignore` unchanged; no paper text in fixtures; this phase added none.
 
+## After the phase (owner choice, `fix/restore-keeps-config`)
+- A restore keeps this computer's `config.json` (network mode, port); only the database and pictures are replaced. Unit test and restore e2e check it.
+
 ## In progress
 - Nothing half-done.
 
@@ -49,7 +52,6 @@ no chat history must be able to continue from this file alone.
 ## Blockers / risks
 - **LAN mode is plain HTTP** (D40): passwords and papers cross the network unencrypted. Only on a trusted network; server mode behind HTTPS for wider use.
 - **Server mode locks out direct access**: after switching, DRAFTEX answers only through the HTTPS proxy; recovery = set `"mode": "local"` in `<data>/config.json` and restart.
-- **Restoring a backup also restores its `config.json`** (D30), so a backup made in LAN mode turns LAN mode on at the next restart after the restore. See questions.
 - **Owner's Mac needs `npm run db:migrate`** once (new migration `login_locks`); startup refuses to run until then.
 - Carried over: restore needs a restart (now one click when started with `npm start`); zip bombs only caught after inflating; long chemical names in 2/4-column choices; cramped phone editor; same question in two windows is last-write-wins; lockout DoS now limited to one address per account; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); first warm-up about 3 minutes; ESLint 10 overrides; `ubuntu-latest` moves to Ubuntu 26.
 - Logged, not fixed: a superseded preview compile sometimes prints a `CompileRejected` stack to the server log (no content in it; Phase 9); Turbopack warns "Dynamic filesystem access causes tracing of the whole project" for `src/lib/backup/run.ts` (since Phase 6); the admin header nav wraps below ~1100 px wide now that it has six links.
@@ -63,7 +65,6 @@ no chat history must be able to continue from this file alone.
 - `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215, LAN mode; the old `0.0.0.0` argument still means lan), `draftex-dev-throwaway` (3216, dev mode). All use throwaway data folders and the supervisor, so Restart works there. E2E uses 3211, restore 3214, server mode 3218.
 
 ## Questions for owner
-- Should restoring a backup keep this computer's network settings (`config.json`) instead of the backup's? Recommended: keep this computer's; it changes D30.
 - Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`?
 - How does your father tag COs of elective options? The default is `BP607TAEC1.01`.
 - Later: should the app offer Times at all?
