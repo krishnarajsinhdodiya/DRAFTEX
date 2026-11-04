@@ -116,6 +116,8 @@ describe("createBackup", () => {
 describe("restore", () => {
   async function otherBackup(): Promise<Uint8Array> {
     const otherPaths = makeDataFolder(path.join(root, "other"), "Restored");
+    // The other computer was open to its network; restoring must not carry that over.
+    fs.writeFileSync(otherPaths.config, '{"mode":"lan","port":3300}');
     const b = await createBackup(
       { paths: otherPaths, repoRoot: REPO, appVersion: "0.6.0" },
       "manual",
@@ -143,6 +145,7 @@ describe("restore", () => {
       "picture of Restored",
     );
     expect(fs.existsSync(path.join(paths.assets, "stray.txt"))).toBe(false);
+    expect(fs.readFileSync(paths.config, "utf8")).toBe('{"mode":"local"}');
     expect(fs.existsSync(path.join(paths.root, PENDING_FILE))).toBe(false);
     expect(fs.readdirSync(paths.root).filter((n) => n.startsWith("."))).toEqual([]);
     // The safety backup holds the data that was replaced.
@@ -163,7 +166,8 @@ describe("restore", () => {
     );
     expect(r.safety).toBeNull();
     expect(userName(empty)).toBe("Restored");
-    expect(fs.existsSync(empty.config)).toBe(true);
+    // No settings file: this computer starts in local mode, whatever the backup's was.
+    expect(fs.existsSync(empty.config)).toBe(false);
   });
 
   it("refuses a damaged database and leaves the current data alone", async () => {

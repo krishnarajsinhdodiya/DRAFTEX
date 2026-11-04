@@ -225,7 +225,9 @@ export class RestoredButNotMigrated extends Error {
 const DB_FILES = ["data.db", "data.db-wal", "data.db-shm", "data.db-journal"];
 
 /**
- * Replaces the database, pictures and settings with the backup's. The
+ * Replaces the database and pictures with the backup's. This computer's
+ * config.json (network mode, port) is kept: a backup made in LAN mode must
+ * not open this computer to the network (owner decision 2026-11-04). The
  * current data is backed up first (when there is any) and moved aside until
  * the new files are in place, so a failure part-way puts it back. Then
  * `migrate` brings an older backup's database up to date. Call only while no
@@ -252,13 +254,13 @@ export async function applyRestore(
       if (name === "manifest.json") continue;
       fs.writeFileSync(path.join(work, ...name.split("/")), bytes);
     }
-    for (const name of [...DB_FILES, "assets", "config.json"]) {
+    for (const name of [...DB_FILES, "assets"]) {
       const from = path.join(paths.root, name);
       if (!fs.existsSync(from)) continue;
       fs.renameSync(from, path.join(aside, name));
       moved.push(name);
     }
-    for (const name of ["data.db", "assets", "config.json"]) {
+    for (const name of ["data.db", "assets"]) {
       const from = path.join(work, name);
       if (!fs.existsSync(from)) continue;
       fs.renameSync(from, path.join(paths.root, name));
