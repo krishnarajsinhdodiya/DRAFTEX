@@ -3,7 +3,7 @@
 // unchanged template never compiles twice (D19).
 import { createHash } from "node:crypto";
 import type { z } from "zod";
-import { CompileRejected, type CompileService } from "@/lib/latex/compile";
+import { type CompileService, isCompileRejected } from "@/lib/latex/compile";
 import { serializePaper } from "@/lib/latex/serialize";
 import { templateFieldsSchema } from "@/lib/templates/fields";
 import { previewPaper } from "@/lib/templates/preview";
@@ -107,7 +107,7 @@ export async function templatePreview(
     deps.cache.set(key, res.pdf);
     return { ok: true, pdf: res.pdf, cached: false };
   } catch (e) {
-    if (e instanceof CompileRejected) {
+    if (isCompileRejected(e)) {
       if (e.reason === "superseded") return { ok: false, status: 409, message: e.message };
       if (e.reason === "rate-limit") return { ok: false, status: 429, message: e.message };
     }

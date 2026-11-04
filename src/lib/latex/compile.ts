@@ -53,6 +53,20 @@ export class CompileRejected extends Error {
   }
 }
 
+/**
+ * True for a CompileRejected from any copy of this module. Next.js may bundle
+ * this file more than once, and the one CompileService lives on globalThis
+ * (src/server/compile.ts), so `instanceof` fails when the caller's copy is not
+ * the service's.
+ */
+export function isCompileRejected(e: unknown): e is CompileRejected {
+  return (
+    e instanceof Error &&
+    e.name === "CompileRejected" &&
+    ["rate-limit", "superseded", "invalid"].includes((e as { reason?: unknown }).reason as string)
+  );
+}
+
 export interface CompileServiceOptions {
   engine: Engine;
   tempRoot?: string;

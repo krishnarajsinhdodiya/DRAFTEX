@@ -3,7 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { CompileRejected, CompileService, slotForLine } from "@/lib/latex/compile";
+import {
+  CompileRejected,
+  CompileService,
+  isCompileRejected,
+  slotForLine,
+} from "@/lib/latex/compile";
 import { engineEnv, tectonicArgs, tectonicEngine, type Engine } from "@/lib/latex/engine";
 import { BUNDLE_URL } from "@/lib/latex/pins";
 
@@ -231,5 +236,27 @@ describe("slotForLine", () => {
     expect(slotForLine(ranges, 4)).toBe("b");
     expect(slotForLine(ranges, 9)).toBeUndefined();
     expect(slotForLine(undefined, 1)).toBeUndefined();
+  });
+});
+
+describe("isCompileRejected", () => {
+  it("recognises the error from another bundled copy of the module", () => {
+    // Next.js may load compile.ts twice; the copy that made the error is not the caller's.
+    class ForeignCompileRejected extends Error {
+      override name = "CompileRejected";
+      readonly reason = "superseded";
+    }
+    const foreign = new ForeignCompileRejected("A newer compile replaced this one.");
+    expect(foreign instanceof CompileRejected).toBe(false);
+    expect(isCompileRejected(foreign)).toBe(true);
+    expect(isCompileRejected(new CompileRejected("rate-limit", "x"))).toBe(true);
+  });
+
+  it("rejects look-alikes", () => {
+    const named = Object.assign(new Error("x"), { name: "CompileRejected", reason: "other" });
+    expect(isCompileRejected(named)).toBe(false);
+    expect(isCompileRejected(Object.assign(new Error("x"), { reason: "superseded" }))).toBe(false);
+    expect(isCompileRejected({ name: "CompileRejected", reason: "superseded" })).toBe(false);
+    expect(isCompileRejected(null)).toBe(false);
   });
 });

@@ -8,7 +8,7 @@ import path from "node:path";
 import { type Zippable, zipSync } from "fflate";
 import type { Actor, DataLayer } from "@/lib/data";
 import { bundleSegments, compactForExport, readme } from "@/lib/export/bundle";
-import { CompileRejected, type CompileService } from "@/lib/latex/compile";
+import { type CompileService, isCompileRejected } from "@/lib/latex/compile";
 import { serializeKey } from "@/lib/latex/key";
 import { serializePaper } from "@/lib/latex/serialize";
 import { paperInput } from "@/lib/paper/assemble";
@@ -162,7 +162,7 @@ export async function exportPaper(
         supersedeKey: `export:${d.kind}:${actor.userId}:${paperId}`,
       });
     } catch (e) {
-      if (e instanceof CompileRejected && e.reason === "rate-limit") {
+      if (isCompileRejected(e) && e.reason === "rate-limit") {
         return { ok: false, status: 429, message: e.message, problems: [] };
       }
       throw e;
