@@ -175,6 +175,14 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-04 · D46: on Windows the app runs in a visible console window ("keep this window open"); closing it stops DRAFTEX; no background service in v1 · owner approved
 - 2026-11-04 · D47: gate 10 runs on windows-latest from a clean checkout: setup (including the Node download), start, smoke e2e, update without `git pull` (the CI checkout is a detached HEAD). The UAC firewall step and a real `git pull` need one manual try on Windows · owner approved
 - 2026-11-04 · D48: install timing is measured on the CI runner and the owner's Mac; the end user's laptop is timed by the owner · owner approved
+- 2026-11-04 · Gate 10 green on windows-latest: setup-windows.bat from a clean checkout (Node download 6 s, setup 2.8 min with the LaTeX cache), start-windows.bat, smoke + installed-copy e2e, update-windows.bat -NoPull, restart. macOS fresh install 5.0 min (LaTeX first download 4.6 min); a real `git pull` update tested on the Mac against a local clone · D47, D48
+- 2026-11-04 · Supervisor and server treat SIGHUP like SIGTERM · closing the Terminal or Windows console window sends it (D46); without it the lock file stayed behind
+- 2026-11-04 · `.bat` and `.ps1` files are ASCII only and routed through `Invoke-Native` (exit code kept, stderr not a PowerShell error); `update-windows.bat` is one parenthesised line and `update-macos.sh` runs inside `main()` · PowerShell 5.1 reads BOM-less files as ANSI; cmd and bash read scripts while running and `git pull` may replace them
+- 2026-11-04 · Setup prints the count of warm-up LaTeX notes, not each one (`--verbose` lists them) · hundreds of expected font-substitution lines looked like failures to the end user
+- 2026-11-04 · `next telemetry disable` writes `<repo>/cache/config.json` only when the CI variable is set (Next keeps telemetry config in the project under CI); harmless, reported by the gate 10 job, not on end-user machines · observed in CI
+- 2026-11-04 · User-guide screenshots are made by `scripts/guide-screenshots.ts` against a fresh `e2e-server.ts` on port 3210 (invented data, light mode, palette PNGs) · reproducible; no real paper text
+- 2026-11-04 · The desktop shortcut icon is `assets/draftex.ico`, rendered from `assets/draftex-icon.svg` by `scripts/make-icon.ts` · a sheet with the marks margin, the app's signature element
+- 2026-11-04 · If the only administrator forgets the password there is no recovery path in the app or a script; the user guide tells the owner to keep a second administrator · open question for Phase 9
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -194,6 +202,7 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
+- Should Phase 9 add an offline admin password reset (`npm run reset-password -- <email>`, run on the DRAFTEX computer with the app stopped)? Today a forgotten sole-admin password cannot be recovered.
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
 - Should restoring a backup keep this computer's config.json (network settings) instead of the backup's? [ANSWERED 2026-11-04 → see "Restore keeps config"]
 - Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable.
