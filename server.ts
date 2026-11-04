@@ -125,3 +125,5 @@ const shutdown = () => {
 };
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+// Closing the terminal window (macOS) or the console window (Windows) sends SIGHUP.
+process.on("SIGHUP", shutdown);

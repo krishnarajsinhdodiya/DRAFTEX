@@ -45,6 +45,8 @@ function stop(): void {
 }
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
+// Closing the window (D46) sends SIGHUP on macOS and Windows.
+process.on("SIGHUP", stop);
 
 function openBrowser(url: string): void {
   if (process.env.DRAFTEX_NO_BROWSER === "1") return;
