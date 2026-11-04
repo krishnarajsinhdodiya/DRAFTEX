@@ -15,6 +15,8 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · 11 sources print per-question marks (`\question[N]` + `\pointsdroppedatright` + `\droppoints`); the date row uses `\uline` (ulem, ULthickness 1pt, ULdepth 1.3ex) · counted across reference sources
 - 2026-11-03 · Page-number bug in sources is mostly `\pageref{2}` (3 files), LastPage without the package in 1 · counted across reference sources
 
+- 2026-11-04 · End user's laptop runs Windows 11: built-in `tar.exe` and Windows PowerShell 5.1 are present; OneDrive folder backup may hold Desktop/Documents, so DRAFTEX is cloned to `C:\DRAFTEX` and data stays in `%USERPROFILE%\DRAFTEX-data` · owner
+
 ## Decisions
 - 2026-11-03 · Local-first; modes local / lan / server; secure as if LAN from day one · may be shared on college network later
 - 2026-11-03 · SQLite (WAL) via Prisma; Postgres-compatible schema · Windows laptop install simplicity
