@@ -7,7 +7,7 @@ no chat history must be able to continue from this file alone.
 - **Date:** 2026-11-06
 - **Current phase:** 9 Polish + paper retrieval: done. Next: Phase 10 Bloom and CO on the printed paper (brief in `docs/ROADMAP-9-12.md`, WP-C).
 - **Branch:** `main` only (Phase 9 merged with `--no-ff` from `phase/9-polish`, tagged `v0.9.0`; branch deleted locally and on GitHub)
-- **Last green commit:** latest `main`
+- **Last green commit:** latest `main` (CI green on the v0.9.0 merge, run 42208639526)
 - **CI:** `commit-hygiene`, `checks (ubuntu-24.04)`, `checks (windows-latest)`, `install (windows-latest)` (gate 10) and the new `upgrade (windows-latest)`.
 
 ## Done this session (Phase 9)
@@ -38,7 +38,7 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps (Phase 10, follow docs/ROADMAP-9-12.md WP-C)
 1. Session start per the operating rules; branch `phase/10-bloom-co` from `main`.
-2. Plan first: D-numbers from D63, each with cost/risk; wait for "go". Ask the owner the Bloom wording (names or L1–L6) before building the label table.
+2. Plan first: D-numbers from D63, each with cost/risk; wait for "go". Bloom wording is decided: names (Remember … Create, "Analyse" spelling), from one label table shared with the editor's `BLOOM_LABEL` (memory.md).
 3. Measure performance before (`node scripts/e2e-server.ts 3212` then `node scripts/measure-performance.ts http://127.0.0.1:3212`).
 4. The upgrade fixture for Phase 10 should be regenerated from v0.9.0 (`scripts/make-upgrade-fixture.ts` against a v0.9.0 worktree build) or kept at v0.8.0 and a v0.9.0 one added; the CI upgrade job picks the previous tag automatically.
 
@@ -46,7 +46,7 @@ no chat history must be able to continue from this file alone.
 - Install on the father's Windows 11 laptop as a `git clone` into `C:\DRAFTEX` (guide §13) and time it.
 - Try the firewall helper once (UAC prompt, rule created, rule removed).
 - Try one real `update-windows.bat` with the read-only token.
-- Confirm the Bloom wording for printed papers (names or L1–L6) and the CO format for electives (`BP607T` vs `BP607T AEC1`).
+- Confirm the CO format for electives (`BP607T` vs `BP607T AEC1`). (Bloom wording answered: names.)
 - Note: papers he marked Final before this update now open read-only; Edit puts them back to Draft.
 
 ## Failing tests
@@ -62,13 +62,12 @@ no chat history must be able to continue from this file alone.
 - D53–D62, upgrade testing approach, performance before/after, D61 as built and its 4-column limit, JS-side search, Final papers read-only after update, version PDF route, CI upgrade job, phone header, worst-case retrieval seed.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`). Run `npm run db:migrate` once (new migration `paper_snapshots`).
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`). `npm run db:migrate` done for `paper_snapshots` (owner, 2026-11-06).
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"`.
 - `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216). E2E 3211, restore 3214, server mode 3218, v0.8.0 fixture server 3219, upgrade spec 3220.
 - A v0.8.0 worktree may remain at `/tmp/draftex-v080` (`git worktree remove /tmp/draftex-v080` to drop it).
 
 ## Questions for owner
-- Bloom wording on printed papers: names or L1–L6?
 - Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`? How are elective COs tagged?
 - Later: should the app offer Times at all?
 
