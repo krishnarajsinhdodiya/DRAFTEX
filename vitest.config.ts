@@ -11,6 +11,7 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts", "src/**/*.test.ts"],
     environment: "node",
+    globalSetup: ["tests/support/db-template.ts"],
     testTimeout: 30_000,
     coverage: {
       provider: "v8",
