@@ -15,6 +15,7 @@ import {
   docSchema,
   paperSchema,
 } from "../paper/schema.ts";
+import { BLOOM_LABEL, type Bloom, bloomPrinted } from "../paper/bloom.ts";
 import type { SlotRange } from "./compile.ts";
 import {
   type BlockContext,
@@ -25,6 +26,7 @@ import {
   fill,
   formatMarks,
   inline,
+  subPartTags,
   text,
 } from "./serialize.ts";
 
@@ -99,6 +101,24 @@ function preamble(w: Writer, left: string, right: string): void {
     "\\newcommand{\\dxKeyHead}[2]{\\par\\vspace{0.2in}\\noindent\\textbf{#1}\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil\\textbf{#2}{\\parfillskip=0pt\\finalhyphendemerits=0\\par}\\nobreak\\vspace{0.08in}\\nobreak}",
   );
   w.line("\\newcommand{\\dxBlank}[1][2.5cm]{\\rule{#1}{0.4pt}}");
+}
+
+/** D68: "Q.2 (a)", then "(Bloom: Apply) [BP604T.01]" when Bloom is shown. */
+function keyLabel(label: string, slot: Slot, group: Group, paper: Paper): string {
+  const style = paper.template.style;
+  if (!style.showBloom) return label;
+  const tags = (t: { bloom?: Bloom | undefined; co?: string | undefined }) => {
+    const bits: string[] = [];
+    if (t.bloom) bits.push(bloomPrinted(t.bloom));
+    if (group.showCoTag === "SLOT" && t.co) bits.push(`[${t.co}]`);
+    return bits.join(" ");
+  };
+  // Sub-parts with their own tags (D67) are listed as the paper prints them.
+  const parts = subPartTags(slot, group, style);
+  const tail = parts
+    ? parts.map((t, i) => `(${String.fromCharCode(97 + i)}) ${tags(t)}`.trim()).join("; ")
+    : tags({ bloom: slot.bloomLevel ?? undefined, co: slot.coTag ?? undefined });
+  return tail ? `${label} ${tail}` : label;
 }
 
 function criteriaTable(criteria: KeyCriterion[], issues: Issues): string[] {
@@ -198,9 +218,13 @@ function serializeParsed(paper: Paper, keys: z.output<typeof keySlotSchema>[]): 
         keyMode: true,
       };
       if (group.type === "OBJECTIVE" && !ownNumbers) {
-        w.line("\\begin{tabularx}{\\linewidth}{@{} l Y Z @{}}");
+        // D68: with Bloom shown, objective answers get a Level column.
+        const level = paper.template.style.showBloom;
+        w.line(`\\begin{tabularx}{\\linewidth}{@{} l Y ${level ? "l " : ""}Z @{}}`);
         w.line("  \\toprule");
-        w.line("  \\textbf{No.} & \\textbf{Answer} & \\textbf{Marks} \\\\ \\midrule");
+        w.line(
+          `  \\textbf{No.} & \\textbf{Answer} & ${level ? "\\textbf{Level} & " : ""}\\textbf{Marks} \\\\ \\midrule`,
+        );
         for (const pos of present) {
           const slotId = id(group.key, pos);
           const slot = slots.get(slotId) as Slot;
@@ -216,7 +240,7 @@ function serializeParsed(paper: Paper, keys: z.output<typeof keySlotSchema>[]): 
           const last = pos === present.at(-1);
           w.line(`  %% DX-SLOT ${slotId}`);
           w.line(
-            `  ${text(num.printed[pos - 1] as string, issues)} & ${answer.split("\n").join("\n  ")} & ${formatMarks(slot.marks ?? group.marksEach)} \\\\${last ? " \\bottomrule" : ""}`,
+            `  ${text(num.printed[pos - 1] as string, issues)} & ${answer.split("\n").join("\n  ")} & ${level ? `${slot.bloomLevel ? BLOOM_LABEL[slot.bloomLevel] : "--"} & ` : ""}${formatMarks(slot.marks ?? group.marksEach)} \\\\${last ? " \\bottomrule" : ""}`,
           );
           slotRanges.push({ slotId, startLine: start, endLine: w.next - 1 });
           issues.slotId = undefined;
@@ -233,7 +257,7 @@ function serializeParsed(paper: Paper, keys: z.output<typeof keySlotSchema>[]): 
         const start = w.next;
         w.line(`%% DX-SLOT ${slotId}`);
         w.line(
-          `\\dxKeyHead{${text(num.slotLabels[pos - 1] as string, issues)}}{(${marksWord(slot.marks ?? group.marksEach)})}`,
+          `\\dxKeyHead{${text(keyLabel(num.slotLabels[pos - 1] as string, slot, group, paper), issues)}}{(${marksWord(slot.marks ?? group.marksEach)})}`,
         );
         const choice = correctChoices(slot.content, issues);
         if (choice) w.line(`Answer: ${choice}\\par`);

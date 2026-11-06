@@ -2,7 +2,9 @@
 // the editor can make (marks, maths, blanks, units, lists, tables, choices,
 // sub-parts, nesting) are valid in the editor's schema, survive the
 // editor ↔ stored round trip, and compile with no errors and no warnings
-// other than line-fitting notes. Batches of 20.
+// other than line-fitting notes. Batches of 20. Phase 10: the same questions
+// again with Bloom shown, random CO tags (elective ones too) and random
+// sub-part marks, CO tags and Bloom levels.
 import { getSchema } from "@tiptap/core";
 import { Node as PMNode } from "@tiptap/pm/model";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -11,6 +13,7 @@ import { questionSchemaExtensions } from "@/lib/editor/nodes";
 import type { CompileService } from "@/lib/latex/compile";
 import { goldenFailures } from "@/lib/latex/log";
 import { serializePaper } from "@/lib/latex/serialize";
+import { BLOOM_LEVELS } from "@/lib/paper/bloom";
 import type { BlockNode, Doc, InlineNode, LeafBlockNode, PaperInput } from "@/lib/paper/schema";
 import { realCompileService } from "../support/engine";
 import { pciEndSem4CreditKsv } from "../fixtures/papers/templates";
@@ -151,6 +154,33 @@ function normal(doc: Doc): Doc {
 }
 const docs = Array.from({ length: COUNT }, () => normal(next()));
 
+/** Phase 10 fields on a question and its sub-parts, from a second stream. */
+const tagRand = mulberry32(SEED + 10);
+const tagPick = <T>(xs: readonly T[]) => xs[Math.floor(tagRand() * xs.length)] as T;
+const TAGS = ["BP104T.01", "BP607T.12 AEC1", "BP212P.03 SEC1", "X.1", "BP806T.05 AEC6"];
+function tagged(doc: Doc) {
+  // Unset values are left out, as the editor's stored form does.
+  const attrs = () => {
+    const a = {
+      ...(tagRand() < 0.6 ? { marks: tagPick([0.5, 1, 2.5, 5, 10]) } : {}),
+      ...(tagRand() < 0.6 ? { coTag: tagPick(TAGS) } : {}),
+      ...(tagRand() < 0.6 ? { bloom: tagPick(BLOOM_LEVELS) } : {}),
+    };
+    return Object.keys(a).length ? { attrs: a } : {};
+  };
+  const content = doc.content.map((b) =>
+    b.type === "subParts"
+      ? { ...b, content: b.content.map((p) => ({ type: p.type, ...attrs(), content: p.content })) }
+      : b,
+  );
+  return {
+    content: { ...doc, content },
+    ...(tagRand() < 0.8 ? { coTag: tagPick(TAGS) } : {}),
+    ...(tagRand() < 0.8 ? { bloomLevel: tagPick(BLOOM_LEVELS) } : {}),
+  };
+}
+const taggedDocs = docs.map(tagged);
+
 let svc: CompileService;
 beforeAll(() => {
   svc = realCompileService();
@@ -160,6 +190,38 @@ describe("editor-shaped questions", () => {
   it("are valid editor documents and round-trip unchanged", () => {
     for (const doc of docs) expect(normal(doc)).toEqual(doc);
   });
+
+  it("keep their sub-part fields through the editor round trip", () => {
+    for (const t of taggedDocs) expect(normal(t.content)).toEqual(t.content);
+  });
+
+  it.each(Array.from({ length: COUNT / BATCH }, (_, i) => i))(
+    "batch %i compiles with Bloom, CO tags and sub-part fields",
+    async (b) => {
+      const template = {
+        ...pciEndSem4CreditKsv,
+        style: { ...pciEndSem4CreditKsv.style, showBloom: true, showMarksPerQuestion: true },
+      };
+      const paper: PaperInput = {
+        template,
+        meta: {},
+        emptySlots: "OMIT",
+        slots: taggedDocs.slice(b * BATCH, (b + 1) * BATCH).map((x, i) => ({
+          groupKey: "g1",
+          position: i + 1,
+          ...x,
+        })),
+      };
+      const ser = serializePaper(paper);
+      if (!ser.ok) throw new Error(ser.issues.map((x) => `${x.slotId}: ${x.message}`).join("\n"));
+      const res = await svc.compile({ userId: "fuzz", tex: ser.tex, slotRanges: ser.slotRanges });
+      const failures = goldenFailures(res.diagnostics)
+        .filter((d) => d.kind !== "overfull" && d.kind !== "underfull")
+        .map((d) => `${d.slotId ?? "-"}: ${d.message}`);
+      expect(failures).toEqual([]);
+    },
+    120_000,
+  );
 
   it.each(Array.from({ length: COUNT / BATCH }, (_, i) => i))(
     "batch %i compiles",

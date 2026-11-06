@@ -72,6 +72,7 @@ export function paperInput(
       content: x.content,
       marks: x.marks,
       ...(x.coTag ? { coTag: x.coTag } : {}),
+      ...(x.bloomLevel ? { bloomLevel: x.bloomLevel } : {}),
     })),
     emptySlots,
   };

@@ -14,6 +14,7 @@ import { serializePaper } from "@/lib/latex/serialize";
 import { paperInput } from "@/lib/paper/assemble";
 import { choiceAnswers, criteriaNote, hasContent } from "@/lib/paper/key";
 import { questionNumbers } from "@/lib/paper/numbering";
+import { missingTags, subPartMarksNote } from "@/lib/paper/tags";
 import { type Problem, errorSummary, fromDiagnostics, fromSerializer } from "@/lib/paper/problems";
 import { PROGRAM_LABEL } from "@/lib/templates/labels";
 import type { ResolveImages } from "./images";
@@ -46,6 +47,12 @@ export function exportWarnings(
   paper: Awaited<ReturnType<DataLayer["papers"]["getWithSlots"]>>,
 ): Problem[] {
   const numbers = questionNumbers(paper.snapshot.structure);
+  const showBloom = paper.snapshot.style.showBloom;
+  const showCo = new Map(
+    paper.snapshot.structure.parts.flatMap((p) =>
+      p.groups.map((g) => [g.key, g.showCoTag === "SLOT"] as const),
+    ),
+  );
   const out: Problem[] = [];
   const bySlot = new Map(paper.slots.map((s) => [`${s.groupKey}.${s.position}`, s]));
   let empty = 0;
@@ -67,6 +74,19 @@ export function exportWarnings(
       }
       const note = criteriaNote(criteria, s.marks);
       if (note) out.push({ level: "note", slotId, message: `${label}: ${note}` });
+      const parts = subPartMarksNote(s.content, s.marks);
+      if (parts) out.push({ level: "note", slotId, message: `${label}: ${parts}` });
+      if (showBloom) {
+        // Phase 10: warn, never block, about tags the printed paper will lack.
+        const miss = missingTags(s);
+        const what = [
+          miss.bloom ? "Bloom level" : null,
+          miss.co && showCo.get(g.key) ? "CO tag" : null,
+        ].filter(Boolean);
+        if (what.length) {
+          out.push({ level: "note", slotId, message: `${label} has no ${what.join(" or ")}.` });
+        }
+      }
     });
   }
   if (empty > 0) {

@@ -1,6 +1,8 @@
 // Template structure, header and style (SPEC §7) plus slot content in the
 // TipTap JSON shape the Phase 5 editor will produce. Zod at the boundary.
 import { z } from "zod";
+import { BLOOM_LEVELS } from "./bloom.ts";
+import { CO_TAG_HINT, CO_TAG_RE } from "./co-tag.ts";
 
 const key = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/, "Keys use letters, digits, - and _ only.");
 const inches = z.number().min(0).max(5);
@@ -134,13 +136,31 @@ const leafBlocks = [
 export const leafBlockNode = z.discriminatedUnion("type", [...leafBlocks]);
 export type LeafBlockNode = z.infer<typeof leafBlockNode>;
 
+export const bloomSchema = z.enum(BLOOM_LEVELS);
+export const coTagSchema = z.string().regex(CO_TAG_RE, CO_TAG_HINT);
+
+/**
+ * A sub-part's own marks, CO tag and Bloom level (D65). The editor writes
+ * null for an unset value; the question's values apply where these are unset.
+ */
+export const subPartAttrs = z.object({
+  marks: z.number().positive().max(100).nullable().optional(),
+  coTag: coTagSchema.nullable().optional(),
+  bloom: bloomSchema.nullable().optional(),
+});
+export type SubPartAttrs = z.infer<typeof subPartAttrs>;
+
+export const subPartNode = z.object({
+  type: z.literal("subPart"),
+  attrs: subPartAttrs.optional(),
+  content: z.array(leafBlockNode).min(1),
+});
+export type SubPartNode = z.infer<typeof subPartNode>;
+
 /** Sub-parts (a)(b)(c): one level deep, as in the reference papers. */
 export const subPartsNode = z.object({
   type: z.literal("subParts"),
-  content: z
-    .array(z.object({ type: z.literal("subPart"), content: z.array(leafBlockNode).min(1) }))
-    .min(1)
-    .max(10),
+  content: z.array(subPartNode).min(1).max(10),
 });
 
 export const blockNode = z.discriminatedUnion("type", [...leafBlocks, subPartsNode]);
@@ -241,6 +261,8 @@ export const styleSchema = z.object({
     height: z.number().min(2).max(11.69),
   }),
   showMarksPerQuestion: z.boolean().default(false),
+  /** Print "(Bloom: Remember)" after each question (Phase 10); off keeps old output. */
+  showBloom: z.boolean().default(false),
   coTagStyle: z.enum(["FOOTNOTE", "BOLD"]).default("FOOTNOTE"),
   logoWidth: z.number().min(0.05).max(0.3).default(0.1),
   spacing: z
@@ -287,10 +309,8 @@ export const slotSchema = z.object({
   position: z.number().int().min(1).max(100),
   content: docSchema,
   marks: z.number().positive().max(100).optional(),
-  coTag: z
-    .string()
-    .regex(/^[A-Za-z0-9.]{1,20}$/, "CO tags look like BP604T.01")
-    .optional(),
+  coTag: coTagSchema.optional(),
+  bloomLevel: bloomSchema.optional(),
 });
 export type Slot = z.infer<typeof slotSchema>;
 

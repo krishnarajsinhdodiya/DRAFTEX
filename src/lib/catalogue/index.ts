@@ -60,7 +60,5 @@ export function bpharmCatalogue(): Catalogue {
   return cached;
 }
 
-/** CO tag as printed on papers: course code without spaces + two-digit number (BP604T.01). */
-export function coTag(code: string, number: number): string {
-  return `${code.replace(/\s+/g, "")}.${String(number).padStart(2, "0")}`;
-}
+/** CO tag as printed on papers (D63): `BP604T.01`, `BP607T.01 AEC1`. */
+export { coTag } from "../paper/co-tag.ts";

@@ -62,6 +62,8 @@ export interface PaperEditorView {
   maxMarksText: string;
   duration: string;
   marksStyle: "MARKS_COLON" | "PARENS" | "BRACKETS";
+  /** D64: this paper prints Bloom levels (its own switch, from the template at creation). */
+  showBloom: boolean;
   parts: { key: string; title?: string }[];
   groups: EditorGroup[];
   slots: EditorSlot[];
@@ -105,6 +107,7 @@ export async function paperEditorView(
     maxMarksText: marksText(s.maxMarks),
     duration: durationText(s.durationMinutes),
     marksStyle: s.structure.marksStyle,
+    showBloom: s.style.showBloom,
     parts: s.structure.parts.map((x) => ({ key: x.key, ...(x.title ? { title: x.title } : {}) })),
     groups: s.structure.parts.flatMap((part) =>
       part.groups.map((g) => {
