@@ -145,6 +145,11 @@ export function LockedBanner({ view }: { view: PaperEditorView }) {
   );
 }
 
+/** The title with a suffix, shortened so the suffix always fits in 200 characters. */
+export function withSuffix(title: string, suffix: string): string {
+  return `${title.slice(0, Math.max(0, 200 - suffix.length)).trimEnd()}${suffix}`;
+}
+
 const REASON = { FINAL: "Marked Final", EXPORT: "Exported" } as const;
 
 /** The paper's kept versions (D57): open as PDF, or restore as a new Draft paper. */
@@ -195,7 +200,7 @@ export function VersionsButton({ view }: { view: PaperEditorView }) {
               No versions yet. Mark the paper Final or export it to keep one.
             </p>
           ) : (
-            <ul className="flex flex-col divide-y divide-rule rounded-md border border-rule">
+            <ul className="flex max-h-[min(24rem,50dvh)] flex-col divide-y divide-rule overflow-y-auto rounded-md border border-rule">
               {view.versions.map((v) => {
                 const when = dateTime.format(new Date(v.createdAt));
                 return (
@@ -232,9 +237,9 @@ export function VersionsButton({ view }: { view: PaperEditorView }) {
                             setError(null);
                             setRestoring(restoring === v.id ? null : v.id);
                             setName(
-                              `${view.title} (version of ${dateOnly.format(new Date(v.createdAt))})`.slice(
-                                0,
-                                200,
+                              withSuffix(
+                                view.title,
+                                ` (version of ${dateOnly.format(new Date(v.createdAt))})`,
                               ),
                             );
                           }}

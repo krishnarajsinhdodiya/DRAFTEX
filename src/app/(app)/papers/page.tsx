@@ -25,7 +25,7 @@ const filterSchema = z.object({
   trashed: z.string().max(64).optional().catch(undefined),
 });
 
-const selectClass = `${inputStyles} text-small`;
+const selectClass = `${inputStyles} w-full text-small sm:w-auto`;
 
 export default async function PapersPage({
   searchParams,
@@ -75,10 +75,11 @@ export default async function PapersPage({
             key={JSON.stringify(filter)}
             role="search"
             aria-label="Find papers"
-            className="flex flex-wrap items-end gap-2"
+            // Two filters per row on a phone, one row on a laptop.
+            className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap"
             action="/papers"
           >
-            <label className="flex min-w-56 flex-[2] flex-col gap-1 text-small font-medium">
+            <label className="col-span-2 flex flex-col gap-1 text-small font-medium sm:min-w-56 sm:flex-[2]">
               Search
               <input
                 type="search"
@@ -122,12 +123,12 @@ export default async function PapersPage({
                 ))}
               </AutoSelect>
             </label>
-            <label className="flex max-w-full min-w-0 flex-col gap-1 text-small font-medium">
+            <label className="col-span-2 flex min-w-0 flex-col gap-1 text-small font-medium sm:max-w-full">
               Course
               <AutoSelect
                 name="course"
                 defaultValue={filter.course ?? ""}
-                className={`${selectClass} max-w-64`}
+                className={`${selectClass} sm:max-w-64`}
               >
                 <option value="">Any</option>
                 {options.courses.map((c) => (

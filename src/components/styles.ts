@@ -20,7 +20,7 @@ export const buttonStyles = {
 export const inputStyles =
   "h-9 rounded-md border border-rule-strong bg-surface px-2.5 text-body text-ink placeholder:text-ink-3 " +
   "focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent " +
-  "aria-invalid:border-danger";
+  "aria-invalid:border-danger disabled:cursor-not-allowed disabled:bg-sunk disabled:text-ink-2";
 
 export const linkStyles = `rounded-sm text-accent underline-offset-2 hover:underline ${focusRing}`;
 

@@ -10,6 +10,7 @@ import type { Problem } from "@/lib/paper/problems";
 import { nextAcademicYear } from "@/lib/paper/academic-year";
 import { EXAM_KIND_LABEL } from "@/lib/templates/labels";
 import { duplicatePaperAction } from "@/server/paper-actions";
+import { withSuffix } from "./status";
 
 type ExportState =
   | { step: "idle" | "working" }
@@ -188,14 +189,13 @@ export function DuplicateButton({
   const nextYear = nextAcademicYear(academicYear);
   const firstCopy: CopyKind = examKind === "END_SEMESTER" ? "ATKT" : "NEXT_YEAR";
   const suggested = (c: CopyKind, year: string) => {
-    if (c === "ATKT") return `${title} (ATKT)`.slice(0, 200);
-    if (c === "OTHER" || !year) return `${title} (copy)`.slice(0, 200);
+    // The suffix always survives a title at its 200-character limit.
+    if (c === "ATKT") return withSuffix(title, " (ATKT)");
+    if (c === "OTHER" || !year) return withSuffix(title, " (copy)");
     // A title that names the year gets the new one; otherwise the year is added.
-    return (
-      academicYear && title.includes(academicYear)
-        ? title.replace(academicYear, year)
-        : `${title} (${year})`
-    ).slice(0, 200);
+    return academicYear && title.includes(academicYear)
+      ? title.replace(academicYear, year).slice(0, 200)
+      : withSuffix(title, ` (${year})`);
   };
   const [open, setOpen] = useState(false);
   const [copy, setCopy] = useState<CopyKind>(firstCopy);
