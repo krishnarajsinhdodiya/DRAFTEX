@@ -79,7 +79,18 @@ Useful scripts:
 | `npm run catalogue:parse` · `catalogue:check`                 | Rebuild / verify the catalogue from the syllabus PDF                                       |
 | `node scripts/e2e-server.ts [port] [local\|lan] [start\|dev]` | Run the built app on a throwaway data folder                                               |
 
+| `node scripts/measure-performance.ts <url>` | Editor key latency and warm preview on a fresh throwaway copy (recorded each phase) |
+| `node scripts/guide-screenshots.ts <url>` | Regenerate `docs/user-guide/*.png` from a fresh throwaway copy on port 3210 |
+| `node scripts/make-upgrade-fixture.ts <url> <data> <tag>` | Rebuild `tests/fixtures/upgrade/` against a build of the previous release |
+
 Do not run `next dev` while building or running e2e: both use `.next`.
+
+Upgrades are tested two ways: `tests/e2e/upgrade.spec.ts` restores a backup
+made by the previous release (`tests/fixtures/upgrade/`, invented data) and
+checks its rows and exported PDFs are unchanged; the CI job
+`upgrade (windows-latest)` installs the newest earlier tag, uses it, then
+runs `update-windows.bat` to the commit. Phases 9–12 follow
+`docs/ROADMAP-9-12.md`.
 
 ## End-user install (what the scripts do)
 
