@@ -80,7 +80,10 @@ no chat history must be able to continue from this file alone.
 - [x] 6 Answer keys + exports + files
 - [x] 7 Network modes + hardening
 - [x] 8 Installers + docs
-- [ ] 9 Polish
+- [ ] 9 Polish + paper retrieval (docs/ROADMAP-9-12.md)
+- [ ] 10 Bloom and CO on the printed paper
+- [ ] 11 Question bank + CSV import
+- [ ] 12 Advanced LaTeX packages
 
 ## Template for future handoffs
 Status (date, phase, branch, last green commit, CI) · Done this session ·

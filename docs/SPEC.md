@@ -106,10 +106,12 @@ generator must produce this structure.
 - B.Pharm course catalogue seeded from the syllabus PDF (code, title, semester,
   credits, L-T-P, course outcomes, units with hours).
 - CO tag and Bloom level as optional fields on every slot. They are stored and
-  displayed, with no analytics yet.
+  displayed, with no analytics yet. [Amended 2026-11-06, D53: Phase 10 prints
+  them and adds a per-paper summary by Bloom level and CO.]
 
 ### Not in v1 (design for, don't build)
-Question bank with reuse/search, auto-generation, old-paper import from `.tex`,
+Question bank with reuse/search [moved into scope 2026-11-06, D53: Phase 11
+builds it with CSV import], auto-generation, old-paper import from `.tex`,
 CO-attainment analytics, M.Pharm/Pharm.D PCI rule sets, multilingual papers,
 approval workflow (explicitly not wanted), research project / internship
 evaluation sheets.
@@ -168,7 +170,8 @@ Names are binding; fields may be added.
   `templateSnapshot` (JSON copy of structure+style+header at creation),
   title, courseId?, courseCode, courseTitle, program, semesterOrYear,
   examKind, academicYear, examDate?, instructions override, status
-  (`DRAFT`|`FINAL`), derivedFromPaperId?, createdAt, updatedAt, version.
+  (`DRAFT`|`FINAL`|`PRINTED`; `PRINTED` added 2026-11-06, D55),
+  derivedFromPaperId?, createdAt, updatedAt, version.
 - `Slot` id, paperId, partKey, groupKey, position, content (TipTap JSON),
   marks (default from group), coTag?, bloomLevel? (`REMEMBER`…`CREATE`),
   answerKey (TipTap JSON)?, keyCriteria (JSON)?, `questionId?` (future bank).
@@ -404,9 +407,13 @@ GitHub → **stop and report to the owner**.
 | 6 | **Answer keys + exports + files**: key editor → key PDF in the house style of the `*Keys.tex` references; export bundle; exports folder; duplicate paper (ATKT flow); backup/restore (+ auto backup daily and before update, keep 14) | Exported zip compiles standalone; restore round-trip e2e |
 | 7 | **Network modes + hardening**: local/lan/server, firewall helper, headers, CSRF, audit log, LAN banner | Security checklist §11 verified item by item in `handoff.md` |
 | 8 | **Installers + docs**: `setup-windows.ps1`, `start-windows.bat` (+ desktop shortcut), `update-windows.ps1`, `setup-macos.sh`, `start-macos.command`, `update-macos.sh`; README for developers; `docs/USER_GUIDE.md` for the faculty member (plain English, screenshots) | Gate 10 green; fresh-machine install documented step by step and timed |
-| 9 | **Polish**: `/apple-design` full review, `/break-ui`, performance (editor input latency < 50 ms, preview < 3 s warm) | Review findings closed or logged with reasons |
+| 9 | **Polish + paper retrieval** (amended 2026-11-06, D53): `/apple-design` full review, `/break-ui`, performance (editor input latency < 50 ms, preview < 3 s warm); paper search/filters, Printed status, Duplicate as…, version snapshots. Brief: `docs/ROADMAP-9-12.md` | Review findings closed or logged with reasons; WP-A and WP-B of the roadmap; tag v0.9.0 |
+| 10 | **Bloom and CO on the printed paper** (D53): WP-C in `docs/ROADMAP-9-12.md` | WP-C done; tag v0.10.0 |
+| 11 | **Question bank + CSV import** (D53): WP-D and WP-E in `docs/ROADMAP-9-12.md` | WP-D and WP-E done; tag v0.11.0 |
+| 12 | **Advanced LaTeX packages** (D53): WP-F in `docs/ROADMAP-9-12.md`, security review approved first | WP-F done; tag v0.12.0 |
 
-Installer requirements: check/install Node 22 LTS (winget on Windows,
+Installer requirements (Node and its install route superseded by D43 in
+`memory.md`: portable Node 24 archive, no winget or Homebrew): check/install Node 22 LTS (winget on Windows,
 Homebrew or the official pkg on macOS), `npm ci`, `prisma migrate deploy`,
 download pinned Tectonic + verify SHA-256, package warm-up, `next build`,
 create data dir, create shortcut that starts the server and opens the
@@ -415,6 +422,9 @@ and print plain-English progress. `update` = backup → `git pull` → `npm ci`
 → migrate → build.
 
 ## 14. Future hooks (keep the door open, build nothing)
+
+[Amended 2026-11-06, D53: the question bank (`Question` + `Slot.questionId`)
+is built in Phase 11; the rest of this list stays future.]
 
 `Question` table + `Slot.questionId`; `CourseOutcome` relations; Bloom enum;
 rule-set registry keyed by `ruleSetId` so M.Pharm/Pharm.D sets can be added
