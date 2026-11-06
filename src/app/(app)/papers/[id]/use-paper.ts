@@ -275,7 +275,7 @@ export function usePaper(view: PaperEditorView) {
               position: pos,
               content: s.doc,
               marks: s.marks,
-              coTag: s.coTag,
+              coTag: s.coTag?.trim() || null,
               bloomLevel: s.bloomLevel,
               answerKey: s.answerKey && !isEmptyDoc(s.answerKey) ? s.answerKey : null,
               keyCriteria: finished(s.keyCriteria),

@@ -20,6 +20,7 @@ const KEEP_ATTRS: Record<string, string[]> = {
   image: ["sha256", "ext", "widthPercent"],
   table: ["headerRow", "widthPercent"],
   choices: ["columns", "correct"],
+  subPart: ["marks", "coTag", "bloom"],
 };
 
 const MARKS = new Set(["bold", "italic", "underline", "subscript", "superscript"]);
@@ -50,7 +51,9 @@ function clean(n: EditorNode): EditorNode {
   if (keep && n.attrs) {
     const attrs: Record<string, unknown> = {};
     for (const k of keep) {
-      const v = n.attrs[k];
+      // A CO tag may end in the space typed before its suffix (D63).
+      const raw = n.attrs[k];
+      const v = k === "coTag" && typeof raw === "string" ? raw.trim() || null : raw;
       if (v !== null && v !== undefined) attrs[k] = v;
     }
     if (Object.keys(attrs).length) out.attrs = attrs;

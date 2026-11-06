@@ -224,6 +224,24 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 
 - 2026-11-06 · Elective course codes and CO tags: the paper prints the option's own code (`BP607T AEC1`, `BP212P SEC1`; most courses are plain `BP604T`). A CO tag is the base code, the CO number, then the suffix: `BP607T.01 AEC1` (plain courses stay `BP604T.01`). Supersedes the `coTag` default `BP607TAEC1.01`; needs the slot tag rule to allow one space before an AEC/SEC suffix. To build in Phase 10 (D63); CO numbers are two digits (`.01`), owner confirmed 2026-11-06 · owner answer
 
+- 2026-11-06 · Performance before Phase 10 (v0.9.0 rebuilt, same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 198 over the 16 ms floor); warm preview p50 441 ms, max 457 ms · roadmap measure-before rule
+- 2026-11-06 · D63: `coTag(code, n)` = base code + `.NN` + optional suffix (`BP607T AEC1` → `BP607T.01 AEC1`); the slot tag rule accepts one space before the suffix (a superset of the old rule, stored tags stay valid, none rewritten); the space prints as a tie · owner approved
+- 2026-11-06 · D64: each paper has its own "Show Bloom level" switch (Details), starting from its template's; saved as a versioned paper edit, audited, locked while Final/Printed · the template snapshot freezes style at paper creation, so a template switch alone reaches no existing paper; owner approved
+- 2026-11-06 · D65: sub-part CO, Bloom and marks are optional attrs on the `subPart` node in the slot content JSON (no migration), edited in a row on each sub-part · owner approved
+- 2026-11-06 · D66: a new sub-part copies the question's CO and Bloom, not its marks · copying marks into every sub-part trips the "does not add up" warning at once; owner approved
+- 2026-11-06 · D67: no sub-part with its own values → output as before; otherwise each sub-part line prints its own Bloom/CO (falling back to the question's) and the question's first line prints none; sub-part marks print only with "show marks per question" · owner approved
+- 2026-11-06 · D68: answer key with Bloom on: objective tables gain a Level column; other questions show `(Bloom: X)` and the CO after the number · owner approved
+- 2026-11-06 · D69: editor summary panel counts every question on the paper (options included, stated in the panel) by Bloom level and CO with "No level"/"No CO" rows; sub-part marks split a question only when they add up to its marks · owner approved
+- 2026-11-06 · D66 as built: a new sub-part stores no CO or Bloom of its own; unset values follow the question's (shown as "As question (Apply)"), so the question's values fill it without a copy that goes stale when the question changes. D67 "differs" compares the effective values, so sub-parts that only follow the question print as before · refines D66 (copy → follow); reported to the owner
+- 2026-11-06 · Question text (not only choices) still overflows on unsplittable chemical pieces such as `(4-isobutylphenyl)propanoic` in one column (63 pt), with every option off; D61 covers column choices only · found while building the Phase 10 fixture; logged, not fixed
+- 2026-11-06 · With Bloom shown, a question's tail (Bloom, CO, marks) goes before its first sub-parts list, right after its own text; with Bloom off sub-part questions keep the old place (after the list) so existing output is unchanged · brief "right after the question text"
+- 2026-11-06 · Performance after Phase 10 (same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 184 over the 16 ms floor); warm preview p50 415 ms, max 431 ms · targets met
+- 2026-11-06 · Sub-part fields are one line of facts under each sub-part that opens a popover (Marks, CO, Bloom; "As question" follows the question) · three inline fields took four lines in the editor column (seen in the guide screenshot)
+- 2026-11-06 · No migration in Phase 10: showBloom lives in the style JSON (snapshot and template), sub-part values in the slot content JSON; the upgrade fixture stays at v0.8.0 and the CI upgrade job installs v0.9.0 then updates · additive JSON with Zod defaults
+- 2026-11-06 · CI ubuntu re-renders of `reference-p1`, `kitchenSink-p1/p2` now differ from their committed baselines by 0.19% / 0.16% / 0.02% (gate 4 limit 0.5%) while their LaTeX is byte-identical to v0.9.0, so the drift is the runner's renderer, not the paper; baselines left unchanged · seen in run 42238327990; watch it, re-baseline only with the owner's approval if it nears 0.5%
+- 2026-11-06 · `upgrade.spec.ts` keeps the restored server's output, reports its time to first answer and fails at once if it exits · once on windows-latest (run 42240032839) the server never answered in 90 s with the output discarded; the next run answered in 3.2 s (ubuntu 1.1 s). Cause not found; next time the output will show it
+- 2026-11-06 · Group CO option "On the group" (`showCoTag: GROUP`) prints nothing: the serializer only acts on SLOT. Not changed in Phase 10 (would alter existing papers) · open question for the owner
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -243,6 +261,8 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
+- The builder's CO option "On the group" prints nothing today. Print the group's distinct CO tags on its heading line, or remove the option? (Either changes papers that use it.)
+- Does the college print Bloom and CO on each sub-part line (a)(b)(c), or only once per question? Decides whether D67 stays.
 - Should Phase 9 add an offline admin password reset (`npm run reset-password -- <email>`, run on the DRAFTEX computer with the app stopped)? Today a forgotten sole-admin password cannot be recovered. [ANSWERED 2026-11-04 → see "D49"]
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
 - Should restoring a backup keep this computer's config.json (network settings) instead of the backup's? [ANSWERED 2026-11-04 → see "Restore keeps config"]

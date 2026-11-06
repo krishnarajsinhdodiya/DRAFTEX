@@ -2,7 +2,18 @@
 // for the invented fixture papers; nothing comes from reference_papers/.
 import type { KeySlot } from "@/lib/latex/key";
 import type { BlockNode, Doc, PaperInput } from "@/lib/paper/schema";
-import { ASSETS, img, legacyPaper, m, md, p, qty, referencePaper, table } from "./papers";
+import {
+  ASSETS,
+  bloomPaper,
+  img,
+  legacyPaper,
+  m,
+  md,
+  p,
+  qty,
+  referencePaper,
+  table,
+} from "./papers";
 
 export interface KeyFixture {
   paper: PaperInput;
@@ -168,8 +179,35 @@ export function ownNumbersKey(): KeyFixture {
   };
 }
 
+/** Phase 10 (D68): the key of the Bloom paper, with the Level column and tagged headings. */
+export function bloomKey(): KeyFixture {
+  const paper = withCorrect(bloomPaper(), "g1", () => 1);
+  return {
+    paper,
+    keys: [
+      { groupKey: "g1", position: 2, answerKey: doc(p("True")), keyCriteria: [] },
+      {
+        groupKey: "g2",
+        position: 1,
+        answerKey: doc(p("What the body does to a drug.")),
+        keyCriteria: [],
+      },
+      {
+        groupKey: "g3",
+        position: 1,
+        answerKey: doc(p("SA node, AV node, bundle of His, Purkinje fibres.")),
+        keyCriteria: [
+          { text: "Conducting system", marks: 6 },
+          { text: "ECG", marks: 4 },
+        ],
+      },
+    ],
+  };
+}
+
 export const KEY_FIXTURES = {
   "key-reference": referenceKey,
   "key-legacy": legacyKey,
   "key-own-numbers": ownNumbersKey,
+  "key-bloom": bloomKey,
 } as const;

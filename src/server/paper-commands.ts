@@ -71,7 +71,7 @@ export const paperDetailsSchema = paperMetaSchema
     academicYear: true,
     instructionsOverride: true,
   })
-  .extend({ examDate: z.coerce.date().nullable() })
+  .extend({ examDate: z.coerce.date().nullable(), showBloom: z.boolean() })
   .partial();
 
 export function paperCommands(data: DataLayer, actor: Actor) {

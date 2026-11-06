@@ -2,7 +2,8 @@
 // A question as it reads, without an editor: used for every question that is
 // not being edited, so a paper with 40 questions opens at once.
 import type { ReactNode } from "react";
-import type { BlockNode, Doc, InlineNode, LeafBlockNode } from "@/lib/paper/schema";
+import { BLOOM_LABEL } from "@/lib/paper/bloom";
+import type { BlockNode, Doc, InlineNode, LeafBlockNode, SubPartAttrs } from "@/lib/paper/schema";
 import { MathText } from "./math";
 import { unitLabel } from "./units";
 
@@ -167,6 +168,17 @@ function Leaf({ b, defaultColumns }: { b: LeafBlockNode; defaultColumns: number 
   }
 }
 
+/** A sub-part's own marks, CO tag and Bloom level (D65), when it has any. */
+function SubPartFacts({ attrs }: { attrs: SubPartAttrs | undefined }) {
+  const bits = [
+    attrs?.marks != null ? `${attrs.marks} ${attrs.marks === 1 ? "mark" : "marks"}` : null,
+    attrs?.coTag ?? null,
+    attrs?.bloom ? BLOOM_LABEL[attrs.bloom] : null,
+  ].filter(Boolean);
+  if (!bits.length) return null;
+  return <span className="block font-sans text-caption text-ink-3">{bits.join(" · ")}</span>;
+}
+
 function Block({ b, defaultColumns }: { b: BlockNode; defaultColumns: number }) {
   if (b.type !== "subParts") return <Leaf b={b} defaultColumns={defaultColumns} />;
   return (
@@ -176,6 +188,7 @@ function Block({ b, defaultColumns }: { b: BlockNode; defaultColumns: number }) 
           {sp.content.map((x, k) => (
             <Leaf key={k} b={x} defaultColumns={defaultColumns} />
           ))}
+          <SubPartFacts attrs={sp.attrs} />
         </li>
       ))}
     </ol>

@@ -16,8 +16,10 @@ import {
   type Slot,
   type Style,
   type Structure,
+  type SubPartAttrs,
   type TableNode,
 } from "../paper/schema.ts";
+import { type Bloom, bloomPrinted } from "../paper/bloom.ts";
 import type { SlotRange } from "./compile.ts";
 import { type GroupNumbers, questionNumbers } from "../paper/numbering.ts";
 import { describeChar, escapeText, mapMathUnicode, type QuoteState } from "./escape.ts";
@@ -183,6 +185,8 @@ export interface BlockContext {
   partsSoFar?: number;
   /** Answer keys are `article` documents: choices and sub-parts become enumerate lists. */
   keyMode?: boolean;
+  /** Right-aligned tail of each sub-part (its Bloom, CO and marks; D67). */
+  partTail?: (attrs: SubPartAttrs | undefined) => string;
 }
 
 function table(t: TableNode, ctx: BlockContext): string {
@@ -289,7 +293,9 @@ function subParts(b: Extract<BlockNode, { type: "subParts" }>, ctx: BlockContext
     "\\begin{parts}",
     // exam.cls restarts lettering (and its labels) in every parts list.
     ...(before > 0 ? [`\\setcounter{partno}{${before}}`] : []),
-    ...b.content.map((p) => `  \\part ${guardBracket(blocks(p.content, ctx))}`),
+    ...b.content.map(
+      (p) => `  \\part ${guardBracket(withTail(p.content, ctx, ctx.partTail?.(p.attrs) ?? ""))}`,
+    ),
     "\\end{parts}",
   ].join("\n");
 }
@@ -435,6 +441,11 @@ function preamble(w: Writer, style: Style, header: Header, widestOwnLabel?: stri
   w.line(
     `\\newcommand{\\dxTail}[1]{{\\unskip\\nobreak\\hfil\\penalty50\\hskip1em\\hbox{}\\nobreak\\hfil${tag}\\parfillskip=0pt\\finalhyphendemerits=0\\par}}`,
   );
+  if (style.showBloom) {
+    const size = style.coTagStyle === "BOLD" ? "" : "\\footnotesize ";
+    w.line("%% Bloom level right after the question text; it moves with the last word.");
+    w.line(`\\newcommand{\\dxBloom}[1]{\\unskip\\ \\mbox{${size}#1}}`);
+  }
   if (numberEach) {
     w.line("%% The same tail, unstyled: a question's own marks (bold) and CO tag.");
     w.line(
@@ -496,41 +507,154 @@ function headerBlock(
   }
 }
 
-function slotTail(slot: Slot, group: Group, structure: Structure, style: Style): string {
+/** What a question or sub-part prints at its end: Bloom, CO tag, marks. */
+interface TailParts {
+  bloom?: Bloom | undefined;
+  co?: string | undefined;
+  marks?: number | undefined;
+}
+
+/** A CO tag never splits at its suffix space (`BP607T.01~AEC1`, D63). */
+const coPrint = (tag: string) => tag.replace(/ /g, "~");
+
+function bloomBit(t: TailParts, style: Style, issues: Issues): string {
+  return style.showBloom && t.bloom ? `\\dxBloom{${text(bloomPrinted(t.bloom), issues)}}` : "";
+}
+
+function tail(
+  t: TailParts,
+  group: Group,
+  structure: Structure,
+  style: Style,
+  issues: Issues,
+): string {
   const bits: string[] = [];
-  if (group.showCoTag === "SLOT" && slot.coTag) bits.push(`[${slot.coTag}]`);
-  if (style.showMarksPerQuestion) {
+  if (group.showCoTag === "SLOT" && t.co) bits.push(`[${coPrint(t.co)}]`);
+  if (t.marks !== undefined) {
     bits.push(
       marksLabel(
         structure.marksStyle === "MARKS_COLON" ? "BRACKETS" : structure.marksStyle,
-        slot.marks ?? group.marksEach,
+        t.marks,
       ),
     );
   }
-  return bits.length ? `\\dxTail{${bits.join("\\quad ")}}` : "";
+  return bloomBit(t, style, issues) + (bits.length ? `\\dxTail{${bits.join("\\quad ")}}` : "");
 }
 
-/** Tail of a question that carries its own number: CO tag, then its marks in bold. */
-function ownTail(slot: Slot | undefined, group: Group, structure: Structure, style: Style): string {
+/** Tail of a question that carries its own number: Bloom, CO tag, then its marks in bold. */
+function ownTail(
+  t: TailParts,
+  group: Group,
+  structure: Structure,
+  style: Style,
+  issues: Issues,
+): string {
   const bits: string[] = [];
-  if (group.showCoTag === "SLOT" && slot?.coTag) {
+  if (group.showCoTag === "SLOT" && t.co) {
     bits.push(
       style.coTagStyle === "BOLD"
-        ? `\\textbf{[${slot.coTag}]}`
-        : `{\\footnotesize [${slot.coTag}]}`,
+        ? `\\textbf{[${coPrint(t.co)}]}`
+        : `{\\footnotesize [${coPrint(t.co)}]}`,
     );
   }
   const style2 = structure.marksStyle === "MARKS_COLON" ? "BRACKETS" : structure.marksStyle;
-  bits.push(`\\textbf{${marksLabel(style2, slot?.marks ?? group.marksEach)}}`);
-  return `\\dxTailRaw{${bits.join("\\quad ")}}`;
+  bits.push(`\\textbf{${marksLabel(style2, t.marks ?? group.marksEach)}}`);
+  return `${bloomBit(t, style, issues)}\\dxTailRaw{${bits.join("\\quad ")}}`;
 }
 
-function questionBody(slot: Slot, ctx: BlockContext, tail: string): string {
-  const content = slot.content.content;
-  // A tail belongs to the question text, before any choices block.
-  const firstChoices = content.findIndex((b) => b.type === "choices");
-  if (!tail || firstChoices <= 0) return `${blocks(content, ctx)}${tail}`;
-  return `${blocks(content.slice(0, firstChoices), ctx)}${tail}\n${blocks(content.slice(firstChoices), ctx)}`;
+/** Every sub-part of a question, in order. */
+function subPartsOf(slot: Slot) {
+  return slot.content.content.flatMap((b) => (b.type === "subParts" ? b.content : []));
+}
+
+/**
+ * D67: sub-parts print their own Bloom and CO only when one of them differs
+ * from the question's (unset values fall back to the question's); the
+ * question's first line then prints none. Sub-part marks print with
+ * "show marks per question".
+ */
+/**
+ * D67: each sub-part's Bloom and CO (unset values follow the question's),
+ * or null when none differs from the question's, so the question's own
+ * line carries them as before.
+ */
+export function subPartTags(
+  slot: Slot,
+  group: Group,
+  style: Style,
+): { bloom?: Bloom; co?: string }[] | null {
+  const tags = subPartsOf(slot).map((p) => ({
+    bloom: p.attrs?.bloom ?? slot.bloomLevel,
+    co: p.attrs?.coTag ?? slot.coTag,
+  }));
+  const coShown = group.showCoTag === "SLOT";
+  const differs = tags.some(
+    (e) => (coShown && e.co !== slot.coTag) || (style.showBloom && e.bloom !== slot.bloomLevel),
+  );
+  return differs ? tags : null;
+}
+
+function tailsFor(
+  slot: Slot,
+  group: Group,
+  structure: Structure,
+  style: Style,
+  issues: Issues,
+  ownNumbers: boolean,
+): { stem: string; part?: (attrs: SubPartAttrs | undefined) => string } {
+  const own = (a: SubPartAttrs | undefined) => ({
+    bloom: a?.bloom ?? slot.bloomLevel,
+    co: a?.coTag ?? slot.coTag,
+  });
+  const parts = subPartsOf(slot);
+  const perPart = subPartTags(slot, group, style) !== null;
+  const partMarks = style.showMarksPerQuestion && parts.some((p) => p.attrs?.marks != null);
+  const stemTags: TailParts = perPart ? {} : { bloom: slot.bloomLevel, co: slot.coTag };
+  const stem = ownNumbers
+    ? ownTail({ ...stemTags, marks: slot.marks }, group, structure, style, issues)
+    : tail(
+        {
+          ...stemTags,
+          marks: style.showMarksPerQuestion ? (slot.marks ?? group.marksEach) : undefined,
+        },
+        group,
+        structure,
+        style,
+        issues,
+      );
+  if (!perPart && !partMarks) return { stem };
+  return {
+    stem,
+    part: (a) =>
+      tail(
+        {
+          ...(perPart ? own(a) : {}),
+          marks: style.showMarksPerQuestion ? (a?.marks ?? undefined) : undefined,
+        },
+        group,
+        structure,
+        style,
+        issues,
+      ),
+  };
+}
+
+/**
+ * A tail belongs to the text, before any choices block. With Bloom shown it
+ * also comes before the first sub-parts list, right after the question's own
+ * text (with Bloom off, sub-part questions keep their old layout).
+ */
+function withTail(
+  content: BlockNode[],
+  ctx: BlockContext,
+  end: string,
+  beforeParts = false,
+): string {
+  const first = content.findIndex(
+    (b) => b.type === "choices" || (beforeParts && b.type === "subParts"),
+  );
+  if (!end || first <= 0) return `${blocks(content, ctx)}${end}`;
+  return `${blocks(content.slice(0, first), ctx)}${end}\n${blocks(content.slice(first), ctx)}`;
 }
 
 export function serializePaper(input: unknown): SerializeResult {
@@ -644,17 +768,18 @@ function serializeParsed(paper: Paper): SerializeResult {
         const start = w.next;
         w.line(`  %% DX-SLOT ${slotId}`);
         if (ownNumbers) w.line(`  \\dxOwnLabel{${text(num.printed[pos - 1] as string, issues)}}`);
-        const tail = ownNumbers
-          ? ownTail(slot, group, structure, style)
-          : slot
-            ? slotTail(slot, group, structure, style)
-            : "";
         if (!slot || !hasContent) {
-          w.line(`  \\question \\textit{(Question not written yet)}${ownNumbers ? tail : ""}`);
+          const placeholder = ownNumbers
+            ? ownTail({ co: slot?.coTag, marks: slot?.marks }, group, structure, style, issues)
+            : "";
+          w.line(`  \\question \\textit{(Question not written yet)}${placeholder}`);
         } else {
+          const tails = tailsFor(slot, group, structure, style, issues, ownNumbers);
+          ctx.partTail = tails.part;
           // Escaped text writes "[" as {[}, but Advanced LaTeX may start with a
           // bracket, which \question would read as its points argument.
-          const raw = questionBody(slot, ctx, tail);
+          const raw = withTail(slot.content.content, ctx, tails.stem, style.showBloom);
+          ctx.partTail = undefined;
           const body = guardBracket(raw);
           w.line(`  \\question ${body.split("\n").join("\n  ")}`);
         }

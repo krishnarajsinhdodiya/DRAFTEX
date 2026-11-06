@@ -13,6 +13,9 @@ import { loadPdfJs } from "@/components/pdf-view";
 import { buttonStyles, inputStyles } from "@/components/styles";
 import { checkMath } from "@/lib/editor/math";
 import { sanitizeLatex } from "@/lib/latex/sanitize";
+import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "@/lib/paper/bloom";
+import { CO_TAG_HINT, CO_TAG_MAX, cleanCoTagInput } from "@/lib/paper/co-tag";
+import { useSubPartFields } from "./sub-part-fields";
 import { MathField, MathText } from "./math";
 import { COMMON_UNITS, unitLabel } from "./units";
 
@@ -510,7 +513,150 @@ function ChoiceView({ editor, getPos }: NodeViewProps) {
   );
 }
 
+/**
+ * One sub-part: its letter, its text and, inside a question, its own marks,
+ * CO tag and Bloom level (D65). Unset values follow the question's (D66,
+ * shown as "As question"); only differing values print on the sub-part (D67).
+ */
+function SubPartView({ editor, getPos, node, updateAttributes }: NodeViewProps) {
+  const f = useSubPartFields();
+  const index = useEditorState({
+    editor,
+    selector: ({ editor: e }) => {
+      const pos = getPos();
+      return typeof pos === "number" ? e.state.doc.resolve(pos).index() : 0;
+    },
+  });
+  const letter = `(${String.fromCharCode(97 + index)})`;
+  const a = node.attrs as { marks: number | null; coTag: string | null; bloom: Bloom | null };
+  const name = f ? `${f.questionName} ${letter}` : letter;
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const asQuestion = (v: string | null | undefined) => (v ? `As question (${v})` : "As question");
+  const bloomOf = (b: Bloom | null) => (b ? BLOOM_LABEL[b] : null);
+  // One short line under the text; the fields open in a popover (narrow columns).
+  const facts = [
+    a.marks != null ? `${a.marks} ${a.marks === 1 ? "mark" : "marks"}` : "No marks",
+    f?.showCo ? (a.coTag ?? `CO as question${f.questionCo ? ` (${f.questionCo})` : ""}`) : null,
+    bloomOf(a.bloom) ??
+      `Bloom as question${f?.questionBloom ? ` (${bloomOf(f.questionBloom)})` : ""}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <NodeViewWrapper as="div" role="listitem" className="flex items-baseline gap-2">
+      <span contentEditable={false} className="w-6 shrink-0 font-paper select-none">
+        {letter}
+      </span>
+      <div className="min-w-0 flex-1">
+        <NodeViewContent as="div" />
+        {f ? (
+          <Popover.Root open={open} onOpenChange={setOpen}>
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                contentEditable={false}
+                aria-label={`Marks, CO and Bloom for ${name}: ${facts}`}
+                className="mb-1 max-w-full rounded px-1 text-left font-sans text-caption text-ink-2 select-none hover:bg-sunk hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+              >
+                {facts}
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className={`${popoverStyles} w-[min(20rem,calc(100vw-2rem))]`}
+                sideOffset={4}
+                align="start"
+                collisionPadding={12}
+                aria-label={`Marks, CO and Bloom for ${name}`}
+              >
+                <p className="text-small font-medium text-ink">{name}</p>
+                <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-small text-ink-2">
+                  <label htmlFor={`${id}-m`}>Marks</label>
+                  <input
+                    id={`${id}-m`}
+                    type="number"
+                    min={0.5}
+                    max={100}
+                    step={0.5}
+                    value={a.marks ?? ""}
+                    placeholder="None"
+                    aria-label={`Marks for ${name}`}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      updateAttributes({ marks: e.target.value && n > 0 && n <= 100 ? n : null });
+                    }}
+                    className={`${inputStyles} w-24 text-right tabular-nums`}
+                  />
+                  {f.showCo ? (
+                    <>
+                      <label htmlFor={`${id}-c`}>CO</label>
+                      {f.coOptions.length ? (
+                        <select
+                          id={`${id}-c`}
+                          aria-label={`CO tag for ${name}`}
+                          value={a.coTag ?? ""}
+                          onChange={(e) => updateAttributes({ coTag: e.target.value || null })}
+                          className={inputStyles}
+                        >
+                          <option value="">{asQuestion(f.questionCo)}</option>
+                          {f.coOptions.map((o) => (
+                            <option key={o.value} value={o.value} title={o.label}>
+                              {o.value}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={`${id}-c`}
+                          aria-label={`CO tag for ${name}`}
+                          value={a.coTag ?? ""}
+                          placeholder={f.questionCo ?? "As question"}
+                          maxLength={CO_TAG_MAX}
+                          title={CO_TAG_HINT}
+                          onChange={(e) =>
+                            updateAttributes({ coTag: cleanCoTagInput(e.target.value) || null })
+                          }
+                          className={inputStyles}
+                        />
+                      )}
+                    </>
+                  ) : null}
+                  <label htmlFor={`${id}-b`}>Bloom</label>
+                  <select
+                    id={`${id}-b`}
+                    aria-label={`Bloom level for ${name}`}
+                    value={a.bloom ?? ""}
+                    onChange={(e) =>
+                      updateAttributes({ bloom: (e.target.value || null) as Bloom | null })
+                    }
+                    className={inputStyles}
+                  >
+                    <option value="">{asQuestion(bloomOf(f.questionBloom))}</option>
+                    {BLOOM_LEVELS.map((v) => (
+                      <option key={v} value={v}>
+                        {BLOOM_LABEL[v]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-caption text-ink-3">
+                  “As question” follows the question’s own CO and level.
+                </p>
+                <div className="flex justify-end">
+                  <Popover.Close className={buttonStyles.secondary}>Done</Popover.Close>
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        ) : null}
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
 export const VIEWS = {
+  subPart: SubPartView,
   mathInline: MathView,
   mathDisplay: MathView,
   advancedLatex: AdvancedView,

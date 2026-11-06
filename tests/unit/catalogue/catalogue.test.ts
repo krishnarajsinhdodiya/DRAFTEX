@@ -199,6 +199,7 @@ describe("B.Pharm catalogue", () => {
 
   it("formats CO tags as the papers print them", () => {
     expect(coTag("BP604T", 1)).toBe("BP604T.01");
-    expect(coTag("BP607T AEC1", 12)).toBe("BP607TAEC1.12");
+    expect(coTag("BP607T AEC1", 12)).toBe("BP607T.12 AEC1");
+    expect(coTag("BP212P SEC1", 1)).toBe("BP212P.01 SEC1");
   });
 });

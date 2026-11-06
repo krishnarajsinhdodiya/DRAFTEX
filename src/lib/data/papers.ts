@@ -8,6 +8,7 @@ import type { Db } from "@/lib/db/client";
 import { advancedSnippets, imageShas, onlyKnownSnippets } from "@/lib/paper/content";
 import { questionNumbers } from "@/lib/paper/numbering";
 import { keyCriteriaSchema } from "@/lib/paper/key";
+import { CO_TAG_HINT, CO_TAG_RE } from "@/lib/paper/co-tag";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { type PaperSnapshot, paperSnapshotSchema } from "@/lib/paper/snapshot";
 import { versionDataSchema, versionHash, versionOf } from "@/lib/paper/version";
@@ -46,7 +47,10 @@ export const paperMetaSchema = z.object({
   status: z.enum(PaperStatus).default("DRAFT"),
 });
 export type PaperMeta = z.input<typeof paperMetaSchema>;
-export const paperPatchSchema = paperMetaSchema.partial();
+export const paperPatchSchema = paperMetaSchema.partial().extend({
+  /** D64: this paper's own "Show Bloom level" (kept in its template snapshot). */
+  showBloom: z.boolean().optional(),
+});
 export type PaperPatch = z.input<typeof paperPatchSchema>;
 
 export const slotPlaceSchema = z.object({
@@ -65,11 +69,7 @@ export const slotInputSchema = z.object({
   position: z.number().int().min(1).max(100),
   content: docSchema,
   marks: z.number().positive().max(100),
-  coTag: z
-    .string()
-    .regex(/^[A-Za-z0-9.]{1,20}$/)
-    .nullable()
-    .default(null),
+  coTag: z.string().regex(CO_TAG_RE, CO_TAG_HINT).nullable().default(null),
   bloomLevel: z.enum(BloomLevel).nullable().default(null),
   /** The answer key (D24); left as it is when not sent. */
   answerKey: docSchema.nullable().optional(),
@@ -358,11 +358,19 @@ export function papers(db: Db) {
         if (!reopen || others.length > 0) throw new ConflictError(PAPER_LOCKED);
       }
       await checkCourse(m.courseId);
-      const { instructionsOverride, ...rest } = m;
+      const { instructionsOverride, showBloom, ...rest } = m;
+      const snapshot =
+        showBloom === undefined
+          ? undefined
+          : (() => {
+              const snap = snapshotOf(before);
+              return json({ ...snap, style: { ...snap.style, showBloom } });
+            })();
       const { count } = await db.paper.updateMany({
         where: { id, ownerId: actor.userId, deletedAt: null, version },
         data: {
           ...rest,
+          ...(snapshot !== undefined && { templateSnapshot: snapshot }),
           ...(instructionsOverride !== undefined && {
             instructionsOverride: nullableJson(instructionsOverride),
           }),

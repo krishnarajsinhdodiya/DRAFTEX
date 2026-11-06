@@ -6,7 +6,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { templateFieldsSchema } from "@/lib/data/templates";
-import type { BlockNode, InlineNode, LeafBlockNode, PaperInput } from "@/lib/paper/schema";
+import type { Bloom } from "@/lib/paper/bloom";
+import type {
+  BlockNode,
+  InlineNode,
+  LeafBlockNode,
+  PaperInput,
+  SubPartAttrs,
+} from "@/lib/paper/schema";
 import { previewPaper } from "@/lib/templates/preview";
 import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import {
@@ -86,7 +93,7 @@ const slot = (
   groupKey: string,
   position: number,
   content: BlockNode[],
-  extra: { coTag?: string; marks?: number } = {},
+  extra: { coTag?: string; marks?: number; bloomLevel?: Bloom } = {},
 ) => ({
   groupKey,
   position,
@@ -440,6 +447,97 @@ export function kitchenSinkPaper(): PaperInput {
   };
 }
 
+const subParts = (...parts: [LeafBlockNode[], SubPartAttrs?][]): BlockNode => ({
+  type: "subParts",
+  content: parts.map(([content, attrs]) => ({
+    type: "subPart" as const,
+    ...(attrs ? { attrs } : {}),
+    content,
+  })),
+});
+
+/**
+ * Phase 10: Bloom levels and CO tags printed (WP-C). One-line and wrapped
+ * questions, long chemical names, sub-parts with their own tags, two-column
+ * choices, a question without tags and an elective CO tag (D63).
+ */
+export function bloomPaper(): PaperInput {
+  const base = referencePaper();
+  return {
+    ...base,
+    template: {
+      ...base.template,
+      style: { ...base.template.style, showBloom: true, showMarksPerQuestion: true },
+    },
+    slots: [
+      slot(
+        "g1",
+        1,
+        [
+          p("Which of the following is the functional unit of the kidney?"),
+          choices(["Neuron", "Nephron", "Alveolus", "Hepatocyte"]),
+        ],
+        { bloomLevel: "REMEMBER", coTag: "BP104T.01" },
+      ),
+      slot("g1", 2, [p("Haemoglobin carries oxygen as oxyhaemoglobin. True/False")], {
+        bloomLevel: "UNDERSTAND",
+      }),
+      slot("g2", 1, [p("Define pharmacokinetics.")], {
+        bloomLevel: "REMEMBER",
+        coTag: "BP104T.02",
+      }),
+      slot(
+        "g2",
+        2,
+        [
+          p(
+            "Explain how the plasma half-life of a drug that follows first-order elimination changes when the volume of distribution doubles while clearance stays the same, and state why.",
+          ),
+        ],
+        { bloomLevel: "ANALYZE", coTag: "BP607T.03 AEC1" },
+      ),
+      slot(
+        "g2",
+        3,
+        [
+          p(
+            "Write the mechanism of action of acetylsalicylic acid and N-acetyl-para-aminophenol, and the use of hydroxypropyl methylcellulose in tablets.",
+          ),
+        ],
+        { bloomLevel: "UNDERSTAND", coTag: "BP104T.04" },
+      ),
+      slot("g2", 4, [p("Write a note on the lymphatic system.")]),
+      slot(
+        "g3",
+        1,
+        [
+          p("Answer the following about the heart."),
+          subParts(
+            [
+              [p("Describe the conducting system of the heart.")],
+              { marks: 6, bloom: "UNDERSTAND" },
+            ],
+            [
+              [p("Evaluate the normal ECG shown in class.")],
+              { marks: 4, bloom: "EVALUATE", coTag: "BP104T.06" },
+            ],
+          ),
+        ],
+        { bloomLevel: "APPLY", coTag: "BP104T.05" },
+      ),
+      slot(
+        "g3",
+        2,
+        [
+          p("Classify blood cells."),
+          subParts([[p("Give two examples of each class.")]], [[p("State their normal counts.")]]),
+        ],
+        { bloomLevel: "CREATE", coTag: "BP104T.05" },
+      ),
+    ],
+  };
+}
+
 export const FIXTURES = {
   reference: referencePaper,
   legacy: legacyPaper,
@@ -447,6 +545,7 @@ export const FIXTURES = {
   practical: practicalPaper,
   synopsis: synopsisPaper,
   kitchenSink: kitchenSinkPaper,
+  bloom: bloomPaper,
 } as const;
 
 export const ALL_ASSETS = Object.values(ASSETS);

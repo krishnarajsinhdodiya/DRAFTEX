@@ -128,6 +128,46 @@ await page.getByRole("button", { name: "Answer key", exact: true, pressed: false
 await page.getByRole("img", { name: /Answer key of .* page 1 of/ }).waitFor({ timeout: 90_000 });
 await q.scrollIntoViewIfNeeded();
 await shot(page, "06-answer-key");
+await page.getByRole("button", { name: "Paper", exact: true, pressed: false }).click();
+
+// Phase 10: sub-parts with their own marks and tags, Bloom printed, the summary.
+await write("Q.3(1)", "Answer the following about an example drug. /sub");
+await page.getByRole("option", { name: "Sub-parts (a)(b)(c)" }).click();
+await page.keyboard.type("Describe how the example drug works.");
+await page.keyboard.press("ArrowDown");
+await page.keyboard.type("Evaluate its use in an example patient.");
+const long = page.getByRole("listitem", { name: "Q.3(1)", exact: true });
+await long.getByLabel("CO tag for Q.3(1)", { exact: true }).selectOption("BP604T.02");
+await long.getByLabel("Bloom level for Q.3(1)", { exact: true }).selectOption({ label: "Apply" });
+for (const [part, marks, level] of [
+  ["a", "6", "Understand"],
+  ["b", "4", "Evaluate"],
+] as const) {
+  await page
+    .getByRole("button", {
+      name: new RegExp(`^Marks, CO and Bloom for Q\\.3\\(1\\) \\(${part}\\)`),
+    })
+    .click();
+  const pop = page.getByRole("dialog", { name: `Marks, CO and Bloom for Q.3(1) (${part})` });
+  await pop.getByLabel(`Marks for Q.3(1) (${part})`).fill(marks);
+  await pop.getByLabel(`Bloom level for Q.3(1) (${part})`).selectOption({ label: level });
+  await pop.getByRole("button", { name: "Done" }).click();
+}
+await page
+  .getByRole("status")
+  .filter({ hasText: "All changes saved" })
+  .waitFor({ timeout: 15_000 });
+await page.getByRole("button", { name: "Details" }).click();
+const details = page.getByRole("dialog", { name: "Paper details" });
+await details.getByRole("checkbox", { name: /Print Bloom levels/ }).check();
+await details.getByRole("button", { name: "Save details" }).click();
+await details.waitFor({ state: "hidden" });
+await page.getByText("Bloom and CO summary").click();
+await page.getByRole("button", { name: "Edit Q.3(1)" }).click();
+await page.waitForTimeout(4_000);
+await page.getByRole("img", { name: /page 1 of/ }).waitFor({ timeout: 90_000 });
+await long.scrollIntoViewIfNeeded();
+await shot(page, "13-bloom");
 
 await page.getByRole("button", { name: "Export" }).click();
 const ask = page.getByRole("dialog", { name: "Export with these gaps?" });

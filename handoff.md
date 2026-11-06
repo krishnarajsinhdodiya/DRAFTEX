@@ -5,68 +5,70 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-06
-- **Current phase:** 9 Polish + paper retrieval: done. Next: Phase 10 Bloom and CO on the printed paper (brief in `docs/ROADMAP-9-12.md`, WP-C).
-- **Branch:** `main` only (Phase 9 merged with `--no-ff` from `phase/9-polish`, tagged `v0.9.0`; branch deleted locally and on GitHub)
-- **Last green commit:** latest `main` (CI green on the v0.9.0 merge, run 42208639526)
-- **CI:** `commit-hygiene`, `checks (ubuntu-24.04)`, `checks (windows-latest)`, `install (windows-latest)` (gate 10) and the new `upgrade (windows-latest)`.
+- **Current phase:** 10 Bloom and CO on the printed paper: done. Next: Phase 11 Question bank + CSV import (brief in `docs/ROADMAP-9-12.md`, WP-D and WP-E).
+- **Branch:** `main` only (Phase 10 merged with `--no-ff` from `phase/10-bloom-co`, tagged `v0.10.0`; branch deleted locally and on GitHub)
+- **Last green commit:** latest `main` (CI green on the v0.10.0 merge)
+- **CI:** `commit-hygiene`, `checks (ubuntu-24.04)`, `checks (windows-latest)`, `install (windows-latest)` (gate 10), `upgrade (windows-latest)`.
 
-## Done this session (Phase 9)
-- **D53**: roadmap extended to Phases 10–12; the owner's brief is `docs/ROADMAP-9-12.md` (every later phase reads it); SPEC §4, §6, §13, §14 amended.
-- **D54–D62 approved** (snapshot cap 20; YEAR_END in End-semester by default).
-- **WP-B paper retrieval**
-  - Additive migration `20261106090000_paper_snapshots`: `PaperStatus.PRINTED`, `Paper.printedAt`, table `PaperSnapshot` (cascade with the paper).
-  - Data layer `src/lib/data/papers.ts`: `list(actor, filter)` (search in JS, filters in SQL), `recent`, `filterOptions`, `findEditable` lock on every write (`PAPER_LOCKED`), `update` handles reopen/Final (version on Final), `markPrinted` (export), `listVersions` / `getVersion` / `restoreVersion`, `duplicate` with `academicYear`.
-  - Version data: `src/lib/paper/version.ts`; PDF: `src/server/version-pdf.ts` + `GET /api/papers/[id]/versions/[versionId]` (`?kind=key`, `?download=1`).
-  - UI: `papers/page.tsx` (search + filters in the URL), `papers/paper-list.tsx` (shared with home Recent papers), editor `status.tsx` (Mark as Final, read-only banner + Edit confirmation, Versions dialog with restore), `export-duplicate.tsx` (Duplicate as…: next year / ATKT / another).
-  - Labels: `EXAM_GROUPS`, `PAPER_STATUS_LABEL` in `src/lib/templates/labels.ts`; `nextAcademicYear` in `src/lib/paper/academic-year.ts`.
-- **WP-A polish**
-  - Performance measured before and after (`scripts/measure-performance.ts`, figures in memory.md).
-  - D61 long chemical names in column choices (LaTeX and the editor's HTML).
-  - D62 phone pass on the editor; ubuntu runners pinned to 24.04.
-  - Design review + break-ui: findings below.
-- **Upgrade tests**: `tests/e2e/upgrade.spec.ts` with `tests/fixtures/upgrade/v0.8.0-*` (rows unchanged, export pixel-identical to v0.8.0's); CI job `upgrade (windows-latest)` (previous tag → its setup → update-windows.bat → `upgraded.spec.ts`).
-- Docs: USER_GUIDE §3, §4 (Final and Printed, Versions), §6, §7 (Duplicate as…, Finding a paper), screenshots regenerated (new 11-papers, 12-versions); README scripts and upgrade testing.
-- Tests: unit 831 (was 787), e2e 50 locally (+ upgrade spec) + 4 in the install job + 2 in the upgrade job, golden 42 + 22 visual on ubuntu (no baseline changed).
-
-## Design review and break-ui (Phase 9)
-- Fixed: disabled fields in a Final paper looked editable; Activity had no words for print / reopen / restore-version; Versions dialog pushed Close off-screen with 20 versions; copy names lost their suffix at 200 characters; phone filters one per row; editor title collapsed at 900 px; phone editor cramped (title, columns, icon-only header below 640 px); editor choice columns let long names overflow.
-- Checked and fine: every colour token pair WCAG AA in light and dark (lowest 4.78:1 tertiary text on sunk); 250 papers render without pagination; long titles, course codes at 40 characters, one-letter titles, odd academic-year text.
-- Logged, not fixed: four-column choices still overflow on unsplittable pieces (use two columns); the papers list is not paginated (a teacher makes tens of papers a year; revisit past ~1,000); admin top navigation scrolls sideways on a phone (unchanged since Phase 7).
+## Done this session (Phase 10, WP-C)
+- **D63–D69 approved** and built (memory.md has each one and how it was built).
+- **D63 elective CO tags**: `src/lib/paper/co-tag.ts` (`coTag`, `CO_TAG_RE`, `cleanCoTagInput`); `BP607T AEC1` → `BP607T.01 AEC1`; the rule is a superset of the old one, nothing stored was rewritten; prints with a tie (`BP607T.01~AEC1`).
+- **Printing** (`src/lib/latex/serialize.ts`): style `showBloom` (default false). `\dxBloom{(Bloom: X)}` right after the text, then the existing `\dxTail` (CO, marks). With Bloom on, the tail goes before the first choices or sub-parts list. With Bloom off, output is byte-identical to v0.9.0 (checked for all 21 fixture, key and built-in outputs against a `main` worktree).
+- **Sub-parts (D65–D67)**: optional `attrs {marks, coTag, bloom}` on the `subPart` node (schema, TipTap node, stored form). They print per sub-part only when one differs from the question (`subPartTags`); sub-part marks print with "show marks per question". Unset values follow the question ("As question"), not a copy (D66 as built, reported to the owner).
+- **Key (D68)** (`src/lib/latex/key.ts`): Level column in objective tables; `(Bloom: X) [CO]` after the question number, per sub-part when they differ.
+- **Per-paper switch (D64)**: `showBloom` in `paperPatchSchema` rewrites the paper's snapshot style (versioned, audited, Final lock); checkbox "Print Bloom levels" in Details; the template builder's Page section has the default.
+- **Warnings**: `src/lib/paper/tags.ts` (`subPartMarksNote`, `missingTags`, `tagSummary`); export warns (never blocks) about missing Bloom/CO while Bloom is on, and about sub-part marks that do not add up; the slot card shows the sub-part note.
+- **Summary (D69)**: `papers/[id]/tag-summary.tsx`, a folded panel above the questions (works at every width).
+- **Editor**: sub-part view in `src/components/editor/views.tsx` (one line of facts, popover with Marks/CO/Bloom; context from `sub-part-fields.tsx`); inserting sub-parts puts the cursor in (a); Bloom labels in one table `src/lib/paper/bloom.ts`.
+- **Tests**: unit 872 (was 831), e2e 53 locally (new `tests/e2e/tags.spec.ts`), golden + new fixtures `bloom` and `key-bloom` with visual baselines from the CI ubuntu artifact (D4); structure fuzz has 10 more batches with Bloom, CO tags and sub-part fields; hostile CO tag fuzz in `tests/unit/paper/tags.test.ts`.
+- **Break-ui**: `tests/break-ui/worst-tags.ts` (free-text 29-character tags, marks that do not add up, ten tagged questions) at 1366/900/375 px. Found: sub-part fields took four lines in the editor column, fixed with the popover. Everything else held.
+- **Docs**: USER_GUIDE §4 (sub-parts, Print Bloom levels, summary), §6 (export warnings), new screenshot `13-bloom.png`, others taken again; README.
+- **Performance**: before p50/p95 16 ms, max 24 ms, preview p50 441 ms; after p50/p95 16 ms, max 24 ms, preview p50 415 ms.
+- No migration this phase.
 
 ## In progress
 - Nothing half-done.
 
-## Next steps (Phase 10, follow docs/ROADMAP-9-12.md WP-C)
-1. Session start per the operating rules; branch `phase/10-bloom-co` from `main`.
-2. Plan first: D-numbers from D63, each with cost/risk; wait for "go". D63 = elective CO tag format (two-digit CO number, confirmed) `BP607T.01 AEC1` / `BP212P.01 SEC1` (coTag helper, slot tag rule allows one space before the AEC/SEC suffix, CO picker, tests); no real elective papers exist yet, so no stored tags need rewriting unless the owner has made some. Bloom wording is decided: names (Remember … Create, "Analyse" spelling), from one label table shared with the editor's `BLOOM_LABEL` (memory.md).
-3. Measure performance before (`node scripts/e2e-server.ts 3212` then `node scripts/measure-performance.ts http://127.0.0.1:3212`).
-4. The upgrade fixture for Phase 10 should be regenerated from v0.9.0 (`scripts/make-upgrade-fixture.ts` against a v0.9.0 worktree build) or kept at v0.8.0 and a v0.9.0 one added; the CI upgrade job picks the previous tag automatically.
+## Logged, not fixed
+- Question text (not only choices) overflows on unsplittable chemical pieces such as `(4-isobutylphenyl)propanoic` in one column, with every option off (pre-existing; D61 covers choices only).
+- "On the group" CO option prints nothing (open question for the owner).
+- CI ubuntu renders of three old baselines drift 0.02–0.19% (limit 0.5%) with unchanged LaTeX; baselines not touched (memory.md).
+- A free-text CO tag keeps at most 20 characters before the suffix space; longer input is cut (rule-conformant).
+- Carried from Phase 9: four-column choices overflow on unsplittable pieces; papers list not paginated; admin navigation scrolls sideways on a phone.
+
+## Next steps (Phase 11, follow docs/ROADMAP-9-12.md WP-D and WP-E)
+1. Session start per the operating rules; branch `phase/11-question-bank` from `main`.
+2. Plan first: D-numbers from D70, each with cost/risk, including the exact sharing rule for bank questions (private by default; per question or per course; admins see no private entries; gate 8). Wait for "go".
+3. Bank questions must carry Bloom and a catalogue CO: reuse `bloomSchema`, `coTagSchema` and `coTag()`; the bank's CO check needs the course's outcomes (`coOptions` in `src/server/paper-commands.ts`).
+4. Measure performance before (`node scripts/e2e-server.ts 3212`, then `node scripts/measure-performance.ts http://127.0.0.1:3212`).
+5. Phase 11 adds migrations: regenerate the upgrade fixture from v0.10.0 or add one; the CI upgrade job installs the previous tag automatically.
 
 ## Owner tasks (not code)
+- Confirm whether the college prints Bloom and CO on each sub-part line (D67), and what "On the group" should do.
 - Install on the father's Windows 11 laptop as a `git clone` into `C:\DRAFTEX` (guide §13) and time it.
 - Try the firewall helper once (UAC prompt, rule created, rule removed).
 - Try one real `update-windows.bat` with the read-only token.
-- Note: papers he marked Final before this update now open read-only; Edit puts them back to Draft.
 
 ## Failing tests
-- None.
+- None. Watch: `upgrade.spec.ts` once timed out on windows-latest (run 42240032839, server never answered in 90 s); it now prints the server output if it happens again.
 
 ## Blockers / risks
 - Not tried on a real Windows machine: double-click flow, Git Credential Manager with the token, real `git pull`, UAC firewall step, `reset-password-windows.bat`. CI covers the scripts headless.
 - LAN mode is plain HTTP (D40). Server mode locks out direct access (recovery documented).
 - The GitHub token on the end user's machine expires; updates then fail (guide explains renewal).
-- Carried: restore needs a restart (D28); same question in two windows is last-write-wins (the Final lock is server-enforced, editing is not merged); bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (Phase 12 security review); ESLint 10 overrides; npm warns about `fsevents` install scripts (harmless).
+- Carried: restore needs a restart (D28); same question in two windows is last-write-wins; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (Phase 12 security review); ESLint 10 overrides; npm warns about `fsevents` install scripts (harmless).
 
 ## Decisions made (copied to memory.md)
-- D53–D62, upgrade testing approach, performance before/after, D61 as built and its 4-column limit, JS-side search, Final papers read-only after update, version PDF route, CI upgrade job, phone header, worst-case retrieval seed.
+- D63–D69, D66 as built (follow, not copy), tail placement with Bloom on, sub-part popover, no migration, question-text chemical overflow, "On the group" question, performance before/after.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`). `npm run db:migrate` done for `paper_snapshots` (owner, 2026-11-06).
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`). No migration in Phase 10.
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"`.
 - `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216). E2E 3211, restore 3214, server mode 3218, v0.8.0 fixture server 3219, upgrade spec 3220.
-- A v0.8.0 worktree may remain at `/tmp/draftex-v080` (`git worktree remove /tmp/draftex-v080` to drop it).
 
 ## Questions for owner
+- Does the college print Bloom and CO per sub-part (D67)?
+- "On the group" CO option: print the group's tags on its heading, or remove it?
 - Later: should the app offer Times at all?
 
 ## Phase checklist
@@ -80,7 +82,7 @@ no chat history must be able to continue from this file alone.
 - [x] 7 Network modes + hardening
 - [x] 8 Installers + docs
 - [x] 9 Polish + paper retrieval (docs/ROADMAP-9-12.md)
-- [ ] 10 Bloom and CO on the printed paper
+- [x] 10 Bloom and CO on the printed paper
 - [ ] 11 Question bank + CSV import
 - [ ] 12 Advanced LaTeX packages
 

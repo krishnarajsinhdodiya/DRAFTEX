@@ -23,7 +23,12 @@ const attr = (name: string, fallback: unknown = null) => ({
   parseHTML: (el: HTMLElement) => {
     const v = el.getAttribute(`data-${name}`);
     if (v === null) return fallback;
-    if (typeof fallback === "number" || name.endsWith("Percent") || name === "widthCm") {
+    if (
+      typeof fallback === "number" ||
+      name.endsWith("Percent") ||
+      name === "widthCm" ||
+      name === "marks"
+    ) {
       return v === "" ? fallback : Number(v);
     }
     return v;
@@ -120,6 +125,8 @@ export const SubPart = Node.create({
   name: "subPart",
   content: "leaf+",
   defining: true,
+  /** D65: the sub-part's own marks, CO tag and Bloom level; null follows the question. */
+  addAttributes: () => ({ marks: attr("marks"), coTag: attr("coTag"), bloom: attr("bloom") }),
   parseHTML: () => [{ tag: 'li[data-type="subPart"]' }],
   renderHTML: ({ HTMLAttributes }) => [
     "li",
