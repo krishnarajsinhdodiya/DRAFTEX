@@ -37,3 +37,22 @@ export async function waitUntil(
     await sleep(intervalMs);
   }
 }
+
+/**
+ * Whether a copy of DRAFTEX is really running. A lock that names a live
+ * process is not enough: after a crash or a forced stop the lock stays
+ * behind, and Windows soon gives its process id to another program. So the
+ * lock must be backed by an app that answers at its address; one that is
+ * still starting gets `waitMs` to answer.
+ */
+export async function alreadyRunning(
+  lockSaysRunning: boolean,
+  url: string | null,
+  answers: (url: string) => Promise<boolean>,
+  waitMs = 10_000,
+  wait: typeof waitUntil = waitUntil,
+): Promise<boolean> {
+  if (!lockSaysRunning) return false;
+  if (!url) return true;
+  return wait(() => answers(url), waitMs);
+}
