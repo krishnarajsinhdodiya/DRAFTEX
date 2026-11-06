@@ -190,7 +190,14 @@ export const groupSchema = z.object({
   /** Every question must be answered; the checker then requires attempt = slots. */
   compulsory: z.boolean().optional(),
   objectiveLayout: z.enum(["TWO_COLUMN", "ONE_COLUMN", "FOUR_COLUMN"]).optional(),
-  showCoTag: z.enum(["NONE", "GROUP", "SLOT"]).default("SLOT"),
+  /**
+   * D71: "GROUP" (On the group) printed nothing and is no longer offered;
+   * stored values still load and read as "NONE", which prints the same.
+   */
+  showCoTag: z
+    .enum(["NONE", "GROUP", "SLOT"])
+    .default("SLOT")
+    .transform((v): "NONE" | "SLOT" => (v === "GROUP" ? "NONE" : v)),
   /**
    * GROUP: one number for the group ("Q.2"), its questions numbered 1, 2, 3.
    * QUESTION: every question gets its own number ("Q.6"), continuing across

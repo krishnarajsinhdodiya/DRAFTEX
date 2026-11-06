@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browserCommand, localAppUrl, waitUntil } from "@/lib/install/browser";
+import { alreadyRunning, browserCommand, localAppUrl, waitUntil } from "@/lib/install/browser";
 
 describe("localAppUrl", () => {
   it("opens loopback in local and lan mode, nothing in server mode", () => {
@@ -58,5 +58,34 @@ describe("waitUntil", () => {
     expect(await waitUntil(async () => true, 10)).toBe(true);
     let n = 0;
     expect(await waitUntil(async () => ++n > 1, 1_000, 1)).toBe(true);
+  });
+});
+
+describe("alreadyRunning", () => {
+  const now = (async (probe: () => Promise<boolean>) => probe()) as typeof waitUntil;
+  it("starts when no lock says otherwise", async () => {
+    expect(await alreadyRunning(false, "http://127.0.0.1:3210/", async () => true, 0, now)).toBe(
+      false,
+    );
+  });
+  it("trusts a lock only when DRAFTEX answers (Windows reuses process ids)", async () => {
+    const url = "http://127.0.0.1:3210/";
+    expect(await alreadyRunning(true, url, async () => true, 0, now)).toBe(true);
+    expect(await alreadyRunning(true, url, async () => false, 0, now)).toBe(false);
+  });
+  it("gives a copy that is still starting time to answer", async () => {
+    let calls = 0;
+    const r = await alreadyRunning(
+      true,
+      "http://127.0.0.1:3210/",
+      async () => ++calls >= 3,
+      1_000,
+      (probe, ms) => waitUntil(probe, ms, 1),
+    );
+    expect(r).toBe(true);
+    expect(calls).toBe(3);
+  });
+  it("keeps trusting the lock where there is no local address (server mode)", async () => {
+    expect(await alreadyRunning(true, null, async () => false, 0, now)).toBe(true);
   });
 });

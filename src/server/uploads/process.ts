@@ -112,15 +112,25 @@ function checkSvg(svg: string): void {
   }
 }
 
+/**
+ * Only a drawing with text needs the system fonts. Loading them scans every
+ * installed font, synchronously, on each upload: 1.5 s cold on the owner's
+ * Mac and more than 30 s once on a busy Windows runner (run 42251776929).
+ */
+export function svgNeedsFonts(svg: string): boolean {
+  return /<(?:[A-Za-z_][\w.-]*:)?text[\s>/]/.test(svg);
+}
+
 function svgToPng(input: Buffer): Buffer {
   const svg = input.toString("utf8");
   checkSvg(svg);
+  // CorelDRAW keeps text as text unless told otherwise; system fonts let it render.
+  const font = { loadSystemFonts: svgNeedsFonts(svg) };
   let r: Resvg;
   try {
     r = new Resvg(svg, {
       fitTo: { mode: "zoom", value: SVG_DPI / 96 },
-      // CorelDRAW keeps text as text unless told otherwise; system fonts let it render.
-      font: { loadSystemFonts: true },
+      font,
     });
   } catch {
     throw new UploadError("This SVG file could not be read. It may be damaged.");
@@ -132,7 +142,7 @@ function svgToPng(input: Buffer): Buffer {
     const scale = Math.sqrt(MAX_INPUT_PIXELS / (width * height));
     r = new Resvg(svg, {
       fitTo: { mode: "width", value: Math.floor(width * scale) },
-      font: { loadSystemFonts: true },
+      font,
     });
   }
   return r.render().asPng();

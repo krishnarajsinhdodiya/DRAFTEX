@@ -9,7 +9,12 @@ import { execFile, spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readConfig } from "../src/lib/config.ts";
-import { browserCommand, localAppUrl, waitUntil } from "../src/lib/install/browser.ts";
+import {
+  alreadyRunning,
+  browserCommand,
+  localAppUrl,
+  waitUntil,
+} from "../src/lib/install/browser.ts";
 import { appRunning } from "../src/lib/lock.ts";
 import { ENV, RESTART_EXIT_CODE } from "../src/lib/net/runtime.ts";
 import { dataPaths, getDataDir } from "../src/lib/paths.ts";
@@ -77,10 +82,15 @@ async function answers(url: string): Promise<boolean> {
 }
 
 const target = open ? appUrl() : { url: null, running: false };
-if (target.running) {
+if (await alreadyRunning(target.running, target.url, answers)) {
   console.log("DRAFTEX is already running.");
   if (target.url) openBrowser(target.url);
   process.exit(0);
+}
+if (target.running) {
+  console.log(
+    "An earlier DRAFTEX did not stop cleanly (its lock was left behind). Starting again.",
+  );
 }
 run();
 if (target.url) {

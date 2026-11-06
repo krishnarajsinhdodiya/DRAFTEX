@@ -96,7 +96,6 @@ export const OBJECTIVE_LAYOUT_LABEL: Record<NonNullable<Group["objectiveLayout"]
 
 export const CO_TAG_LABEL: Record<Group["showCoTag"], string> = {
   SLOT: "On each question",
-  GROUP: "On the group",
   NONE: "Hidden",
 };
 

@@ -71,13 +71,13 @@ describe("Bloom on the printed paper", () => {
   it("puts the tail before choices and, with Bloom on, before sub-parts", () => {
     const mcq = one([p("Pick one."), choices(["a", "b"])], { bloomLevel: "REMEMBER" });
     expect(mcq).toMatch(/Pick one\.\\dxBloom\{\(Bloom: Remember\)\}\n\s*\\vspace/);
-    const sp = one([p("Stem."), parts(["one"], ["two"])], {
-      bloomLevel: "APPLY",
-      coTag: "BP1.01",
-    });
-    expect(sp).toMatch(
-      /Stem\.\\dxBloom\{\(Bloom: Apply\)\}\\dxTail\{\[BP1\.01\]\}\n\s*\\begin\{parts\}/,
+    const marks = tpl((t) => void (t.style.showMarksPerQuestion = true));
+    const sp = one(
+      [p("Stem."), parts(["one"], ["two"])],
+      { bloomLevel: "APPLY", coTag: "BP1.01" },
+      marks,
     );
+    expect(sp).toMatch(/Stem\.\\dxTail\{\[4\]\}\n\s*\\begin\{parts\}/);
   });
 
   it("keeps the old place of the tail on sub-part questions while Bloom is off", () => {
@@ -103,13 +103,32 @@ describe("Bloom on the printed paper", () => {
 });
 
 describe("sub-parts with their own values (D67)", () => {
-  it("prints the tags on the question when every sub-part follows it", () => {
+  it("puts the tags on every sub-part line while Bloom is shown (D70)", () => {
     const tex = one([p("Stem."), parts(["one", { bloom: "APPLY" }], ["two"])], {
       bloomLevel: "APPLY",
       coTag: "BP1.01",
     });
-    expect(tex).toContain("Stem.\\dxBloom{(Bloom: Apply)}\\dxTail{[BP1.01]}");
-    expect(tex).toContain("\\part one\n");
+    expect(tex).toContain("Stem.\\par\n");
+    expect(tex).toContain("\\part one\\dxBloom{(Bloom: Apply)}\\dxTail{[BP1.01]}");
+    expect(tex).toContain("\\part two\\dxBloom{(Bloom: Apply)}\\dxTail{[BP1.01]}");
+  });
+
+  it("keeps the CO on the question line while Bloom is off and no sub-part differs", () => {
+    const off = tpl((t) => void (t.style.showBloom = false));
+    const tex = one(
+      [p("Stem."), parts(["one", { bloom: "CREATE" }], ["two"])],
+      { coTag: "BP1.01" },
+      off,
+    );
+    expect(tex).toMatch(/\\end\{parts\}\\dxTail\{\[BP1\.01\]\}/);
+    expect(tex).not.toContain("\\part one\\dxTail");
+    const differs = one(
+      [p("Stem."), parts(["one", { coTag: "BP1.02" }], ["two"])],
+      { coTag: "BP1.01" },
+      off,
+    );
+    expect(differs).toContain("\\part one\\dxTail{[BP1.02]}");
+    expect(differs).toContain("\\part two\\dxTail{[BP1.01]}");
   });
 
   it("moves the tags to each sub-part when one differs, falling back to the question's", () => {
@@ -131,7 +150,7 @@ describe("sub-parts with their own values (D67)", () => {
       { bloomLevel: "APPLY", coTag: "BP1.01" },
       hidden,
     );
-    expect(tex).toContain("Stem.\\dxBloom{(Bloom: Apply)}");
+    expect(tex).toContain("\\part one\\dxBloom{(Bloom: Apply)}\n");
     expect(tex).not.toContain("BP1.0");
   });
 
@@ -167,6 +186,21 @@ describe("sub-parts with their own values (D67)", () => {
       ],
     });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("'On the group' CO tags (D71)", () => {
+  it("reads a stored GROUP as Hidden, which prints the same as before", () => {
+    const group = tpl((t) => {
+      (t.structure.parts[0]!.groups[1] as { showCoTag: string }).showCoTag = "GROUP";
+    });
+    const hidden = tpl((t) => {
+      t.structure.parts[0]!.groups[1]!.showCoTag = "NONE";
+    });
+    const slot = { bloomLevel: "APPLY" as const, coTag: "BP1.01" };
+    const a = one([p("Define x.")], slot, group);
+    expect(a).toBe(one([p("Define x.")], slot, hidden));
+    expect(a).not.toContain("BP1.01");
   });
 });
 

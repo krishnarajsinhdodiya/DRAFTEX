@@ -7,7 +7,7 @@ no chat history must be able to continue from this file alone.
 - **Date:** 2026-11-06
 - **Current phase:** 10 Bloom and CO on the printed paper: done. Next: Phase 11 Question bank + CSV import (brief in `docs/ROADMAP-9-12.md`, WP-D and WP-E).
 - **Branch:** `main` only (Phase 10 merged with `--no-ff` from `phase/10-bloom-co`, tagged `v0.10.0`; branch deleted locally and on GitHub)
-- **Last green commit:** latest `main` (the v0.10.0 merge run 42244287523 failed once on windows-latest, a browser stall in templates.spec; fixed on `fix/e2e-close-contexts`, merged with CI green)
+- **Last green commit:** latest `main` (the v0.10.0 merge run failed once on windows-latest; the fixes after it are merged and CI is green)
 - **CI:** `commit-hygiene`, `checks (ubuntu-24.04)`, `checks (windows-latest)`, `install (windows-latest)` (gate 10), `upgrade (windows-latest)`.
 
 ## Done this session (Phase 10, WP-C)
@@ -20,8 +20,13 @@ no chat history must be able to continue from this file alone.
 - **Warnings**: `src/lib/paper/tags.ts` (`subPartMarksNote`, `missingTags`, `tagSummary`); export warns (never blocks) about missing Bloom/CO while Bloom is on, and about sub-part marks that do not add up; the slot card shows the sub-part note.
 - **Summary (D69)**: `papers/[id]/tag-summary.tsx`, a folded panel above the questions (works at every width).
 - **Editor**: sub-part view in `src/components/editor/views.tsx` (one line of facts, popover with Marks/CO/Bloom; context from `sub-part-fields.tsx`); inserting sub-parts puts the cursor in (a); Bloom labels in one table `src/lib/paper/bloom.ts`.
-- **Tests**: unit 872 (was 831), e2e 53 locally (new `tests/e2e/tags.spec.ts`), golden + new fixtures `bloom` and `key-bloom` with visual baselines from the CI ubuntu artifact (D4); structure fuzz has 10 more batches with Bloom, CO tags and sub-part fields; hostile CO tag fuzz in `tests/unit/paper/tags.test.ts`.
+- **Tests**: unit 879 (was 831), e2e 53 locally (new `tests/e2e/tags.spec.ts`), golden + new fixtures `bloom` and `key-bloom` with visual baselines from the CI ubuntu artifact (D4); structure fuzz has 10 more batches with Bloom, CO tags and sub-part fields; hostile CO tag fuzz in `tests/unit/paper/tags.test.ts`.
 - **Break-ui**: `tests/break-ui/worst-tags.ts` (free-text 29-character tags, marks that do not add up, ten tagged questions) at 1366/900/375 px. Found: sub-part fields took four lines in the editor column, fixed with the popover. Everything else held.
+- **After the merge (D70, D71, owner answers)**: with Bloom on, every sub-part line carries its Bloom and CO; "On the group" removed (stored values read as Hidden). On `fix/subpart-tags-group-co`, merged with CI green, together with three Windows CI findings:
+  - `start.ts --open` exited "already running" when a leftover `draftex.lock` named a reused process id; it now also checks the app answers (`alreadyRunning`).
+  - SVG uploads scanned every system font on each upload; fonts now load only for drawings with text (`svgNeedsFonts`).
+  - `retrieval.spec.ts` picked a filter before the cleared page loaded; it now waits.
+- **E2E cleanup** (`fix/e2e-close-contexts`, merged): specs close the browser contexts they open after each test.
 - **Docs**: USER_GUIDE §4 (sub-parts, Print Bloom levels, summary), §6 (export warnings), new screenshot `13-bloom.png`, others taken again; README.
 - **Performance**: before p50/p95 16 ms, max 24 ms, preview p50 441 ms; after p50/p95 16 ms, max 24 ms, preview p50 415 ms.
 - No migration this phase.
@@ -30,8 +35,9 @@ no chat history must be able to continue from this file alone.
 - Nothing half-done.
 
 ## Logged, not fixed
+- `bloom-p1.png` / `key-bloom-p1.png` show the layout before D70 (tags of Q.3(2) moved to its sub-parts); the change is under the 0.5% limit, so CI passes and did not render new ones. Refresh them from a CI ubuntu artifact the next time a baseline must change.
+- Stale `draftex.lock` with a reused process id: start is fixed (checks the app answers), but restore, move-data, reset-password, update-check and uninstall-check still trust the pid alone and would refuse until the next clean start replaces the lock.
 - Question text (not only choices) overflows on unsplittable chemical pieces such as `(4-isobutylphenyl)propanoic` in one column, with every option off (pre-existing; D61 covers choices only).
-- "On the group" CO option prints nothing (open question for the owner).
 - CI ubuntu renders of three old baselines drift 0.02–0.19% (limit 0.5%) with unchanged LaTeX; baselines not touched (memory.md).
 - A free-text CO tag keeps at most 20 characters before the suffix space; longer input is cut (rule-conformant).
 - Carried from Phase 9: four-column choices overflow on unsplittable pieces; papers list not paginated; admin navigation scrolls sideways on a phone.
@@ -44,7 +50,6 @@ no chat history must be able to continue from this file alone.
 5. Phase 11 adds migrations: regenerate the upgrade fixture from v0.10.0 or add one; the CI upgrade job installs the previous tag automatically.
 
 ## Owner tasks (not code)
-- Confirm whether the college prints Bloom and CO on each sub-part line (D67), and what "On the group" should do.
 - Install on the father's Windows 11 laptop as a `git clone` into `C:\DRAFTEX` (guide §13) and time it.
 - Try the firewall helper once (UAC prompt, rule created, rule removed).
 - Try one real `update-windows.bat` with the read-only token.
@@ -59,7 +64,7 @@ no chat history must be able to continue from this file alone.
 - Carried: restore needs a restart (D28); same question in two windows is last-write-wins; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (Phase 12 security review); ESLint 10 overrides; npm warns about `fsevents` install scripts (harmless).
 
 ## Decisions made (copied to memory.md)
-- D63–D69, D66 as built (follow, not copy), tail placement with Bloom on, sub-part popover, no migration, question-text chemical overflow, "On the group" question, performance before/after.
+- D63–D71, D66 as built (follow, not copy), tail placement with Bloom on, sub-part popover, no migration, question-text chemical overflow, "On the group" question, performance before/after.
 
 ## Machine setup (owner's Mac)
 - Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`). No migration in Phase 10.
@@ -67,8 +72,6 @@ no chat history must be able to continue from this file alone.
 - `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216). E2E 3211, restore 3214, server mode 3218, v0.8.0 fixture server 3219, upgrade spec 3220.
 
 ## Questions for owner
-- Does the college print Bloom and CO per sub-part (D67)?
-- "On the group" CO option: print the group's tags on its heading, or remove it?
 - Later: should the app offer Times at all?
 
 ## Phase checklist
