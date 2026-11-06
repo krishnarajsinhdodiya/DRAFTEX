@@ -219,6 +219,9 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-06 · Below 640 px the editor header shows icons only (labels stay as screen-reader text) and the title gets its own row; at 640 px and up the title row keeps a 16rem minimum · D62 phone pass; at 900 px the title had collapsed to zero width
 - 2026-11-06 · Worst-case data for the Phase 9 screens: tests/break-ui/seed-worst-retrieval.ts (250 papers at the field limits, 20 versions); found Versions dialog Close below the fold, copy-name suffix lost at 200 characters, one filter per row on a phone; all fixed
 
+- 2026-11-06 · Bloom wording on printed papers (Phase 10): the level names, spelled as the editor already shows them: Remember, Understand, Apply, Analyse (British), Evaluate, Create; printed as `(Bloom: Remember)`; L1–L6 not used. One label table shared by the editor and the printed paper · owner answer
+- 2026-11-06 · Owner's Mac data folder migrated to the paper_snapshots migration (`npm run db:migrate`) · owner confirmed
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
