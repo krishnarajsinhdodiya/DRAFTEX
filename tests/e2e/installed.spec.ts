@@ -3,9 +3,11 @@
 // DRAFTEX_E2E_URL names that copy (playwright.config.ts); the account is an
 // invented test value.
 import { expect, test } from "@playwright/test";
-import { ADMIN } from "./support";
+import { ADMIN, closeOpenContexts } from "./support";
 
 test.describe.configure({ mode: "serial" });
+
+test.afterEach(closeOpenContexts);
 
 test("the installed copy sets up its administrator", async ({ page }) => {
   await page.goto("/");

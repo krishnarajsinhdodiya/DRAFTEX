@@ -4,9 +4,11 @@
 // "Duplicate as… next academic year". Gate 8 at the version route.
 // Runs after papers.spec.ts, whose exported (Printed) paper it uses. Invented data.
 import { type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, asUser } from "./support";
+import { ADMIN, asUser, closeOpenContexts, FACULTY } from "./support";
 
 test.describe.configure({ mode: "serial", timeout: 120_000 });
+
+test.afterEach(closeOpenContexts);
 
 const PRINTED = "Invented Pharmacology Paper";
 const SESSIONAL = "Invented Chemistry Sessional";

@@ -9,10 +9,12 @@
 import fs from "node:fs";
 import { unzipSync } from "fflate";
 import { type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, asUser, cspViolations } from "./support";
+import { ADMIN, asUser, closeOpenContexts, cspViolations, FACULTY } from "./support";
 
 // These tests include real LaTeX compiles; on the Windows runner one takes up to ~25 s.
 test.describe.configure({ mode: "serial", timeout: 120_000 });
+
+test.afterEach(closeOpenContexts);
 
 const TITLE = "Invented Pharmacology Paper";
 let paperUrl = "";

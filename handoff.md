@@ -7,7 +7,7 @@ no chat history must be able to continue from this file alone.
 - **Date:** 2026-11-06
 - **Current phase:** 10 Bloom and CO on the printed paper: done. Next: Phase 11 Question bank + CSV import (brief in `docs/ROADMAP-9-12.md`, WP-D and WP-E).
 - **Branch:** `main` only (Phase 10 merged with `--no-ff` from `phase/10-bloom-co`, tagged `v0.10.0`; branch deleted locally and on GitHub)
-- **Last green commit:** latest `main` (CI green on the v0.10.0 merge)
+- **Last green commit:** latest `main` (the v0.10.0 merge run 42244287523 failed once on windows-latest, a browser stall in templates.spec; fixed on `fix/e2e-close-contexts`, merged with CI green)
 - **CI:** `commit-hygiene`, `checks (ubuntu-24.04)`, `checks (windows-latest)`, `install (windows-latest)` (gate 10), `upgrade (windows-latest)`.
 
 ## Done this session (Phase 10, WP-C)
@@ -50,7 +50,7 @@ no chat history must be able to continue from this file alone.
 - Try one real `update-windows.bat` with the read-only token.
 
 ## Failing tests
-- None. Watch: `upgrade.spec.ts` once timed out on windows-latest (run 42240032839, server never answered in 90 s); it now prints the server output if it happens again.
+- None. Watch: e2e on windows-latest stalled once in Chromium "Create page" (run 42244287523); specs now close their browser contexts after each test. `upgrade.spec.ts` once timed out on windows-latest (run 42240032839, server never answered in 90 s); it now prints the server output if it happens again.
 
 ## Blockers / risks
 - Not tried on a real Windows machine: double-click flow, Git Credential Manager with the token, real `git pull`, UAC firewall step, `reset-password-windows.bat`. CI covers the scripts headless.

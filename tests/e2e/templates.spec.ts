@@ -3,9 +3,11 @@
 // answer "not found" for someone else's private template, whatever the ID.
 // Runs after auth.spec.ts, which creates the accounts used here.
 import { type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, asUser, cspViolations } from "./support";
+import { ADMIN, asUser, closeOpenContexts, cspViolations, FACULTY } from "./support";
 
 test.describe.configure({ mode: "serial" });
+
+test.afterEach(closeOpenContexts);
 
 const COPY_TITLE = "Invented Pharmacology End-Sem";
 let copyId = "";

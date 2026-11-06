@@ -11,10 +11,12 @@ import Database from "better-sqlite3";
 import { unzipSync } from "fflate";
 import { type APIRequestContext, type Page, expect, request, test } from "@playwright/test";
 import { diffPages, renderPdf } from "../support/pdf";
-import { ADMIN, FACULTY, asUser, signIn } from "./support";
+import { ADMIN, asUser, closeOpenContexts, FACULTY, signIn } from "./support";
 
 // Starting a second server and compiling twice takes longer than the 30 s default.
 test.describe.configure({ mode: "serial", timeout: 120_000 });
+
+test.afterEach(closeOpenContexts);
 
 const TITLE = "Invented Pharmacology Paper";
 const PORT = 3214;

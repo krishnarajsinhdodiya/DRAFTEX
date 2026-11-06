@@ -9,9 +9,11 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { type Page, expect, test } from "@playwright/test";
-import { ADMIN, FACULTY, asUser } from "./support";
+import { ADMIN, asUser, closeOpenContexts, FACULTY } from "./support";
 
 test.describe.configure({ mode: "serial", timeout: 120_000 });
+
+test.afterEach(closeOpenContexts);
 
 const PORT = 3211;
 const SERVER_PORT = 3218;

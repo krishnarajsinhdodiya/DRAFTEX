@@ -5,9 +5,11 @@
 import fs from "node:fs";
 import { unzipSync } from "fflate";
 import { type Page, expect, test } from "@playwright/test";
-import { FACULTY, asUser } from "./support";
+import { asUser, closeOpenContexts, FACULTY } from "./support";
 
 test.describe.configure({ mode: "serial", timeout: 120_000 });
+
+test.afterEach(closeOpenContexts);
 
 const TITLE = "Invented Green Chemistry Paper";
 let paperUrl = "";

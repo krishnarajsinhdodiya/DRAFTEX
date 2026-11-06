@@ -12,9 +12,11 @@ import Database from "better-sqlite3";
 import { unzipSync } from "fflate";
 import { expect, request, test } from "@playwright/test";
 import { diffPages, renderPdf } from "../support/pdf";
-import { signIn } from "./support";
+import { closeOpenContexts, signIn } from "./support";
 
 test.describe.configure({ mode: "serial", timeout: 180_000 });
+
+test.afterEach(closeOpenContexts);
 
 const FROM = "v0.8.0";
 const FIXTURE = path.resolve("tests", "fixtures", "upgrade");
