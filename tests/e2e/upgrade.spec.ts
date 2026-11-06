@@ -92,11 +92,31 @@ test(`a ${FROM} backup restores into this version unchanged`, async ({ browser }
   expect(before.slots.length).toBeGreaterThan(0);
 
   // The start applies the migrations this version added.
-  server = spawn(process.execPath, [path.resolve("server.ts")], { env, stdio: "ignore" });
+  server = spawn(process.execPath, [path.resolve("server.ts")], {
+    env,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  // Keep the server's own words: a start that never answers must say why.
+  let output = "";
+  const keep = (b: Buffer) => void (output = (output + b.toString()).slice(-20_000));
+  server.stdout?.on("data", keep);
+  server.stderr?.on("data", keep);
+  const started = Date.now();
   const api = await request.newContext({ baseURL: BASE });
-  await expect
-    .poll(async () => (await api.get("/login").catch(() => null))?.status(), { timeout: 90_000 })
-    .toBe(200);
+  try {
+    await expect
+      .poll(
+        async () => {
+          if (server?.exitCode !== null) return `exited ${server?.exitCode}`;
+          return (await api.get("/login").catch(() => null))?.status();
+        },
+        { timeout: 90_000 },
+      )
+      .toBe(200);
+  } catch (err) {
+    throw new Error(`${(err as Error).message}\n--- server output ---\n${output}`);
+  }
+  console.log(`upgrade server answered after ${Date.now() - started} ms`);
   await api.dispose();
   expect(rows(path.join(dir, "data.db"))).toEqual(before);
 
