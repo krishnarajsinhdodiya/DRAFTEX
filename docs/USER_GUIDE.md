@@ -153,7 +153,12 @@ While you write a question:
 - Pictures: PNG, JPG, PDF (one page) or SVG, up to 10 MB. Structures
   exported from CorelDRAW as PNG or PDF work well.
 - **CO** and **Bloom** under each question set its course outcome tag and
-  level. The CO tag prints at the right, like `[BP604T.01]`.
+  level. The CO tag prints at the right, like `[BP604T.01]`. Elective
+  courses write the option after the number: `[BP607T.01 AEC1]`.
+- **Sub-parts (a)(b)(c)** (Insert, or `/sub`) each have their own **Marks**,
+  **CO** and **Bloom**. Left at "As question", a sub-part follows the
+  question. DRAFTEX warns when the sub-part marks do not add up to the
+  question's marks; the question's marks still count for the total.
 - The small buttons move a question up or down, duplicate it or clear it.
   **Undo** at the top brings back a cleared or moved question.
 
@@ -161,7 +166,24 @@ While you write a question:
 finds a problem (for example a question that cannot be printed), the question
 is marked and the message says what to change.
 
-**Details** changes the title, course, exam date and academic year.
+**Details** changes the title, course, exam date and academic year, and
+has **Print Bloom levels**:
+
+- When it is ticked, each question prints its level right after its text,
+  like "(Bloom: Remember)", with the CO tag at the right as before. A sub-part
+  with its own level or CO prints them on its own line; otherwise the
+  question's line carries them.
+- The answer key then shows the level too: a **Level** column for
+  multiple-choice answers, and the level and CO after each question number.
+- The switch belongs to this paper. A new paper starts with its template's
+  setting (**Print the Bloom level after each question** in the template
+  builder's Page section); copies such as ATKT papers keep it.
+
+![Sub-parts with their own marks and Bloom levels, the summary, and the preview](user-guide/13-bloom.png)
+
+**Bloom and CO summary**, above the questions, counts the questions and
+marks for each Bloom level and each CO. It counts every written question,
+optional ones too, so the marks can add up to more than the paper's total.
 
 ### Final and Printed papers
 
@@ -221,6 +243,9 @@ When the paper is ready, click **Export**.
 If some questions are still empty or have no answer, DRAFTEX tells you first:
 
 ![Export with these gaps? dialog](user-guide/07-export.png)
+
+While **Print Bloom levels** is ticked, it also lists questions without a
+Bloom level or CO tag; these do not stop the export.
 
 Empty questions are left out and the rest are numbered without gaps. Click
 **Export anyway**, or **Cancel** to finish them first. A paper with errors

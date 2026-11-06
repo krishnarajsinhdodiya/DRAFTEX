@@ -3,7 +3,8 @@
 A local-first question-paper builder for pharmacy faculty. Papers are written
 in a structured editor, checked against the PCI 2026 B.Pharm rules, and
 compiled to PDF (paper and answer key) through LaTeX in the KSV/KBIPER house
-style. Everything runs on one computer; other computers on the same network
+style. Questions and their sub-parts carry CO tags and Bloom levels, which a
+paper can print and summarise. Everything runs on one computer; other computers on the same network
 can be let in (LAN mode).
 
 - Product and build contract: [docs/SPEC.md](docs/SPEC.md)
@@ -25,6 +26,7 @@ Exact versions are pinned in `package.json` and listed in `memory.md`.
 | `src/lib/data`                            | The only data-access layer (ownership enforced here; ESLint blocks the database client elsewhere) |
 | `src/lib/latex`                           | Sanitiser, serialiser, Tectonic manager and compile service                                       |
 | `src/lib/rules`, `src/lib/catalogue`      | PCI rules checker and the B.Pharm course catalogue                                                |
+| `src/lib/paper`                           | Paper data shapes: schema, numbering, Bloom labels, CO tag format, answer-key and tag helpers     |
 | `src/lib/backup`, `src/lib/install`       | Backups/restore; install helpers (cloud-sync check, move data folder)                             |
 | `server.ts`, `scripts/start.ts`           | The HTTP server with its request guard, and the supervisor `npm start` runs                       |
 | `scripts/`                                | Node scripts (TypeScript run by Node's type stripping, no build step)                             |
