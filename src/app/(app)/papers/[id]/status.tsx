@@ -51,7 +51,8 @@ export function MarkFinalButton({
         })
       }
     >
-      <CheckCircle2 size={15} aria-hidden /> {pending ? "Marking…" : "Mark as Final"}
+      <CheckCircle2 size={15} aria-hidden />
+      <span className="max-sm:sr-only">{pending ? "Marking…" : "Mark as Final"}</span>
     </button>
   );
 }
@@ -171,7 +172,7 @@ export function VersionsButton({ view }: { view: PaperEditorView }) {
           className={buttonStyles.quiet}
           title="Versions kept when the paper was marked Final or exported"
         >
-          <History size={15} aria-hidden /> Versions
+          <History size={15} aria-hidden /> <span className="max-sm:sr-only">Versions</span>
           {view.versions.length ? (
             <span className="text-caption text-ink-3 tabular-nums">{view.versions.length}</span>
           ) : null}

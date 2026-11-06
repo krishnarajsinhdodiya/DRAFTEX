@@ -204,15 +204,18 @@ export function PaperEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-3.5rem-2rem-2px)] lg:flex-none">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-rule bg-surface px-4 py-2">
-        <Link href="/papers" className={`${linkStyles} text-small`}>
-          ← Papers
-        </Link>
-        <h1
-          className="min-w-0 flex-1 truncate font-paper text-lead font-semibold"
-          title={view.title}
-        >
-          {view.title}
-        </h1>
+        {/* On a phone the title gets its own row; the buttons wrap below it. */}
+        <div className="flex min-w-0 basis-full items-baseline gap-3 sm:min-w-64 sm:flex-1 sm:basis-64">
+          <Link href="/papers" className={`${linkStyles} shrink-0 text-small`}>
+            ← Papers
+          </Link>
+          <h1
+            className="min-w-0 flex-1 truncate font-paper text-lead font-semibold"
+            title={view.title}
+          >
+            {view.title}
+          </h1>
+        </div>
         <span
           role="status"
           className={`text-small ${paper.failed.length ? "text-danger" : "text-ink-2"}`}
@@ -226,7 +229,7 @@ export function PaperEditor({
           onClick={() => void paper.undo()}
           title={paper.undoLabel ? `Undo: ${paper.undoLabel}` : "Nothing to undo"}
         >
-          <Undo2 size={15} aria-hidden /> Undo
+          <Undo2 size={15} aria-hidden /> <span className="max-sm:sr-only">Undo</span>
         </button>
         {locked ? null : <DetailsButton view={view} />}
         {locked ? null : (
@@ -259,7 +262,7 @@ export function PaperEditor({
           ) : (
             <PanelRightOpen size={15} aria-hidden />
           )}
-          Preview
+          <span className="max-sm:sr-only">Preview</span>
         </button>
       </div>
 
@@ -400,8 +403,8 @@ export function PaperEditor({
           ))}
         </nav>
 
-        <main className="min-h-0 flex-1 overflow-y-auto bg-canvas px-4 py-5 lg:px-8">
-          <article className="mx-auto flex max-w-3xl flex-col gap-4 rounded-lg bg-surface px-4 py-6 shadow-sheet sm:px-8">
+        <main className="min-h-0 flex-1 overflow-y-auto bg-canvas px-2 py-3 sm:px-4 sm:py-5 lg:px-8">
+          <article className="mx-auto flex max-w-3xl flex-col gap-4 rounded-lg bg-surface px-2 py-4 shadow-sheet sm:px-8 sm:py-6">
             <header className="flex flex-col items-center gap-0.5 border-b border-ink pb-3 text-center font-paper">
               <p className="text-small font-semibold tracking-[0.04em]">
                 {view.courseTitle || "Course title"} {view.courseCode ? `[${view.courseCode}]` : ""}

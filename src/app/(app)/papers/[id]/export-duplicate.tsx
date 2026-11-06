@@ -99,7 +99,7 @@ export function ExportButton({
         title="Save the paper, its answer key and their LaTeX in the exports folder, and download them"
       >
         <FolderDown size={15} aria-hidden />
-        {state.step === "working" ? "Exporting…" : "Export"}
+        <span className="max-sm:sr-only">{state.step === "working" ? "Exporting…" : "Export"}</span>
       </button>
       <Dialog.Root open={open} onOpenChange={(o) => !o && setState({ step: "idle" })}>
         <Dialog.Portal>
@@ -249,7 +249,7 @@ export function DuplicateButton({
           className={buttonStyles.quiet}
           title="Copy this paper with its questions and answer key"
         >
-          <CopyPlus size={15} aria-hidden /> Duplicate as…
+          <CopyPlus size={15} aria-hidden /> <span className="max-sm:sr-only">Duplicate as…</span>
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>

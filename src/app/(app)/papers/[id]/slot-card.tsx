@@ -103,7 +103,7 @@ export const SlotCard = memo(function SlotCard({
       }
     >
       <div className="flex items-stretch">
-        <span className="w-12 shrink-0 pt-2 pl-3 font-paper text-body font-semibold text-ink">
+        <span className="w-9 shrink-0 pt-2 pl-2 font-paper sm:w-12 sm:pl-3 text-body font-semibold text-ink">
           {printed}
         </span>
         <div className="min-w-0 flex-1">
@@ -134,7 +134,7 @@ export const SlotCard = memo(function SlotCard({
         </div>
         <label
           htmlFor={marksId}
-          className="dx-margin flex w-24 shrink-0 items-baseline justify-end gap-1 py-2 pr-3"
+          className="dx-margin flex w-16 shrink-0 items-baseline justify-end gap-1 py-2 pr-2 sm:w-24 sm:pr-3"
         >
           <span className="sr-only">Marks for {name}</span>
           <input
@@ -150,14 +150,14 @@ export const SlotCard = memo(function SlotCard({
             }}
             className="w-12 rounded border border-transparent bg-transparent text-right font-paper text-body font-semibold text-ink tabular-nums hover:border-rule focus:border-accent focus:outline-none"
           />
-          <span className="font-sans text-caption text-ink-3">
+          <span className="font-sans text-caption text-ink-3 max-sm:sr-only">
             {state.marks === 1 ? "mark" : "marks"}
           </span>
         </label>
       </div>
 
       {active || !empty || problems.length || status ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-rule/70 px-3 py-1.5 pl-12 text-caption text-ink-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-rule/70 px-3 py-1.5 pl-9 sm:pl-12 text-caption text-ink-2">
           {group.showCoTag !== "NONE" ? (
             <label htmlFor={coId} className="flex items-center gap-1">
               CO
@@ -276,18 +276,18 @@ export const SlotCard = memo(function SlotCard({
       ) : null}
 
       {changedMarks ? (
-        <p className="px-3 pb-1.5 pl-12 text-caption text-caution">
+        <p className="px-3 pb-1.5 pl-9 sm:pl-12 text-caption text-caution">
           {name} is worth {marksText(state.marks)} instead of the group&apos;s{" "}
           {marksText(group.marksEach)}, so the group total changes.
         </p>
       ) : null}
       {editorProblem ? (
-        <p role="alert" className="px-3 pb-1.5 pl-12 text-caption text-danger">
+        <p role="alert" className="px-3 pb-1.5 pl-9 sm:pl-12 text-caption text-danger">
           {editorProblem}
         </p>
       ) : null}
       {errors.length || notes.length ? (
-        <ul className="flex flex-col gap-0.5 px-3 pb-2 pl-12 text-caption">
+        <ul className="flex flex-col gap-0.5 px-3 pb-2 pl-9 sm:pl-12 text-caption">
           {[...errors, ...notes].map((p, i) => (
             <li key={i} className={p.level === "error" ? "text-danger" : "text-caution"}>
               {p.message}
