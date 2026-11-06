@@ -9,6 +9,8 @@ import {
   UploadError,
   processUpload,
   sniff,
+  svgFontFiles,
+  svgFontOptions,
   svgNeedsFonts,
 } from "@/server/uploads/process";
 import { assetFile, storeUpload } from "@/server/uploads/store";
@@ -88,8 +90,16 @@ describe("processUpload: SVG", () => {
     expect(svgNeedsFonts("<svg><!-- context --><textPath/></svg>")).toBe(false);
     expect(svgNeedsFonts('<svg><text x="1">CH3</text></svg>')).toBe(true);
     expect(svgNeedsFonts("<svg:svg><svg:text>OH</svg:text></svg:svg>")).toBe(true);
+    // The text is drawn, from a short list of font files, not a scan of every font.
+    expect(svgFontOptions("<svg><rect/></svg>")).toEqual({ loadSystemFonts: false });
+    const opts = svgFontOptions("<svg><text>CH3</text></svg>");
+    if (svgFontFiles().length) expect(opts).toMatchObject({ loadSystemFonts: false });
     const out = await processUpload(svg('<text x="4" y="30" font-size="24">CH3</text>'));
     expect(out).toMatchObject({ ext: "png", from: "svg" });
+    // stats() reads its input, so flatten onto white into a buffer first.
+    const flat = await sharp(out.bytes).flatten({ background: "#ffffff" }).toBuffer();
+    const { channels } = await sharp(flat).stats();
+    expect(channels.some((c) => c.min < 128)).toBe(true);
   });
 
   it("renders a huge drawing smaller instead of refusing it", async () => {
