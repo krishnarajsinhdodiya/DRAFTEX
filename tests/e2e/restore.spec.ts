@@ -220,6 +220,9 @@ test("a restore waiting in an empty folder is applied at start, and the paper is
       expect(a.length, name).toBe(b.length);
       for (const d of diffPages(a, b)) expect(d.changedPixels, `${name} page ${d.page}`).toBe(0);
     }
+    // The question bank comes back with the database (Phase 11; bank.spec.ts made these).
+    await page.goto("/bank?q=invented+shared+bank+question");
+    await expect(page.getByText("1 question match")).toBeVisible();
   } finally {
     await ctx.close();
   }
