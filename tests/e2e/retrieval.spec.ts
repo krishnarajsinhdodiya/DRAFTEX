@@ -60,6 +60,11 @@ test("papers are found by text and narrowed by exam, year, status and course", a
 
   // The selects apply at once; Back returns to the previous filters.
   await page.getByRole("link", { name: "Clear" }).click();
+  // Wait for the cleared page: a filter picked on the old one is lost when it loads
+  // (seen on windows-latest, run 42253325270).
+  await expect(page).toHaveURL(/\/papers$/);
+  await expect(search.getByRole("searchbox", { name: "Search" })).toHaveValue("");
+  await expect(page.getByText("1 paper match")).toBeHidden();
   await search.getByLabel("Exam").selectOption({ label: "Sessional" });
   await expect(page).toHaveURL(/group=SESSIONAL/);
   await expect(await papersLink(page, SESSIONAL)).toBeVisible();
