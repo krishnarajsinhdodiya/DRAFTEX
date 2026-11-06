@@ -27,6 +27,8 @@ no chat history must be able to continue from this file alone.
   - SVG uploads scanned every system font on each upload; fonts now load only for drawings with text (`svgNeedsFonts`).
   - `retrieval.spec.ts` picked a filter before the cleared page loaded; it now waits.
 - **E2E cleanup** (`fix/e2e-close-contexts`, merged): specs close the browser contexts they open after each test.
+- **SVG text fonts** (`fix/svg-font-files`, merged): text SVGs use a short list of common font files, not a scan of every font (over 30 s on Windows).
+- **Test database template** (`fix/test-db-template`, merged): Vitest builds the migrated template once in a global setup (`tests/support/db-template.ts`); Windows unit tests went from 57–129 s to 40 s.
 - **Docs**: USER_GUIDE §4 (sub-parts, Print Bloom levels, summary), §6 (export warnings), new screenshot `13-bloom.png`, others taken again; README.
 - **Performance**: before p50/p95 16 ms, max 24 ms, preview p50 441 ms; after p50/p95 16 ms, max 24 ms, preview p50 415 ms.
 - No migration this phase.
@@ -44,7 +46,7 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps (Phase 11, follow docs/ROADMAP-9-12.md WP-D and WP-E)
 1. Session start per the operating rules; branch `phase/11-question-bank` from `main`.
-2. Plan first: D-numbers from D70, each with cost/risk, including the exact sharing rule for bank questions (private by default; per question or per course; admins see no private entries; gate 8). Wait for "go".
+2. Plan first: D-numbers from D72 (D70 and D71 were used after the Phase 10 merge), each with cost/risk, including the exact sharing rule for bank questions (private by default; per question or per course; admins see no private entries; gate 8). Wait for "go".
 3. Bank questions must carry Bloom and a catalogue CO: reuse `bloomSchema`, `coTagSchema` and `coTag()`; the bank's CO check needs the course's outcomes (`coOptions` in `src/server/paper-commands.ts`).
 4. Measure performance before (`node scripts/e2e-server.ts 3212`, then `node scripts/measure-performance.ts http://127.0.0.1:3212`).
 5. Phase 11 adds migrations: regenerate the upgrade fixture from v0.10.0 or add one; the CI upgrade job installs the previous tag automatically.
@@ -55,7 +57,7 @@ no chat history must be able to continue from this file alone.
 - Try one real `update-windows.bat` with the read-only token.
 
 ## Failing tests
-- None. Watch: e2e on windows-latest stalled once in Chromium "Create page" (run 42244287523); specs now close their browser contexts after each test. `upgrade.spec.ts` once timed out on windows-latest (run 42240032839, server never answered in 90 s); it now prints the server output if it happens again.
+- None. `main` CI green on all five jobs at a2739b0. Watch: e2e on windows-latest stalled once in Chromium "Create page" (run 42244287523); specs now close their browser contexts after each test. `upgrade.spec.ts` once timed out on windows-latest (run 42240032839, server never answered in 90 s); it now prints the server output if it happens again.
 
 ## Blockers / risks
 - Not tried on a real Windows machine: double-click flow, Git Credential Manager with the token, real `git pull`, UAC firewall step, `reset-password-windows.bat`. CI covers the scripts headless.
