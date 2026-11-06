@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { describeChar, escapeText, mapMathUnicode } from "@/lib/latex/escape";
 import {
+  Issues,
   formatMarks,
   marksLabel,
   serializePaper,
+  text,
   validateSlotContent,
   type SerializeResult,
 } from "@/lib/latex/serialize";
@@ -203,7 +205,7 @@ describe("serializePaper: content nodes", () => {
     expect(out).toContain(
       "\\question Q?\\dxTail{[BP1.01]}\n  \\vspace{-0.09in}\n  \\begin{multicols}{2}",
     );
-    expect(out).toContain("\\choice a \\choice ");
+    expect(out).toContain("\\choice \\hspace{0pt}a \\choice \\hspace{0pt}");
   });
 
   it("renders choices in one and four columns", () => {
@@ -648,5 +650,71 @@ describe("serializePaper: empty header values", () => {
       ),
     );
     expect(full.tex).toContain("  P {[}BP604T{]} (1)\\par");
+  });
+});
+
+describe("break points in column choices (D61)", () => {
+  const brk = (s: string) => {
+    const issues = new Issues();
+    const out = text(s, issues, undefined, true);
+    return { out, problems: [...issues.list].map((i) => i.message) };
+  };
+
+  it("go after a hyphen, comma or closing bracket inside a word only", () => {
+    expect(brk("N-(4-hydroxyphenyl)acetamide").out).toBe(
+      "N-\\hspace{0pt}(4-\\hspace{0pt}hydroxyphenyl)\\hspace{0pt}acetamide",
+    );
+    expect(brk("3,3-dimethyl").out).toBe("3,3-\\hspace{0pt}dimethyl");
+    expect(brk("amino,hydroxy").out).toBe("amino,\\hspace{0pt}hydroxy");
+    expect(brk("azabicyclo[3.2.0]heptane").out).toBe("azabicyclo{[}3.2.0{]}\\hspace{0pt}heptane");
+  });
+
+  it("leave spaces, dashes, minus signs and sentence punctuation alone", () => {
+    for (const s of ["a, b", "pages 4--5", "-5 to 5", "(a).", "end-", "x - y", "1,000."]) {
+      expect(brk(s).out, s).not.toContain("hspace");
+    }
+  });
+
+  it("never split an escaped character and keep quotes paired", () => {
+    expect(brk("a-\\b,{c}").out).toBe("a-\\hspace{0pt}\\textbackslash{}b,\\hspace{0pt}\\{c\\}");
+    expect(brk('"x-y" and "z"').out).toBe("``x-\\hspace{0pt}y'' and ``z''");
+    expect(brk("bad-😀").problems).toEqual([
+      "This text contains characters that cannot be printed: 😀 (U+1F600).",
+    ]);
+  });
+
+  it("apply to 2 and 4 columns, not to one column or the key", () => {
+    const doc = (columns: 1 | 2 | 4) => ({
+      type: "doc" as const,
+      content: [
+        p("Pick one."),
+        {
+          type: "choices" as const,
+          attrs: { columns },
+          content: ["N-oxide", "B"].map((x) => ({
+            type: "choice" as const,
+            content: [{ type: "text" as const, text: x }],
+          })),
+        },
+      ],
+    });
+    const tex = (columns: 1 | 2 | 4) => {
+      const r = serializePaper({
+        template: pciEndSem4CreditKsv,
+        meta: {},
+        emptySlots: "OMIT",
+        slots: [{ groupKey: "g1", position: 1, content: doc(columns) }],
+      });
+      if (!r.ok) throw new Error("not ok");
+      return r.tex;
+    };
+    expect(tex(1)).toContain("\\choice N-oxide");
+    expect(tex(1)).not.toContain("emergencystretch");
+    for (const c of [2, 4] as const) {
+      expect(tex(c)).toContain("\\choice \\hspace{0pt}N-\\hspace{0pt}oxide");
+      expect(tex(c)).toContain(
+        `\\begin{multicols}{${c}}\\setlength{\\emergencystretch}{3em}\\hbadness=10000`,
+      );
+    }
   });
 });
