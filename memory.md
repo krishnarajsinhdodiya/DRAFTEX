@@ -208,6 +208,8 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-06 · D62: cheap carried fixes: a CSS-only phone pass on the editor at 375 px (anything needing new components is logged), CI ubuntu jobs pinned to `ubuntu-24.04`; the other carried items stay logged · owner approved
 - 2026-11-06 · Upgrade test for Phase 9 onward: a v0.8.0 backup with invented data is committed as a fixture and restored in tests; the Windows install job installs the previous tag first and then updates to the branch · roadmap rule "migrations tested from the previous version"; owner approved with the plan
 
+- 2026-11-06 · Performance before Phase 9 (v0.8.0 code, built app, MacBook Apple silicon, Chromium headless, `scripts/measure-performance.ts`): editor key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 77 over the 16 ms floor); warm preview of a 4-credit end-sem paper p50 432 ms, max 476 ms (5 compiles after a change) · targets < 50 ms and < 3 s
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
