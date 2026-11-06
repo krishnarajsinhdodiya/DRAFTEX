@@ -568,15 +568,16 @@ function subPartsOf(slot: Slot) {
 }
 
 /**
- * D67: sub-parts print their own Bloom and CO only when one of them differs
- * from the question's (unset values fall back to the question's); the
- * question's first line then prints none. Sub-part marks print with
- * "show marks per question".
+ * Where a question's tags go (D67, D70; see subPartTags): on its first line,
+ * or on each sub-part, the first line then printing none. Sub-part marks
+ * print with "show marks per question".
  */
 /**
- * D67: each sub-part's Bloom and CO (unset values follow the question's),
- * or null when none differs from the question's, so the question's own
- * line carries them as before.
+ * Each sub-part's Bloom and CO (unset values follow the question's), or null
+ * when the question's own line carries them. D70: with Bloom shown, every
+ * sub-part line carries its tags. With Bloom off, sub-parts print their own
+ * CO only when one differs from the question's (D67), so papers made before
+ * Phase 10 print as they did.
  */
 export function subPartTags(
   slot: Slot,
@@ -587,11 +588,10 @@ export function subPartTags(
     bloom: p.attrs?.bloom ?? slot.bloomLevel,
     co: p.attrs?.coTag ?? slot.coTag,
   }));
+  if (tags.length === 0) return null;
+  if (style.showBloom) return tags;
   const coShown = group.showCoTag === "SLOT";
-  const differs = tags.some(
-    (e) => (coShown && e.co !== slot.coTag) || (style.showBloom && e.bloom !== slot.bloomLevel),
-  );
-  return differs ? tags : null;
+  return tags.some((e) => coShown && e.co !== slot.coTag) ? tags : null;
 }
 
 function tailsFor(
