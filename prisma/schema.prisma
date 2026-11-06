@@ -61,6 +61,11 @@ enum SnapshotReason {
   EXPORT
 }
 
+enum BankSharing {
+  PRIVATE
+  SHARED
+}
+
 enum BloomLevel {
   REMEMBER
   UNDERSTAND
@@ -100,12 +105,14 @@ model User {
   updatedAt          DateTime @updatedAt
 
   sessions       Session[]
-  invitesCreated InviteCode[] @relation("InviteCreator")
-  invitesUsed    InviteCode[] @relation("InviteUser")
+  invitesCreated InviteCode[]      @relation("InviteCreator")
+  invitesUsed    InviteCode[]      @relation("InviteUser")
   templates      Template[]
   papers         Paper[]
   assets         Asset[]
   questions      Question[]
+  questionUses   QuestionUse[]
+  courseShares   BankCourseShare[]
   auditLogs      AuditLog[]
   loginLocks     LoginLock[]
 }
@@ -187,9 +194,10 @@ model Course {
   /// Page of the PCI 2026 syllabus PDF the course was read from.
   syllabusPage     Int?
 
-  outcomes CourseOutcome[]
-  units    CourseUnit[]
-  papers   Paper[]
+  outcomes  CourseOutcome[]
+  units     CourseUnit[]
+  papers    Paper[]
+  questions Question[]
 }
 
 model CourseOutcome {
@@ -285,6 +293,8 @@ model Paper {
   slots            Slot[]
   compileJobs      CompileJob[]
   snapshots        PaperSnapshot[]
+  bankQuestions    Question[]      @relation("QuestionSource")
+  questionUses     QuestionUse[]
 
   @@index([ownerId, deletedAt])
   @@index([templateId])
@@ -303,7 +313,7 @@ model Slot {
   bloomLevel  BloomLevel?
   answerKey   Json?
   keyCriteria Json?
-  /// Future question bank (SPEC §14); always null in v1.
+  /// The bank question this one was inserted from or added to (Phase 11).
   questionId  String?
 
   paper    Paper     @relation(fields: [paperId], references: [id], onDelete: Cascade)
@@ -313,15 +323,86 @@ model Slot {
 }
 
 /// Future question bank (SPEC §14). Empty in v1.
+/// A question in the bank (Phase 11). Private to its author unless shared on
+/// its own (SHARED) or through a course share (D73). Every column added in
+/// Phase 11 is optional in the database; the data layer requires course code,
+/// CO, Bloom, marks, type and content on every save.
 model Question {
-  id        String   @id @default(uuid())
-  ownerId   String
-  createdAt DateTime @default(now())
+  id            String      @id @default(uuid())
+  ownerId       String
+  createdAt     DateTime    @default(now())
+  /// Catalogue course, when the question is for one (D72).
+  courseId      String?
+  /// The course as printed (catalogue code, or typed for courses outside the
+  /// catalogue); duplicates and course shares go by this code (D72 amended).
+  courseCode    String?
+  courseTitle   String?
+  program       Program?
+  /// Unit number of the course (CourseUnit.number); optional.
+  unit          Int?
+  coTag         String?
+  bloomLevel    BloomLevel?
+  marks         Float?
+  /// Group type the question is written for (OBJECTIVE, SHORT, ...).
+  type          String?
+  /// TipTap JSON, validated by docSchema (same as a slot).
+  content       Json?
+  answerKey     Json?
+  keyCriteria   Json?
+  /// Free tags, a JSON array of strings.
+  tags          Json?
+  /// Duplicate key (D76): SHA-256 of the normalised question.
+  dupKey        String?
+  /// Plain text of the question for search.
+  searchText    String?
+  sharing       BankSharing @default(PRIVATE)
+  /// The paper the question was added from, while it exists.
+  sourcePaperId String?
+  updatedAt     DateTime?   @updatedAt
+  version       Int         @default(1)
+  /// Set when the question is moved to Trash (D82); removed for good 30 days later.
+  deletedAt     DateTime?
 
-  owner User   @relation(fields: [ownerId], references: [id])
-  slots Slot[]
+  owner       User          @relation(fields: [ownerId], references: [id])
+  course      Course?       @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  sourcePaper Paper?        @relation("QuestionSource", fields: [sourcePaperId], references: [id], onDelete: SetNull)
+  slots       Slot[]
+  uses        QuestionUse[]
 
   @@index([ownerId])
+  @@index([ownerId, courseCode, dupKey])
+  @@index([courseCode, sharing])
+}
+
+/// One use of a bank question in a paper (D75); each user sees only their own.
+model QuestionUse {
+  id         String   @id @default(uuid())
+  questionId String
+  userId     String
+  paperId    String?
+  /// The paper's title when the question was used; kept after the paper goes.
+  paperTitle String
+  usedAt     DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paper    Paper?   @relation(fields: [paperId], references: [id], onDelete: SetNull)
+
+  @@index([questionId, userId, usedAt])
+  @@index([userId])
+}
+
+/// "Share all my questions of this course" (D73): covers current and future
+/// ones; by course code so courses outside the catalogue can be shared too.
+model BankCourseShare {
+  ownerId    String
+  courseCode String
+  createdAt  DateTime @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, courseCode])
+  @@index([courseCode])
 }
 
 /// One row per owner and file; the file itself is stored once as assets/<sha256>.<ext>.
