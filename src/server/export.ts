@@ -215,6 +215,8 @@ export async function exportPaper(
   }
   files[OWNER_FILE] = paperId;
   writeFolder(path.join(deps.exportsDir, ...segments), files);
+  // The paper is now Printed, and this version is kept (D55, D57).
+  await deps.data.papers.markPrinted(actor, paperId, (deps.now ?? (() => new Date()))());
 
   const top = segments[2];
   const zippable: Zippable = {};

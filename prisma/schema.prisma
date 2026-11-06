@@ -51,6 +51,14 @@ enum Visibility {
 enum PaperStatus {
   DRAFT
   FINAL
+  /// Set by a successful export only (D55).
+  PRINTED
+}
+
+/// Why a version snapshot was taken (D57).
+enum SnapshotReason {
+  FINAL
+  EXPORT
 }
 
 enum BloomLevel {
@@ -76,20 +84,20 @@ enum CompileStatus {
 }
 
 model User {
-  id                 String    @id @default(uuid())
+  id                 String   @id @default(uuid())
   name               String
   /// Stored lower-cased and trimmed.
-  email              String    @unique
+  email              String   @unique
   passwordHash       String
-  role               Role      @default(FACULTY)
+  role               Role     @default(FACULTY)
   institution        String?
-  isActive           Boolean   @default(true)
+  isActive           Boolean  @default(true)
   /// Set when an admin chose the password; the user must replace it at next sign-in.
-  mustChangePassword Boolean   @default(false)
+  mustChangePassword Boolean  @default(false)
   /// Admin-enabled: the user may add Advanced LaTeX blocks (sanitised) to questions.
-  allowAdvancedLatex Boolean   @default(false)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  allowAdvancedLatex Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   sessions       Session[]
   invitesCreated InviteCode[] @relation("InviteCreator")
@@ -266,14 +274,17 @@ model Paper {
   version              Int         @default(1)
   /// Set when the paper is moved to Trash (D51); removed for good 30 days later.
   deletedAt            DateTime?
+  /// Time of the last successful export (D55).
+  printedAt            DateTime?
 
-  owner            User         @relation(fields: [ownerId], references: [id])
-  template         Template?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  course           Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  derivedFromPaper Paper?       @relation("PaperDerivation", fields: [derivedFromPaperId], references: [id], onDelete: SetNull)
-  derivedPapers    Paper[]      @relation("PaperDerivation")
+  owner            User            @relation(fields: [ownerId], references: [id])
+  template         Template?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  course           Course?         @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  derivedFromPaper Paper?          @relation("PaperDerivation", fields: [derivedFromPaperId], references: [id], onDelete: SetNull)
+  derivedPapers    Paper[]         @relation("PaperDerivation")
   slots            Slot[]
   compileJobs      CompileJob[]
+  snapshots        PaperSnapshot[]
 
   @@index([ownerId, deletedAt])
   @@index([templateId])
@@ -359,4 +370,21 @@ model AuditLog {
   actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([at])
+}
+
+/// A version of a paper kept when it is marked Final or exported (D57).
+/// `data` holds the paper's details, template snapshot, questions and keys;
+/// the PDF is compiled again when the snapshot is viewed. Newest 20 per paper (D58).
+model PaperSnapshot {
+  id        String         @id @default(uuid())
+  paperId   String
+  reason    SnapshotReason
+  /// SHA-256 of `data`, so identical content is not stored twice.
+  sha256    String
+  data      Json
+  createdAt DateTime       @default(now())
+
+  paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId, createdAt])
 }

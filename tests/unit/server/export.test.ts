@@ -133,6 +133,11 @@ describe("exportPaper", () => {
     );
     const history = await t.data.papers.listCompiles(me, paperId);
     expect(history.slice(0, 2).map((h) => h.kind)).toEqual(["KEY", "PAPER"]);
+    // D55, D57: the export marks the paper Printed and keeps this version.
+    expect(await t.data.papers.get(me, paperId)).toMatchObject({ status: "PRINTED" });
+    expect((await t.data.papers.listVersions(me, paperId)).map((v) => v.reason)).toEqual([
+      "EXPORT",
+    ]);
   });
 
   it("replaces the same day's folder and leaves no temporary folder", async () => {

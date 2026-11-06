@@ -16,6 +16,8 @@ let privateTemplateId: string;
 let globalTemplateId: string;
 let paperId: string;
 let slotId: string;
+let versionedPaperId: string;
+let versionId: string;
 const SHA = "a".repeat(64);
 
 async function makeUser(email: string, role: "ADMIN" | "FACULTY"): Promise<Actor> {
@@ -34,6 +36,13 @@ beforeAll(async () => {
   paperId = (await t.data.papers.create(owner, privateTemplateId, paperMeta())).id;
   slotId = (await t.data.papers.saveSlot(owner, paperId, testSlot())).id;
   await t.data.papers.recordCompile(owner, paperId, { kind: "PAPER", status: "SUCCEEDED" });
+  // A Printed paper with a version (D55, D57), kept apart so the paper above stays editable.
+  versionedPaperId = (
+    await t.data.papers.create(owner, privateTemplateId, paperMeta({ courseCode: "ZZ999T" }))
+  ).id;
+  await t.data.papers.saveSlot(owner, versionedPaperId, testSlot());
+  await t.data.papers.markPrinted(owner, versionedPaperId);
+  versionId = (await t.data.papers.listVersions(owner, versionedPaperId))[0]?.id ?? "";
   await t.data.assets.add(owner, {
     sha256: SHA,
     mime: "image/png",
@@ -101,6 +110,35 @@ describe.each([
   it("is missing from lists", async () => {
     expect((await t.data.papers.list(who())).map((p) => p.id)).not.toContain(paperId);
     expect((await t.data.papers.listTrash(who())).map((p) => p.id)).not.toContain(paperId);
+    // Search and filters (D59) only ever look at the actor's own papers.
+    for (const filter of [{}, { q: "Test" }, { year: "2026-27" }, { course: "ZZ999T" }]) {
+      const ids = (await t.data.papers.list(who(), filter)).map((p) => p.id);
+      expect(ids).not.toContain(paperId);
+      expect(ids).not.toContain(versionedPaperId);
+    }
+    expect((await t.data.papers.recent(who())).map((p) => p.id)).not.toContain(paperId);
+    const options = await t.data.papers.filterOptions(who());
+    expect(options.courses.map((c) => c.code)).not.toContain("ZZ999T");
+  });
+
+  it.each([
+    ["list its versions", () => t.data.papers.listVersions(who(), versionedPaperId)],
+    ["open a version", () => t.data.papers.getVersion(who(), versionedPaperId, versionId)],
+    [
+      "restore a version",
+      () => t.data.papers.restoreVersion(who(), versionedPaperId, versionId, "Mine now"),
+    ],
+    ["mark it Printed", () => t.data.papers.markPrinted(who(), paperId)],
+  ])("cannot %s (not found)", async (_op, run) => {
+    await expect(run()).rejects.toEqual(notFound);
+  });
+
+  it("cannot reach the owner's version through a paper of their own", async () => {
+    const own = await t.data.papers.create(who(), globalTemplateId, paperMeta());
+    await expect(t.data.papers.getVersion(who(), own.id, versionId)).rejects.toEqual(notFound);
+    await expect(
+      t.data.papers.restoreVersion(who(), own.id, versionId, "Mine now"),
+    ).rejects.toEqual(notFound);
   });
 
   it.each([

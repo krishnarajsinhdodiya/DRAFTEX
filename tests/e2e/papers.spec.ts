@@ -215,6 +215,10 @@ test("export asks about gaps, then saves the paper and key as a zip", async ({ b
     "paper.tex",
   ]);
   expect(names.filter((n) => n.startsWith("assets/"))).toHaveLength(1);
+  // D55: the export marks the paper Printed; it is read-only until Edit.
+  await expect(
+    page.getByRole("note").filter({ hasText: /This paper is Printed on/ }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Dismiss" }).click();
 });
 
@@ -223,9 +227,10 @@ test("a paper is duplicated with its questions and key for the ATKT exam", async
   await page.goto(paperUrl);
   // The editor is ready (and its buttons work) once the first preview is in.
   await expect(page.getByRole("img", { name: /page 1 of/ })).toBeVisible({ timeout: 60_000 });
-  await page.getByRole("button", { name: "Duplicate", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Duplicate paper" });
-  await expect(dialog.getByLabel("Exam", { exact: true })).toHaveValue("SUPPLEMENTARY_ATKT");
+  await page.getByRole("button", { name: "Duplicate as…" }).click();
+  const dialog = page.getByRole("dialog", { name: "Duplicate as…" });
+  // An end-semester paper suggests its ATKT copy (D60).
+  await expect(dialog.getByRole("radio", { name: /ATKT copy/ })).toBeChecked();
   await expect(dialog.getByLabel("Title of the copy")).toHaveValue(`${TITLE} (ATKT)`);
   await dialog.getByRole("button", { name: "Make the copy" }).click();
   await expect(page).not.toHaveURL(paperUrl);
@@ -312,7 +317,7 @@ test("a deleted paper goes to Trash, comes back with Undo or Restore, and can be
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(page).toHaveURL(/\/papers$/);
   await expect(
-    page.getByRole("link", { name: new RegExp(`^${TITLE} (Draft|Final)`) }),
+    page.getByRole("link", { name: new RegExp(`^${TITLE} (Draft|Final|Printed)`) }),
   ).toBeVisible();
 
   // Delete again, then Restore from the Trash page.

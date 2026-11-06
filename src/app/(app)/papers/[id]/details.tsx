@@ -23,13 +23,11 @@ export function DetailsButton({ view }: { view: PaperEditorView }) {
         semesterOrYear: view.semesterOrYear,
         academicYear: view.academicYear,
         examDate: view.examDate,
-        status: view.status,
       }}
       courses={view.courses}
       unit={view.program === "PHARM_D" ? "Year" : "Semester"}
       submitLabel="Save details"
       pendingLabel="Saving…"
-      showStatus
       onSubmit={(v) => updatePaperDetailsAction(view.id, view.version, v)}
     />
   );

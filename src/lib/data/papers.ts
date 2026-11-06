@@ -1,7 +1,7 @@
 // Papers are always private to their owner in v1 (SPEC §7), admins included.
 // Anything that is not the actor's own paper is "not found".
 import { z } from "zod";
-import type { CompileKind, CompileStatus } from "@/generated/prisma/enums";
+import type { CompileKind, CompileStatus, SnapshotReason } from "@/generated/prisma/enums";
 import { BloomLevel, ExamKind, PaperStatus, Program } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import type { Db } from "@/lib/db/client";
@@ -10,6 +10,8 @@ import { questionNumbers } from "@/lib/paper/numbering";
 import { keyCriteriaSchema } from "@/lib/paper/key";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { type PaperSnapshot, paperSnapshotSchema } from "@/lib/paper/snapshot";
+import { versionDataSchema, versionHash, versionOf } from "@/lib/paper/version";
+import { EXAM_GROUPS, EXAM_GROUP_KEYS } from "@/lib/templates/labels";
 import type { Actor } from "./actor";
 import { assertOwnsAssets, headerUploads, shareAssets } from "./assets";
 import { writeAudit } from "./audit";
@@ -20,6 +22,13 @@ import { storedFields } from "./templates";
 const WHAT = "Paper";
 /** SPEC §6: keep the last 20 compile jobs per paper. */
 export const COMPILE_HISTORY = 20;
+/** D58: keep the newest 20 version snapshots per paper. */
+export const VERSION_HISTORY = 20;
+
+/** D56: Final and Printed papers are read-only until the user chooses Edit. */
+export const PAPER_LOCKED =
+  "This paper is marked Final or Printed. Choose Edit to put it back to Draft before changing it.";
+export const PRINTED_BY_EXPORT = "A paper is marked Printed by exporting it.";
 
 const key = z.string().regex(/^[A-Za-z0-9_-]{1,40}$/);
 
@@ -68,12 +77,24 @@ export const slotInputSchema = z.object({
 });
 export type SlotInput = z.input<typeof slotInputSchema>;
 
-/** "Duplicate paper": a new title, and the exam it is for (ATKT copies, SPEC §1). */
+/** "Duplicate paper": a new title, and the exam it is for (ATKT copies, SPEC §1; D60). */
 export const duplicateInputSchema = z.object({
   title: z.string().trim().min(1, "Give the copy a title.").max(200),
   examKind: z.enum(ExamKind),
   examDate: z.date().nullable().default(null),
+  /** "Next academic year" (D60); the source's year when left out. */
+  academicYear: z.string().trim().max(20).optional(),
 });
+
+/** Papers list search and filters (D59). Every field optional; empty means "any". */
+export const paperFilterSchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  group: z.enum(EXAM_GROUP_KEYS).optional(),
+  year: z.string().trim().max(20).optional(),
+  status: z.enum(PaperStatus).optional(),
+  course: z.string().trim().max(40).optional(),
+});
+export type PaperFilter = z.input<typeof paperFilterSchema>;
 export type DuplicateInput = z.input<typeof duplicateInputSchema>;
 
 export interface CompileRecord {
@@ -98,6 +119,50 @@ export function papers(db: Db) {
     const p = await db.paper.findFirst({ where: { id, ownerId: actor.userId, deletedAt: null } });
     if (!p) throw new NotFoundError(WHAT);
     return p;
+  }
+
+  /** The actor's own paper, if it is a Draft (D56); Final and Printed papers refuse changes. */
+  async function findEditable(actor: Actor, id: string) {
+    const p = await findOwn(actor, id);
+    if (p.status !== "DRAFT") throw new ConflictError(PAPER_LOCKED);
+    return p;
+  }
+
+  /**
+   * Keeps a version of the paper as it is now (D57). Nothing is added when the
+   * newest version has the same content; only the newest VERSION_HISTORY stay.
+   */
+  async function takeVersion(paperId: string, reason: SnapshotReason) {
+    const p = await db.paper.findUniqueOrThrow({
+      where: { id: paperId },
+      include: { slots: true },
+    });
+    const data = versionOf(p, p.slots);
+    const sha256 = versionHash(data);
+    const newest = await db.paperSnapshot.findFirst({
+      where: { paperId },
+      orderBy: { createdAt: "desc" },
+      select: { sha256: true },
+    });
+    if (newest?.sha256 === sha256) return;
+    await db.paperSnapshot.create({ data: { paperId, reason, sha256, data: json(data) } });
+    const old = await db.paperSnapshot.findMany({
+      where: { paperId },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: VERSION_HISTORY,
+      select: { id: true },
+    });
+    if (old.length > 0) {
+      await db.paperSnapshot.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
+    }
+  }
+
+  /** A version of one of the actor's papers (not in Trash), or "not found". */
+  async function findVersion(actor: Actor, paperId: string, versionId: string) {
+    const paper = await findOwn(actor, paperId);
+    const v = await db.paperSnapshot.findFirst({ where: { id: versionId, paperId: paper.id } });
+    if (!v) throw new NotFoundError("Version");
+    return { paper, version: v, data: versionDataSchema.parse(v.data) };
   }
 
   /** The paper's own copy of its template; every slot is checked against it. */
@@ -171,11 +236,61 @@ export function papers(db: Db) {
   }
 
   return {
-    list(actor: Actor) {
+    /**
+     * The actor's papers, most recently edited first, narrowed by search and
+     * filters (D59). The text search runs here, not in SQL: SQLite LIKE treats
+     * % and _ as wildcards and folds only ASCII case; one person's papers are few.
+     */
+    async list(actor: Actor, filter: PaperFilter = {}) {
+      const f = paperFilterSchema.parse(filter);
+      const rows = await db.paper.findMany({
+        where: {
+          ownerId: actor.userId,
+          deletedAt: null,
+          ...(f.group && { examKind: { in: [...EXAM_GROUPS[f.group].kinds] } }),
+          ...(f.year && { academicYear: f.year }),
+          ...(f.status && { status: f.status }),
+          ...(f.course && { courseCode: f.course }),
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+      const q = f.q?.toLocaleLowerCase("en");
+      if (!q) return rows;
+      return rows.filter((p) =>
+        [p.title, p.courseCode, p.courseTitle].some((x) => x.toLocaleLowerCase("en").includes(q)),
+      );
+    },
+
+    /** The last `n` papers the actor edited, for the home screen. */
+    recent(actor: Actor, n = 5) {
       return db.paper.findMany({
         where: { ownerId: actor.userId, deletedAt: null },
         orderBy: { updatedAt: "desc" },
+        take: n,
       });
+    },
+
+    /** What the Papers filters can offer: the years and courses of the actor's own papers. */
+    async filterOptions(actor: Actor) {
+      const where = { ownerId: actor.userId, deletedAt: null };
+      const [years, courses] = await Promise.all([
+        db.paper.findMany({
+          where: { ...where, academicYear: { not: "" } },
+          distinct: ["academicYear"],
+          select: { academicYear: true },
+          orderBy: { academicYear: "desc" },
+        }),
+        db.paper.findMany({
+          where: { ...where, courseCode: { not: "" } },
+          distinct: ["courseCode"],
+          select: { courseCode: true, courseTitle: true },
+          orderBy: { courseCode: "asc" },
+        }),
+      ]);
+      return {
+        years: years.map((y) => y.academicYear),
+        courses: courses.map((c) => ({ code: c.courseCode, title: c.courseTitle })),
+      };
     },
 
     get: findOwn,
@@ -207,6 +322,7 @@ export function papers(db: Db) {
       });
       if (!t) throw new NotFoundError("Template");
       const m = paperMetaSchema.parse(meta);
+      if (m.status === "PRINTED") throw new ConflictError(PRINTED_BY_EXPORT);
       await checkCourse(m.courseId);
       const p = await db.paper.create({
         data: {
@@ -227,9 +343,20 @@ export function papers(db: Db) {
       return p;
     },
 
+    /**
+     * Changes the paper's details. A Final or Printed paper accepts only
+     * {status: "DRAFT"} ("Edit", D56); Printed is set by export only (D55).
+     * Marking a paper Final keeps a version of it (D57).
+     */
     async update(actor: Actor, id: string, version: number, patch: PaperPatch) {
-      await findOwn(actor, id);
+      const before = await findOwn(actor, id);
       const m = parsePatch(paperPatchSchema, patch);
+      if (m.status === "PRINTED") throw new ConflictError(PRINTED_BY_EXPORT);
+      const reopen = before.status !== "DRAFT" && m.status === "DRAFT";
+      if (before.status !== "DRAFT") {
+        const others = Object.keys(m).filter((k) => k !== "status");
+        if (!reopen || others.length > 0) throw new ConflictError(PAPER_LOCKED);
+      }
       await checkCourse(m.courseId);
       const { instructionsOverride, ...rest } = m;
       const { count } = await db.paper.updateMany({
@@ -243,8 +370,102 @@ export function papers(db: Db) {
         },
       });
       if (count === 0) throw new ConflictError(STALE_VERSION);
-      await writeAudit(db, { actorId: actor.userId, action: "update", entity: WHAT, entityId: id });
+      await writeAudit(db, {
+        actorId: actor.userId,
+        action: reopen ? "reopen" : "update",
+        entity: WHAT,
+        entityId: id,
+      });
+      if (before.status !== "FINAL" && m.status === "FINAL") await takeVersion(id, "FINAL");
       return findOwn(actor, id);
+    },
+
+    /**
+     * After a successful export (D55): the paper becomes Printed with the time,
+     * and a version is kept (D57). Returns the new version number.
+     */
+    async markPrinted(actor: Actor, id: string, at: Date = new Date()) {
+      await findOwn(actor, id);
+      const p = await db.paper.update({
+        where: { id },
+        data: { status: "PRINTED", printedAt: at, version: { increment: 1 } },
+      });
+      await writeAudit(db, { actorId: actor.userId, action: "print", entity: WHAT, entityId: id });
+      await takeVersion(id, "EXPORT");
+      return p.version;
+    },
+
+    /** The paper's versions, newest first (D57); content is read only when one is opened. */
+    async listVersions(actor: Actor, paperId: string) {
+      await findOwn(actor, paperId);
+      return db.paperSnapshot.findMany({
+        where: { paperId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true, reason: true, createdAt: true },
+      });
+    },
+
+    /** One version's content, e.g. to compile it as a PDF. */
+    async getVersion(actor: Actor, paperId: string, versionId: string) {
+      const { version, data } = await findVersion(actor, paperId, versionId);
+      return { id: version.id, reason: version.reason, createdAt: version.createdAt, data };
+    },
+
+    /** Restores a version as a new Draft paper with no date (D57), linked to its paper. */
+    async restoreVersion(actor: Actor, paperId: string, versionId: string, title: string) {
+      const { paper, data } = await findVersion(actor, paperId, versionId);
+      const t = z.string().trim().min(1, "Give the copy a title.").max(200).parse(title);
+      const v = data.paper;
+      // The course and template may have gone since; the copy keeps its own snapshot either way.
+      const course = v.courseId
+        ? await db.course.findUnique({ where: { id: v.courseId }, select: { id: true } })
+        : null;
+      const template = v.templateId
+        ? await db.template.findUnique({ where: { id: v.templateId }, select: { id: true } })
+        : null;
+      const copy = await db.$transaction(async (tx) => {
+        const p = await tx.paper.create({
+          data: {
+            ownerId: actor.userId,
+            templateId: template?.id ?? null,
+            templateSnapshot: json(v.templateSnapshot),
+            title: t,
+            courseId: course?.id ?? null,
+            courseCode: v.courseCode,
+            courseTitle: v.courseTitle,
+            program: v.program,
+            semesterOrYear: v.semesterOrYear,
+            examKind: v.examKind,
+            academicYear: v.academicYear,
+            examDate: null,
+            instructionsOverride: nullableJson(v.instructionsOverride),
+            status: "DRAFT",
+            derivedFromPaperId: paper.id,
+          },
+        });
+        await tx.slot.createMany({
+          data: data.slots.map((x) => ({
+            paperId: p.id,
+            partKey: x.partKey,
+            groupKey: x.groupKey,
+            position: x.position,
+            content: json(x.content),
+            marks: x.marks,
+            coTag: x.coTag,
+            bloomLevel: x.bloomLevel,
+            answerKey: nullableJson(x.answerKey),
+            keyCriteria: nullableJson(x.keyCriteria),
+          })),
+        });
+        return p;
+      });
+      await writeAudit(db, {
+        actorId: actor.userId,
+        action: "restore-version",
+        entity: WHAT,
+        entityId: copy.id,
+      });
+      return copy;
     },
 
     /** Moves the paper to Trash (D51); restore brings it back, purge removes it for good. */
@@ -313,7 +534,7 @@ export function papers(db: Db) {
      * (a user whose permission was turned off may keep, but not add, blocks).
      */
     async saveSlot(actor: Actor, paperId: string, input: SlotInput) {
-      const paper = await findOwn(actor, paperId);
+      const paper = await findEditable(actor, paperId);
       const s = slotInputSchema.parse(input);
       const { partKey } = placeIn(snapshotOf(paper), s);
       if (s.partKey !== undefined && s.partKey !== partKey) throw new NotFoundError("Question");
@@ -377,7 +598,7 @@ export function papers(db: Db) {
             program: src.program,
             semesterOrYear: src.semesterOrYear,
             examKind: d.examKind,
-            academicYear: src.academicYear,
+            academicYear: d.academicYear ?? src.academicYear,
             examDate: d.examDate,
             instructionsOverride: nullableJson(src.instructionsOverride),
             status: "DRAFT",
@@ -411,7 +632,7 @@ export function papers(db: Db) {
 
     /** Empties the question at (group, position). Clearing an empty one is fine. */
     async clearSlot(actor: Actor, paperId: string, place: SlotPlace) {
-      const paper = await findOwn(actor, paperId);
+      const paper = await findEditable(actor, paperId);
       const p = slotPlaceSchema.parse(place);
       const { partKey } = placeIn(snapshotOf(paper), p);
       await db.slot.deleteMany({ where: { paperId, partKey, ...p } });
@@ -423,7 +644,7 @@ export function papers(db: Db) {
      * takes its old place. The marks follow the place, not the question.
      */
     async moveSlot(actor: Actor, paperId: string, from: SlotPlace, to: SlotPlace) {
-      const paper = await findOwn(actor, paperId);
+      const paper = await findEditable(actor, paperId);
       const snapshot = snapshotOf(paper);
       const a = slotPlaceSchema.parse(from);
       const b = slotPlaceSchema.parse(to);
@@ -464,7 +685,7 @@ export function papers(db: Db) {
 
     /** Copies a question into the next empty place of its group; returns that place. */
     async duplicateSlot(actor: Actor, paperId: string, place: SlotPlace) {
-      const paper = await findOwn(actor, paperId);
+      const paper = await findEditable(actor, paperId);
       const snapshot = snapshotOf(paper);
       const p = slotPlaceSchema.parse(place);
       const { partKey, group } = placeIn(snapshot, p);
