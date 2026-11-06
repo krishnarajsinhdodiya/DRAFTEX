@@ -227,6 +227,7 @@ describe("saving (D72 amended, D77, D85)", () => {
   it("warns, never blocks, on a duplicate written by hand (D76)", async () => {
     const r = await t.data.bank.create(a, fields("PRIVATE  invented question."));
     expect(r.duplicates).toEqual([{ id: q1, deletedAt: null }]);
+    expect((await t.data.bank.get(a, r.question.id)).duplicates).toBe(1);
     await t.data.bank.remove(a, r.question.id);
   });
 

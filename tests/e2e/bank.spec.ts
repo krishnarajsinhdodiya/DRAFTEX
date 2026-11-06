@@ -129,6 +129,27 @@ test("the author does not see the colleague's use (D75)", async ({ browser }) =>
   await expect(page.getByText(/Invented Colleague Paper/)).toHaveCount(0);
 });
 
+test("a question written on the Bank page saves with syllabus defaults (D85)", async ({
+  browser,
+}) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto("/bank/new");
+  await page.getByLabel("Course code").fill("BP604T");
+  // The syllabus fills the title; the CO is free text with suggestions.
+  await expect(page.getByLabel("Course title")).not.toHaveValue("");
+  await page.getByLabel("CO", { exact: true }).fill("BP604T.09");
+  await page.getByLabel("Bloom level").selectOption({ label: "Analyse" });
+  await page.getByLabel("Marks").fill("5");
+  await page.getByRole("textbox", { name: "Question text" }).click();
+  await page.keyboard.type("Invented question written on the Bank page.");
+  await page.getByRole("button", { name: "Add to bank" }).click();
+  await expect(page.getByText("Saved. The question is in your bank.")).toBeVisible();
+  await expect(
+    page.getByText("CO BP604T.09 is not in the syllabus list for BP604T."),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/bank\/[0-9a-f-]{36}\?saved=1$/);
+});
+
 test("CSV import previews row by row, saves the valid rows, reports the rest", async ({
   browser,
 }) => {

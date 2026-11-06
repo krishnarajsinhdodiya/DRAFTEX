@@ -345,8 +345,14 @@ export function bank(db: Db) {
             where: { ownerId: q.ownerId, courseCode: q.courseCode },
           })) > 0
         : false;
+      const duplicates =
+        q.ownerId === actor.userId && q.courseCode && q.dupKey
+          ? (await duplicatesOf(actor, q.courseCode, q.dupKey, q.id)).length
+          : 0;
       return {
         ...shape(q),
+        /** The author's other questions with the same text in this course, Trash included (D76). */
+        duplicates,
         /** A CO or unit outside the syllabus lists (D85), shown as a note. */
         warnings: q.coTag
           ? bankCheck(

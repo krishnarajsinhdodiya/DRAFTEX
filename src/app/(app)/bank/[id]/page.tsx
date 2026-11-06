@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/badge";
+import { FormAlert } from "@/components/form";
 import { StaticDoc } from "@/components/editor/static-doc";
 import { eyebrowStyles, linkStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
 import { actorOf } from "@/lib/auth/service";
@@ -18,9 +19,16 @@ export const metadata: Metadata = { title: "Question · DRAFTEX" };
 
 const day = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" });
 
-export default async function QuestionPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function QuestionPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { user } = await requireUser();
   const { id } = await params;
+  const justSaved = (await searchParams).saved === "1";
   const commands = bankCommands(await getData(), actorOf(user));
   let q: Awaited<ReturnType<typeof commands.get>>;
   try {
@@ -124,6 +132,14 @@ export default async function QuestionPage({ params }: { params: Promise<{ id: s
         </div>
         <TrashQuestionButton id={q.id} />
       </div>
+      {justSaved ? (
+        <FormAlert kind={q.warnings.length || q.duplicates ? "caution" : "notice"}>
+          Saved. The question is in your bank.
+          {q.duplicates
+            ? ` You already have ${q.duplicates === 1 ? "a question" : `${q.duplicates} questions`} with the same text in this course (Trash included).`
+            : ""}
+        </FormAlert>
+      ) : null}
       {q.warnings.length ? (
         <ul className="-mb-2 list-disc pl-5 text-small text-caution">
           {q.warnings.map((w) => (

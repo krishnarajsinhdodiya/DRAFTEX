@@ -65,14 +65,13 @@ export async function searchBankAction(filter: unknown) {
   return (await commands()).list(filter);
 }
 
+// The two editor actions below do not revalidate: the editor keeps its own
+// state (a refresh would remount it and drop the report), and every page
+// renders per request anyway.
 export async function addToBankAction(paperId: string, place?: unknown) {
-  const r = await (await commands()).addFromPaper(paperId, place);
-  if (r.ok) revalidatePath("/bank");
-  return r;
+  return (await commands()).addFromPaper(paperId, place);
 }
 
 export async function insertFromBankAction(questionId: string, paperId: string, place: unknown) {
-  const r = await (await commands()).insert(questionId, paperId, place);
-  if (r.ok) revalidatePath(`/papers/${paperId}`);
-  return r;
+  return (await commands()).insert(questionId, paperId, place);
 }

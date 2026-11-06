@@ -73,7 +73,7 @@ export function QuestionForm({
   const router = useRouter();
   const ids = useId();
   const [v, setV] = useState(initial);
-  const [id, setId] = useState(initialId);
+  const id = initialId;
   const [version, setVersion] = useState(initialVersion);
   const [savedShared, setSavedShared] = useState(initial.shared);
   const [focused, setFocused] = useState<EditorHandle | null>(null);
@@ -130,12 +130,13 @@ export function QuestionForm({
         if (s.ok) setSavedShared(v.shared);
         else setError({ message: s.message, issues: [] });
       }
+      if (id === null) {
+        // The question's own page says "Saved" and lists its warnings and duplicates.
+        router.replace(`/bank/${r.value.id}?saved=1`);
+        return;
+      }
       setNotice({ warnings: r.value.warnings, duplicates: r.value.duplicates });
       setVersion(r.value.version);
-      if (id === null) {
-        setId(r.value.id);
-        window.history.replaceState(null, "", `/bank/${r.value.id}`);
-      }
       router.refresh();
     });
 
