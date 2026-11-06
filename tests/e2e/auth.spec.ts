@@ -4,11 +4,13 @@
 // All accounts and passwords here are invented test values.
 import { type Browser, type Page, expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { ADMIN, FACULTY, JOINER, asUser, signIn } from "./support";
+import { ADMIN, asUser, closeOpenContexts, FACULTY, JOINER, signIn } from "./support";
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
 
 test.describe.configure({ mode: "serial" });
+
+test.afterEach(closeOpenContexts);
 
 let inviteCode = "";
 

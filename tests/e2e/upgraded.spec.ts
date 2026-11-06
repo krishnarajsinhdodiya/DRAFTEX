@@ -4,9 +4,11 @@
 // administrator signs in, and a paper uses what the new migrations added
 // (Final lock and versions, D56-D57). Only runs when DRAFTEX_E2E_URL is set.
 import { expect, test } from "@playwright/test";
-import { ADMIN } from "./support";
+import { ADMIN, closeOpenContexts } from "./support";
 
 test.describe.configure({ mode: "serial", timeout: 180_000 });
+
+test.afterEach(closeOpenContexts);
 
 test("the updated copy keeps its administrator and makes a Final paper", async ({ page }) => {
   await page.goto("/login");

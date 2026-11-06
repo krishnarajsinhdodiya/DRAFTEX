@@ -22,8 +22,24 @@ export const JOINER = {
 /** Content Security Policy violations seen on any page these helpers opened (SPEC §11.6). */
 export const cspViolations: string[] = [];
 
+/** Browser contexts the helpers opened; closed after each test (closeOpenContexts). */
+const open = new Set<BrowserContext>();
+
+/**
+ * Closes every context the helpers opened. Each spec registers it with
+ * test.afterEach: one worker keeps one Chromium for the whole run, and dozens
+ * of open tabs once stalled "Create page" for 30 s on windows-latest
+ * (run 42244287523).
+ */
+export async function closeOpenContexts(): Promise<void> {
+  const all = [...open];
+  open.clear();
+  await Promise.all(all.map((c) => c.close().catch(() => {})));
+}
+
 /** Collects CSP violations Chromium reports on this page's console. */
 export function watchCsp(page: Page): Page {
+  open.add(page.context());
   page.on("console", (m) => {
     if (/Content Security Policy/i.test(m.text())) cspViolations.push(`${page.url()}: ${m.text()}`);
   });
