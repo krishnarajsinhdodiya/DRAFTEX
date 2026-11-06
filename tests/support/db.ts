@@ -2,11 +2,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import Database from "better-sqlite3";
+import { inject } from "vitest";
 import { dataLayer, type DataLayer } from "@/lib/data";
 import { type Db, openDatabase } from "@/lib/db/client";
-
-const MIGRATIONS = path.resolve(import.meta.dirname, "../../prisma/migrations");
 
 export interface TestDb {
   db: Db;
@@ -15,34 +13,14 @@ export interface TestDb {
   close: () => Promise<void>;
 }
 
-export function applyMigrations(file: string): void {
-  const sqlite = new Database(file);
-  try {
-    const dirs = fs
-      .readdirSync(MIGRATIONS, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .map((d) => d.name)
-      .sort();
-    for (const d of dirs)
-      sqlite.exec(fs.readFileSync(path.join(MIGRATIONS, d, "migration.sql"), "utf8"));
-  } finally {
-    sqlite.close();
-  }
-}
+export { applyMigrations } from "./migrations";
 
-/** One migrated database per test worker; each test database is a copy of it. */
-let migrated: string | undefined;
+/** The migrated template built once by the global setup (tests/support/db-template.ts). */
 function migratedTemplate(): string {
-  if (migrated && fs.existsSync(migrated)) return migrated;
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "draftex-db-template-"));
-  const file = path.join(dir, "data.db");
-  applyMigrations(file);
-  // Fold any journal into the main file so a plain copy is complete.
-  const db = new Database(file);
-  db.pragma("journal_mode = DELETE");
-  db.close();
-  process.once("exit", () => fs.rmSync(dir, { recursive: true, force: true }));
-  migrated = file;
+  const file = inject("dbTemplate");
+  if (!file || !fs.existsSync(file)) {
+    throw new Error("No migrated template database: run the tests through vitest's config.");
+  }
   return file;
 }
 

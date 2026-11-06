@@ -10,6 +10,7 @@ export default defineConfig({
   test: {
     include: ["tests/golden/**/*.test.ts"],
     environment: "node",
+    globalSetup: ["tests/support/db-template.ts"],
     testTimeout: 300_000,
     hookTimeout: 300_000,
     fileParallelism: false,
