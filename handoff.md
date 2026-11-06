@@ -4,70 +4,72 @@ Replace this whole file at the end of every session. A fresh session with
 no chat history must be able to continue from this file alone.
 
 ## Status
-- **Date:** 2026-11-04
-- **Current phase:** 8 Installers + docs: done. Next: Phase 9 Polish.
-- **Branch:** `main` only (Phase 8 merged with `--no-ff` from `phase/8-installers-docs`, tagged `v0.8.0`; branch deleted locally and on GitHub)
+- **Date:** 2026-11-06
+- **Current phase:** 9 Polish + paper retrieval: done. Next: Phase 10 Bloom and CO on the printed paper (brief in `docs/ROADMAP-9-12.md`, WP-C).
+- **Branch:** `main` only (Phase 9 merged with `--no-ff` from `phase/9-polish`, tagged `v0.9.0`; branch deleted locally and on GitHub)
 - **Last green commit:** latest `main`
-- **CI:** `commit-hygiene` + `checks (ubuntu-latest)` + `checks (windows-latest)` + new `install (windows-latest)` (gate 10), green on the phase branch before the merge.
+- **CI:** `commit-hygiene`, `checks (ubuntu-24.04)`, `checks (windows-latest)`, `install (windows-latest)` (gate 10) and the new `upgrade (windows-latest)`.
 
-## Done this session (Phase 8)
-- Deviations D42–D48 approved before the phase; D43 amended during it (owner chose the portable Node archive: winget has no 24.22.2).
-- **Installers** (repo root): `setup-windows.bat` → `setup-windows.ps1`, `start-windows.bat`, `update-windows.bat` → `update-windows.ps1`, `setup-macos.sh`, `start-macos.command`, `update-macos.sh`.
-  - Setup: download Node 24.22.2 from nodejs.org, check the pinned SHA-256, unpack into `.runtime/node` (git-ignored, no admin) → `npm ci` → `scripts/install.ts` (data folder + cloud-sync warning, migrations, Tectonic + warm-up, `next build`, telemetry off) → desktop shortcut (`DRAFTEX.lnk` with `assets/draftex.ico`; `~/Desktop/DRAFTEX.command` on macOS). Idempotent.
-  - Start: `node scripts/start.ts --open` opens the browser when the app answers, or only the browser if DRAFTEX already runs; `DRAFTEX_NO_BROWSER=1` skips it. Window close (SIGHUP) now stops cleanly.
-  - Update: `scripts/update-check.ts` (refuses while running or with edited tracked files) → `backup.ts --kind before-update` → `git pull --ff-only` → the new setup script. Written so `git pull` changing the script mid-run is harmless.
-  - `tests/unit/install/scripts.test.ts` keeps the Node pin = `.nvmrc` with the official checksums, the order check → backup → pull, ASCII-only Windows files, line endings and exec bits.
-- **Move data folder** (D45): `npm run move-data -- <folder>` (`src/lib/install/move.ts`): app stopped, copy, SHA-256 compare, rewrite `draftex.local.json`, old folder kept.
-- Lock helpers moved to `src/lib/lock.ts` (re-exported by `src/lib/backup/run.ts`).
-- Setup prints a count of expected warm-up notes instead of hundreds of font lines (`--verbose` lists them).
-- **Docs:** `README.md` (developers) and `docs/USER_GUIDE.md` (plain English, 10 screenshots in `docs/user-guide/`, made by `scripts/guide-screenshots.ts` with invented data). The guide says plainly: never open the router/internet, LAN mode is unencrypted, backups and exports hold unreleased papers, how to recover from server mode, and the installer's steps (Git for Windows, read-only fine-grained token, clone, setup) with measured times.
-- **Gate 10** (`install (windows-latest)` job): clean checkout → `setup-windows.bat` → shortcut and unchanged checkout checked → `start-windows.bat` → `smoke.spec.ts` + new `installed.spec.ts` (first-run admin, built-in template compiles) against port 3210 via `DRAFTEX_E2E_URL` → stop → `update-windows.bat -NoPull` → before-update backup exists → starts again.
-- Tests: unit 768 (was 747), e2e 38 locally + 4 in the install job, golden 40 + 22 visual on ubuntu (unchanged).
+## Done this session (Phase 9)
+- **D53**: roadmap extended to Phases 10–12; the owner's brief is `docs/ROADMAP-9-12.md` (every later phase reads it); SPEC §4, §6, §13, §14 amended.
+- **D54–D62 approved** (snapshot cap 20; YEAR_END in End-semester by default).
+- **WP-B paper retrieval**
+  - Additive migration `20261106090000_paper_snapshots`: `PaperStatus.PRINTED`, `Paper.printedAt`, table `PaperSnapshot` (cascade with the paper).
+  - Data layer `src/lib/data/papers.ts`: `list(actor, filter)` (search in JS, filters in SQL), `recent`, `filterOptions`, `findEditable` lock on every write (`PAPER_LOCKED`), `update` handles reopen/Final (version on Final), `markPrinted` (export), `listVersions` / `getVersion` / `restoreVersion`, `duplicate` with `academicYear`.
+  - Version data: `src/lib/paper/version.ts`; PDF: `src/server/version-pdf.ts` + `GET /api/papers/[id]/versions/[versionId]` (`?kind=key`, `?download=1`).
+  - UI: `papers/page.tsx` (search + filters in the URL), `papers/paper-list.tsx` (shared with home Recent papers), editor `status.tsx` (Mark as Final, read-only banner + Edit confirmation, Versions dialog with restore), `export-duplicate.tsx` (Duplicate as…: next year / ATKT / another).
+  - Labels: `EXAM_GROUPS`, `PAPER_STATUS_LABEL` in `src/lib/templates/labels.ts`; `nextAcademicYear` in `src/lib/paper/academic-year.ts`.
+- **WP-A polish**
+  - Performance measured before and after (`scripts/measure-performance.ts`, figures in memory.md).
+  - D61 long chemical names in column choices (LaTeX and the editor's HTML).
+  - D62 phone pass on the editor; ubuntu runners pinned to 24.04.
+  - Design review + break-ui: findings below.
+- **Upgrade tests**: `tests/e2e/upgrade.spec.ts` with `tests/fixtures/upgrade/v0.8.0-*` (rows unchanged, export pixel-identical to v0.8.0's); CI job `upgrade (windows-latest)` (previous tag → its setup → update-windows.bat → `upgraded.spec.ts`).
+- Docs: USER_GUIDE §3, §4 (Final and Printed, Versions), §6, §7 (Duplicate as…, Finding a paper), screenshots regenerated (new 11-papers, 12-versions); README scripts and upgrade testing.
+- Tests: unit 831 (was 787), e2e 50 locally (+ upgrade spec) + 4 in the install job + 2 in the upgrade job, golden 42 + 22 visual on ubuntu (no baseline changed).
 
-## Measured install times (D48)
-- macOS (Apple silicon), clean clone, no system Node on PATH: **5.0 min** (LaTeX first download 4.6 min). Update with a real `git pull` from a local clone: 24 s.
-- windows-latest, clean checkout: setup **2.8 min** with the LaTeX cache restored (Node download 6 s); update 1.6 min. A first install adds the 4–5 min LaTeX download.
-- Father's laptop: **not timed** (owner to do; guide says expect 10–15 min).
-
-## After the phase (fixes on `main`)
-- `fix/e2e-equation-locator`: the Windows e2e failure on `main` after the restore-config merge was a test race (MathLive copies the "Equation" label into its shadow input); tests now select `math-field[aria-label="Equation"]`.
-- `fix/carried-issues`: superseded previews answered 500 (cross-bundle `instanceof`) → now 409, with an e2e test; Turbopack whole-project tracing warning gone; admin header stays on one line down to 900 px; restore uploads are capped by real inflated size.
-- End user's laptop is Windows 11 (memory.md).
-- `fix/setup-network-retries`: first real install on the father's Windows 11 laptop failed at `npm ci` (ECONNRESET); setup now retries and warns about ZIP copies and Downloads folders; guide §13 says not to use Download ZIP and what to do on network errors. **The laptop copy must be redone as a `git clone` into `C:\DRAFTEX`.**
-- `fix/delete-and-uninstall` (owner request after the first real install worked): admins delete/restore built-in templates (D50, blank built-in stays), paper Trash with Undo, Restore, Delete forever and a 30-day purge (D51, migration `paper_trash`), and `uninstall-windows.bat` / `uninstall-macos.sh` that keep the data folder (D52). Gate 10 now also runs the uninstall. Guide §4, §8 and new §14.
-- `fix/sole-admin-lockout` (D49): offline password reset (`npm run reset-password -- <email>`, `reset-password-windows.bat`), applied at the next start; user guide §12 explains it.
+## Design review and break-ui (Phase 9)
+- Fixed: disabled fields in a Final paper looked editable; Activity had no words for print / reopen / restore-version; Versions dialog pushed Close off-screen with 20 versions; copy names lost their suffix at 200 characters; phone filters one per row; editor title collapsed at 900 px; phone editor cramped (title, columns, icon-only header below 640 px); editor choice columns let long names overflow.
+- Checked and fine: every colour token pair WCAG AA in light and dark (lowest 4.78:1 tertiary text on sunk); 250 papers render without pagination; long titles, course codes at 40 characters, one-letter titles, odd academic-year text.
+- Logged, not fixed: four-column choices still overflow on unsplittable pieces (use two columns); the papers list is not paginated (a teacher makes tens of papers a year; revisit past ~1,000); admin top navigation scrolls sideways on a phone (unchanged since Phase 7).
 
 ## In progress
 - Nothing half-done.
 
-## Next steps (Phase 9, Polish; follow SPEC §13)
-1. Session start per the operating rules; branch `phase/9-polish` from `main`.
-2. `/apple-design` full review and `/break-ui` across all screens; close findings or log them with reasons.
-3. Performance: editor input latency < 50 ms, preview < 3 s warm; measure and record.
-5. Owner tasks before handing the laptop over (not code): install on the real Windows laptop with the guide's §13 and time it; try the firewall helper once (UAC prompt, rule created, rule removed); try one real `update-windows.bat` with the token.
+## Next steps (Phase 10, follow docs/ROADMAP-9-12.md WP-C)
+1. Session start per the operating rules; branch `phase/10-bloom-co` from `main`.
+2. Plan first: D-numbers from D63, each with cost/risk; wait for "go". Ask the owner the Bloom wording (names or L1–L6) before building the label table.
+3. Measure performance before (`node scripts/e2e-server.ts 3212` then `node scripts/measure-performance.ts http://127.0.0.1:3212`).
+4. The upgrade fixture for Phase 10 should be regenerated from v0.9.0 (`scripts/make-upgrade-fixture.ts` against a v0.9.0 worktree build) or kept at v0.8.0 and a v0.9.0 one added; the CI upgrade job picks the previous tag automatically.
+
+## Owner tasks (not code)
+- Install on the father's Windows 11 laptop as a `git clone` into `C:\DRAFTEX` (guide §13) and time it.
+- Try the firewall helper once (UAC prompt, rule created, rule removed).
+- Try one real `update-windows.bat` with the read-only token.
+- Confirm the Bloom wording for printed papers (names or L1–L6) and the CO format for electives (`BP607T` vs `BP607T AEC1`).
+- Note: papers he marked Final before this update now open read-only; Edit puts them back to Draft.
 
 ## Failing tests
 - None.
 
 ## Blockers / risks
-- **Not tried on a real Windows machine:** double-click flow (execution policy bypass, console window, `rundll32` browser open, closing the console window → SIGHUP), Git Credential Manager with a fine-grained token, real `git pull` on Windows, and the UAC firewall step. CI covers the scripts headless.
-- Offline password reset (D49) is tested on macOS and by unit tests; `reset-password-windows.bat` has not been run on Windows (CI checks it is ASCII only).
-- **LAN mode is plain HTTP** (D40). **Server mode locks out direct access**; recovery documented (set `"mode": "local"` in `config.json`).
-- The GitHub token on the end user's machine expires; updates then fail with "could not be downloaded" (guide explains renewal).
-- Carried over: restore needs a restart; long chemical names in 2/4-column choices; cramped phone editor; same question in two windows is last-write-wins; bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (always sanitise); ESLint 10 overrides; `ubuntu-latest` moves to Ubuntu 26; npm warns that `fsevents` has unapproved install scripts (macOS optional dependency, harmless).
+- Not tried on a real Windows machine: double-click flow, Git Credential Manager with the token, real `git pull`, UAC firewall step, `reset-password-windows.bat`. CI covers the scripts headless.
+- LAN mode is plain HTTP (D40). Server mode locks out direct access (recovery documented).
+- The GitHub token on the end user's machine expires; updates then fail (guide explains renewal).
+- Carried: restore needs a restart (D28); same question in two windows is last-write-wins (the Final lock is server-enforced, editing is not merged); bundle host `data1b.fullyjustified.net`; Times not offered; `--untrusted` still allows `\input` of absolute paths (Phase 12 security review); ESLint 10 overrides; npm warns about `fsevents` install scripts (harmless).
 
 ## Decisions made (copied to memory.md)
-- D42–D48 (D43 amended: portable Node archive), Git not installed by setup, SIGHUP handling, ASCII-only Windows scripts and mid-run-safe update scripts, quiet warm-up notes, CI-only `cache/` from Next telemetry, screenshot script, icon, sole-admin recovery gap.
+- D53–D62, upgrade testing approach, performance before/after, D61 as built and its 4-column limit, JS-side search, Final papers read-only after update, version PDF route, CI upgrade job, phone header, worst-case retrieval seed.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`, git-ignored). Run `npm run db:migrate` once (new migration `paper_trash`); the father's laptop gets it through `update-windows.bat`.
-- Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"` before npm commands (the dev checkout does not use `.runtime/`; `./setup-macos.sh` would create it).
-- `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215, LAN), `draftex-dev-throwaway` (3216, dev). E2E uses 3211, restore 3214, server mode 3218. Guide screenshots: `node scripts/e2e-server.ts 3210` then `node scripts/guide-screenshots.ts http://127.0.0.1:3210` (only when the real app is not running).
-- Throwaway install test leftovers may exist in `/tmp/draftex-install-test`, `/tmp/draftex-install-data`, `/tmp/draftex-moved` (safe to delete).
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`). Run `npm run db:migrate` once (new migration `paper_snapshots`).
+- Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"`.
+- `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216). E2E 3211, restore 3214, server mode 3218, v0.8.0 fixture server 3219, upgrade spec 3220.
+- A v0.8.0 worktree may remain at `/tmp/draftex-v080` (`git worktree remove /tmp/draftex-v080` to drop it).
 
 ## Questions for owner
-- Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`?
-- How does your father tag COs of elective options? The default is `BP607TAEC1.01`.
+- Bloom wording on printed papers: names or L1–L6?
+- Which code does KSV print on an elective paper: `BP607T` or `BP607T AEC1`? How are elective COs tagged?
 - Later: should the app offer Times at all?
 
 ## Phase checklist
@@ -80,7 +82,7 @@ no chat history must be able to continue from this file alone.
 - [x] 6 Answer keys + exports + files
 - [x] 7 Network modes + hardening
 - [x] 8 Installers + docs
-- [ ] 9 Polish + paper retrieval (docs/ROADMAP-9-12.md)
+- [x] 9 Polish + paper retrieval (docs/ROADMAP-9-12.md)
 - [ ] 10 Bloom and CO on the printed paper
 - [ ] 11 Question bank + CSV import
 - [ ] 12 Advanced LaTeX packages

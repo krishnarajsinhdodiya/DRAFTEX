@@ -210,6 +210,15 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 
 - 2026-11-06 · Performance before Phase 9 (v0.8.0 code, built app, MacBook Apple silicon, Chromium headless, `scripts/measure-performance.ts`): editor key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 77 over the 16 ms floor); warm preview of a 4-credit end-sem paper p50 432 ms, max 476 ms (5 compiles after a change) · targets < 50 ms and < 3 s
 
+- 2026-11-06 · Performance after Phase 9 (same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, ~180 over the 16 ms floor, was 77; none above 24 ms); warm preview p50 418 ms, max 434 ms · targets met; watch the over-16 ms count in Phase 10
+- 2026-11-06 · D61 as built: column choices (2/4) get `\hspace{0pt}` before each option (TeX never hyphenates the first word after the label box) and after - , ) ] inside words (not after a comma before a digit), `\emergencystretch` 3em and `\hbadness=10000` inside the multicols; one column and keys unchanged; all 21 golden fixtures pixel-identical before/after. Four columns (~85 pt) still overflow on pieces the patterns cannot split (carboxymethyl-, isobutylphenyl)) and keep their note · tests/golden/chemical-names.test.ts
+- 2026-11-06 · Papers search filters in JavaScript after the SQL filters, not with Prisma `contains` · SQLite LIKE treats % and _ as wildcards (found by test: "%" matched everything) and folds only ASCII case
+- 2026-11-06 · Papers marked Final before Phase 9 open read-only after the update (D56 applies to every Final paper); the user guide explains Edit · consequence of D56, seen in the upgrade test
+- 2026-11-06 · Version PDFs are compiled like an export (empty questions left out), cached in the paper preview cache and not written to CompileJob; the route is a read-only GET added to the reviewed list in tests/unit/server/csrf.test.ts · D57
+- 2026-11-06 · The CI `upgrade (windows-latest)` job installs `git describe --tags --abbrev=0 <sha>^1` (the newest earlier release), runs its own installed.spec.ts, then `update-windows.bat -NoPull` to the commit and tests/e2e/upgraded.spec.ts; `tests/fixtures/upgrade/v0.8.0-*` comes from scripts/make-upgrade-fixture.ts against a v0.8.0 worktree build (admin upgrade@example.test, invented) · roadmap upgrade rule
+- 2026-11-06 · Below 640 px the editor header shows icons only (labels stay as screen-reader text) and the title gets its own row; at 640 px and up the title row keeps a 16rem minimum · D62 phone pass; at 900 px the title had collapsed to zero width
+- 2026-11-06 · Worst-case data for the Phase 9 screens: tests/break-ui/seed-worst-retrieval.ts (250 papers at the field limits, 20 versions); found Versions dialog Close below the fold, copy-name suffix lost at 200 characters, one filter per row on a phone; all fixed
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
