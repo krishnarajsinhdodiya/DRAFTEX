@@ -31,6 +31,7 @@ no chat history must be able to continue from this file alone.
 - Nothing half-done.
 
 ## Logged, not fixed
+- `bloom-p1.png` / `key-bloom-p1.png` show the layout before D70 (tags of Q.3(2) moved to its sub-parts); the change is under the 0.5% limit, so CI passes and did not render new ones. Refresh them from a CI ubuntu artifact the next time a baseline must change.
 - Stale `draftex.lock` with a reused process id: start is fixed (checks the app answers), but restore, move-data, reset-password, update-check and uninstall-check still trust the pid alone and would refuse until the next clean start replaces the lock.
 - Question text (not only choices) overflows on unsplittable chemical pieces such as `(4-isobutylphenyl)propanoic` in one column, with every option off (pre-existing; D61 covers choices only).
 - CI ubuntu renders of three old baselines drift 0.02–0.19% (limit 0.5%) with unchanged LaTeX; baselines not touched (memory.md).
