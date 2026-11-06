@@ -47,7 +47,9 @@ const q = page.getByRole("listitem", { name: "Q.3(1)", exact: true });
 await q.getByLabel("CO tag for Q.3(1)", { exact: true }).fill(LONG.slice(0, 29));
 for (const [i, part] of ["a", "b"].entries()) {
   await page
-    .getByRole("button", { name: new RegExp(`^Marks, CO and Bloom for Q\\.3\\(1\\) \\(${part}\\)`) })
+    .getByRole("button", {
+      name: new RegExp(`^Marks, CO and Bloom for Q\\.3\\(1\\) \\(${part}\\)`),
+    })
     .click();
   const pop = page.getByRole("dialog", { name: `Marks, CO and Bloom for Q.3(1) (${part})` });
   await pop.getByLabel(`Marks for Q.3(1) (${part})`).fill("99.5");
@@ -65,7 +67,10 @@ for (let n = 1; n <= 7; n++) {
     .getByLabel(`Bloom level for Q.2(${n})`, { exact: true })
     .selectOption({ label: levels[n % 6] });
 }
-await page.getByRole("status").filter({ hasText: "All changes saved" }).waitFor({ timeout: 15_000 });
+await page
+  .getByRole("status")
+  .filter({ hasText: "All changes saved" })
+  .waitFor({ timeout: 15_000 });
 await page.getByText("Bloom and CO summary").click();
 
 const out = os.tmpdir();
