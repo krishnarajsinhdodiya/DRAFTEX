@@ -10,7 +10,7 @@ import { EXAM_KIND_LABEL, PROGRAM_LABEL } from "@/lib/templates/labels";
 import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import { requireUser } from "@/server/auth";
 import { summary } from "@/server/template-view";
-import { AutoSelect } from "./auto-select";
+import { AutoSelect } from "@/components/auto-select";
 import { NewTemplateButton, RestoreBuiltInsButton } from "./buttons";
 
 const SCOPES = [

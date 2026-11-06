@@ -191,14 +191,14 @@ describe("papers", () => {
     const p = await t.data.papers.create(
       faculty,
       tpl.id,
-      paperMeta({ courseCode: "XX202T", academicYear: "2026-27", status: "FINAL" }),
+      paperMeta({ courseCode: "XX202T", academicYear: "2026-27" }),
     );
     const v2 = await t.data.papers.update(faculty, p.id, 1, { title: "Renamed" });
     expect(v2).toMatchObject({
       title: "Renamed",
       courseCode: "XX202T",
       academicYear: "2026-27",
-      status: "FINAL",
+      status: "DRAFT",
     });
   });
 
@@ -235,9 +235,11 @@ describe("papers", () => {
       status: "FINAL",
     });
     expect(v2).toMatchObject({ instructionsOverride: null, status: "FINAL", version: 2 });
-    const v3 = await t.data.papers.update(faculty, p.id, 2, { examDate: new Date("2027-04-01") });
-    expect(v3.instructionsOverride).toBeNull();
-    await expect(t.data.papers.update(faculty, p.id, 2, { title: "x" })).rejects.toBeInstanceOf(
+    const v3 = await t.data.papers.update(faculty, p.id, 2, { status: "DRAFT" });
+    const v4 = await t.data.papers.update(faculty, p.id, 3, { examDate: new Date("2027-04-01") });
+    expect(v4).toMatchObject({ instructionsOverride: null, version: 4 });
+    expect(v3.version).toBe(3);
+    await expect(t.data.papers.update(faculty, p.id, 3, { title: "x" })).rejects.toBeInstanceOf(
       ConflictError,
     );
     await t.data.papers.remove(faculty, p.id);
@@ -508,7 +510,7 @@ describe("papers", () => {
     const p = await t.data.papers.create(
       faculty,
       tpl.id,
-      paperMeta({ examDate: new Date("2027-04-01T00:00:00Z"), status: "FINAL" }),
+      paperMeta({ examDate: new Date("2027-04-01T00:00:00Z") }),
     );
     await t.data.papers.saveSlot(
       faculty,
@@ -520,6 +522,7 @@ describe("papers", () => {
       p.id,
       testSlot({ groupKey: "g2", position: 2, marks: 2 }),
     );
+    await t.data.papers.update(faculty, p.id, 1, { status: "FINAL" });
     const copy = await t.data.papers.duplicate(faculty, p.id, {
       title: "Test paper (ATKT)",
       examKind: "SUPPLEMENTARY_ATKT",

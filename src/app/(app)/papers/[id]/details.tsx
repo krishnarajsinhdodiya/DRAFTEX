@@ -10,7 +10,7 @@ export function DetailsButton({ view }: { view: PaperEditorView }) {
     <PaperFormDialog
       trigger={
         <button type="button" className={buttonStyles.quiet}>
-          <Settings2 size={15} aria-hidden /> Details
+          <Settings2 size={15} aria-hidden /> <span className="max-sm:sr-only">Details</span>
         </button>
       }
       heading="Paper details"
@@ -23,13 +23,11 @@ export function DetailsButton({ view }: { view: PaperEditorView }) {
         semesterOrYear: view.semesterOrYear,
         academicYear: view.academicYear,
         examDate: view.examDate,
-        status: view.status,
       }}
       courses={view.courses}
       unit={view.program === "PHARM_D" ? "Year" : "Semester"}
       submitLabel="Save details"
       pendingLabel="Saving…"
-      showStatus
       onSubmit={(v) => updatePaperDetailsAction(view.id, view.version, v)}
     />
   );

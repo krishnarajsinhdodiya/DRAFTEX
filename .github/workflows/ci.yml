@@ -19,7 +19,7 @@ env:
 jobs:
   commit-hygiene:
     name: commit-hygiene
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-24.04, windows-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -186,5 +186,82 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report-install
+          path: playwright-report/
+          retention-days: 7
+
+  # Roadmap rule: the Windows installer must apply this version's migrations to
+  # a data folder made by the previous release. Installs the newest tag before
+  # this commit, uses it, then updates to this commit with update-windows.bat.
+  upgrade:
+    name: upgrade (windows-latest)
+    runs-on: windows-latest
+    env:
+      DRAFTEX_NO_PAUSE: "1"
+      DRAFTEX_NO_BROWSER: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Create the data folder
+        run: node scripts/ci-data-dir.mjs
+      - name: Cache the LaTeX engine and package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/draftex-data/tools
+          key: tectonic-0.17.0-6ffe0558-${{ runner.os }}-${{ hashFiles('src/lib/latex/warmup.ts', 'src/lib/latex/pins.ts') }}
+          restore-keys: tectonic-0.17.0-6ffe0558-${{ runner.os }}-
+      - name: Check out the previous release
+        shell: powershell
+        run: |
+          $tag = git describe --tags --abbrev=0 "$env:GITHUB_SHA^1"
+          if (-not $tag) { throw "No earlier release tag" }
+          Write-Host "Previous release: $tag"
+          git checkout --quiet $tag
+      - name: Install the previous release with its setup-windows.bat
+        shell: cmd
+        run: setup-windows.bat
+      - name: Start the previous release and set it up (its own installed.spec.ts)
+        shell: powershell
+        run: |
+          Start-Process -FilePath cmd.exe -ArgumentList "/c", "start-windows.bat" -WindowStyle Hidden
+          $up = $false
+          for ($i = 0; $i -lt 90; $i++) {
+            try { if ((Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3210/login).StatusCode -eq 200) { $up = $true; break } } catch {}
+            Start-Sleep -Seconds 2
+          }
+          if (-not $up) { throw "The previous release did not answer on port 3210" }
+          .runtime\node\node.exe node_modules\@playwright\test\cli.js install chromium
+          $env:DRAFTEX_E2E_URL = "http://127.0.0.1:3210"
+          .runtime\node\node.exe node_modules\@playwright\test\cli.js test tests/e2e/installed.spec.ts
+          if ($LASTEXITCODE -ne 0) { throw "installed.spec.ts failed on the previous release" }
+          Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+      - name: Check out this commit
+        run: git checkout --quiet ${{ github.sha }}
+      - name: Update with update-windows.bat (no git pull on a CI checkout)
+        shell: cmd
+        run: update-windows.bat -NoPull -NoShortcut
+      - name: Start the updated copy
+        shell: powershell
+        run: |
+          Start-Process -FilePath cmd.exe -ArgumentList "/c", "start-windows.bat" -WindowStyle Hidden
+          for ($i = 0; $i -lt 90; $i++) {
+            try { if ((Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3210/login).StatusCode -eq 200) { exit 0 } } catch {}
+            Start-Sleep -Seconds 2
+          }
+          throw "The updated copy did not answer on port 3210"
+      - name: Smoke and upgraded-copy e2e
+        run: .runtime\node\node.exe node_modules\@playwright\test\cli.js test tests/e2e/smoke.spec.ts tests/e2e/upgraded.spec.ts
+        env:
+          DRAFTEX_E2E_URL: http://127.0.0.1:3210
+      - name: Stop DRAFTEX
+        if: always()
+        shell: powershell
+        run: Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-upgrade
           path: playwright-report/
           retention-days: 7

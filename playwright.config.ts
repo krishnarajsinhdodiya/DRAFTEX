@@ -8,7 +8,8 @@ const baseURL = external ?? `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: external ? [] : ["**/installed.spec.ts"],
+  // These two run only against an installed copy (gate 10 and the upgrade job).
+  testIgnore: external ? [] : ["**/installed.spec.ts", "**/upgraded.spec.ts"],
   forbidOnly: Boolean(process.env.CI),
   // The suite walks one shared database from first-run setup onwards.
   fullyParallel: false,

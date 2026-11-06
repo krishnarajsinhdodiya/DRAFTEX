@@ -40,6 +40,8 @@ describe("route handlers", () => {
       "src/app/api/admin/backups/[name]/route.ts",
       "src/app/api/assets/[file]/route.ts",
       "src/app/api/papers/[id]/preview/route.ts",
+      // D57: compiles a stored version, writes nothing; owner-only like the preview.
+      "src/app/api/papers/[id]/versions/[versionId]/route.ts",
       "src/app/api/templates/[id]/preview/route.ts",
     ]);
   });

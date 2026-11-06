@@ -22,7 +22,6 @@ export interface PaperFormValues {
   semesterOrYear: number;
   academicYear: string;
   examDate: string | null;
-  status?: "DRAFT" | "FINAL";
 }
 
 /** "2026-27" for papers set before June, the usual Indian academic year. */
@@ -62,7 +61,6 @@ export function PaperFormDialog({
   unit,
   submitLabel,
   pendingLabel,
-  showStatus,
   onSubmit,
 }: {
   trigger: ReactNode;
@@ -73,7 +71,6 @@ export function PaperFormDialog({
   unit: "Semester" | "Year";
   submitLabel: string;
   pendingLabel: string;
-  showStatus?: boolean;
   onSubmit: (v: PaperFormValues) => Promise<CommandResult<unknown> | undefined>;
 }) {
   const [open, setOpen] = useState(false);
@@ -241,21 +238,6 @@ export function PaperFormDialog({
                 )}
               </Row>
             </div>
-            {showStatus ? (
-              <Row label="Status" hint="Final is a note for you; it does not lock the paper.">
-                {(id) => (
-                  <select
-                    id={id}
-                    value={v.status ?? "DRAFT"}
-                    onChange={(e) => set({ status: e.target.value as "DRAFT" | "FINAL" })}
-                    className={inputStyles}
-                  >
-                    <option value="DRAFT">Draft</option>
-                    <option value="FINAL">Final</option>
-                  </select>
-                )}
-              </Row>
-            ) : null}
             {error ? <FormAlert kind="error">{error}</FormAlert> : null}
             <div className="flex justify-end gap-2">
               <Dialog.Close className={buttonStyles.secondary}>Cancel</Dialog.Close>

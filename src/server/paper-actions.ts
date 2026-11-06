@@ -35,6 +35,29 @@ export async function updatePaperDetailsAction(
   return r;
 }
 
+/** "Mark as Final" / "Edit" (D56). */
+export async function setPaperStatusAction(
+  id: string,
+  version: number,
+  status: "DRAFT" | "FINAL",
+): Promise<CommandResult<number>> {
+  const r = await (await commands()).setStatus(id, version, status);
+  if (r.ok) revalidatePath(`/papers/${id}`);
+  return r;
+}
+
+/** Restores a version as a new Draft paper and opens it (D57). */
+export async function restoreVersionAction(
+  id: string,
+  versionId: string,
+  title: string,
+): Promise<CommandResult<string>> {
+  const r = await (await commands()).restoreVersion(id, versionId, title);
+  if (!r.ok) return r;
+  revalidatePath("/papers");
+  redirect(`/papers/${r.value}`);
+}
+
 export async function saveSlotAction(id: string, input: unknown): Promise<CommandResult<string>> {
   return (await commands()).saveSlot(id, input);
 }

@@ -6,6 +6,7 @@ import type { ExportDeps } from "./export";
 import { type ResolveImages, imageResolver } from "./images";
 import { type PaperPreviewDeps, paperPreviewCache } from "./paper-preview";
 import { PreviewCache, type PreviewDeps } from "./template-preview";
+import type { VersionPdfDeps } from "./version-pdf";
 
 const globalForPreview = globalThis as unknown as {
   draftexPreview?: PreviewDeps;
@@ -30,6 +31,10 @@ export async function paperPreviewDeps(): Promise<PaperPreviewDeps> {
     images: appImages(),
     cache: globalForPreview.draftexPaperCache,
   };
+}
+
+export async function versionPdfDeps(): Promise<VersionPdfDeps> {
+  return paperPreviewDeps();
 }
 
 export async function exportDeps(): Promise<ExportDeps> {

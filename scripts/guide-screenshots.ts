@@ -135,6 +135,28 @@ await ask.getByText(/empty questions are left out/).waitFor({ timeout: 60_000 })
 await shot(page, "07-export");
 await ask.getByRole("button", { name: "Cancel" }).click();
 
+// Final, then its versions (D56, D57).
+await page.getByRole("button", { name: "Mark as Final" }).click();
+await page.getByRole("note").filter({ hasText: "This paper is Final." }).waitFor();
+await page.getByRole("button", { name: /^Versions/ }).click();
+await page
+  .getByRole("dialog", { name: "Versions" })
+  .getByText("Marked Final", { exact: true })
+  .waitFor();
+await shot(page, "12-versions");
+await page.keyboard.press("Escape");
+
+// An ATKT copy, so the Papers page has more than one paper (D59, D60).
+await page.getByRole("button", { name: "Duplicate as…" }).click();
+await page
+  .getByRole("dialog", { name: "Duplicate as…" })
+  .getByRole("button", { name: "Make the copy" })
+  .click();
+await page.getByRole("heading", { level: 1, name: /\(ATKT\)$/ }).waitFor();
+await page.goto("/papers");
+await page.getByRole("search", { name: "Find papers" }).waitFor();
+await shot(page, "11-papers");
+
 await page.goto("/admin/backups");
 await page.getByRole("button", { name: "Back up now" }).click();
 await page.getByRole("status").filter({ hasText: "Backup saved." }).waitFor({ timeout: 60_000 });

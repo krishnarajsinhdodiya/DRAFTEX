@@ -77,7 +77,24 @@ export class Writer {
 
 // ---------- inline ----------
 
-export function text(s: string, issues: Issues, quotes?: QuoteState): string {
+/**
+ * Where a long word may break in a narrow column (D61): after a hyphen
+ * between letters or digits, a comma, or a closing bracket, when more of
+ * the word follows ("N-(4-hydroxyphenyl)acetamide"). A comma before a digit
+ * stays ("1,000", "2,6-dione" breaks after the hyphen instead).
+ */
+const BREAK_AFTER = /(?<=[\p{L}\p{N})\]]-|[)\]])(?=[^\s,.;:)\]-])|(?<=,)(?=[^\s\p{N},.;:)\]-])/u;
+
+export function text(s: string, issues: Issues, quotes?: QuoteState, breakable = false): string {
+  if (breakable) {
+    // Each piece is escaped on its own, so the break never lands inside a command;
+    // \hspace{0pt} is a break point that also lets the next piece hyphenate.
+    const pieces = s.split(BREAK_AFTER);
+    if (pieces.length > 1) {
+      const q = quotes ?? { doubleOpen: false };
+      return pieces.map((x) => text(x, issues, q)).join("\\hspace{0pt}");
+    }
+  }
   const r = escapeText(s, quotes);
   if (r.ok) return r.value;
   const chars = [...new Set(r.bad.map((b) => describeChar(b.char)))].join(", ");
@@ -111,13 +128,17 @@ function usefulBreaks(nodes: InlineNode[]): InlineNode[] {
   return out;
 }
 
-export function inline(nodes: InlineNode[] | undefined, issues: Issues): string {
+export function inline(
+  nodes: InlineNode[] | undefined,
+  issues: Issues,
+  opts: { breakable?: boolean } = {},
+): string {
   const quotes: QuoteState = { doubleOpen: false };
   let out = "";
   for (const n of usefulBreaks(nodes ?? [])) {
     switch (n.type) {
       case "text": {
-        let t = text(n.text, issues, quotes);
+        let t = text(n.text, issues, quotes, opts.breakable);
         for (const m of n.marks ?? []) {
           t = {
             bold: `\\textbf{${t}}`,
@@ -197,11 +218,22 @@ function choices(c: ChoicesNode, ctx: BlockContext): string {
     return ["\\begin{enumerate}[label=\\Alph*., nosep]", ...items, "\\end{enumerate}"].join("\n");
   }
   const columns = c.attrs?.columns ?? ctx.defaultColumns;
-  const items = c.content.map((ch) => `\\choice ${inline(ch.content, ctx.issues)}`).join(" ");
+  // Narrow columns get break points in long words and, only when a line
+  // cannot be set otherwise, extra stretch (D61); one column is unchanged.
+  // Loose lines are expected there, so they are not reported (\\hbadness).
+  const narrow = columns > 1;
+  // The \\hspace{0pt} before each option lets its first word hyphenate:
+  // TeX never hyphenates a word that follows the label box directly.
+  const items = c.content
+    .map(
+      (ch) =>
+        `\\choice ${narrow ? "\\hspace{0pt}" : ""}${inline(ch.content, ctx.issues, { breakable: narrow })}`,
+    )
+    .join(" ");
   const list = `\\begin{choices}\n  ${items}\n\\end{choices}`;
   const lead = `\\vspace{${inch(ctx.beforeChoices)}}`;
-  if (columns === 1) return `${lead}\n${list}`;
-  return `${lead}\n\\begin{multicols}{${columns}}\n${list}\n\\end{multicols}`;
+  if (!narrow) return `${lead}\n${list}`;
+  return `${lead}\n\\begin{multicols}{${columns}}\\setlength{\\emergencystretch}{3em}\\hbadness=10000\n${list}\n\\end{multicols}`;
 }
 
 function leaf(b: LeafBlockNode, ctx: BlockContext): string {

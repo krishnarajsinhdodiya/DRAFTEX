@@ -3,6 +3,7 @@
 // print order in the centre, the PDF on the right (resizable, collapsible).
 import { Download, PanelRightClose, PanelRightOpen, RefreshCw, Undo2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { type EditorHandle, Toolbar, type Uploader } from "@/components/editor/question-editor";
 import { FormAlert } from "@/components/form";
@@ -18,6 +19,7 @@ import { DetailsButton } from "./details";
 import { DeletePaperButton } from "./delete-paper";
 import { DuplicateButton, ExportButton } from "./export-duplicate";
 import { SlotCard } from "./slot-card";
+import { LockedBanner, MarkFinalButton, VersionsButton } from "./status";
 import { slotKey, usePaper } from "./use-paper";
 
 const upload: Uploader = async (file) => {
@@ -78,6 +80,30 @@ function useStoredWidth() {
   return [width, set] as const;
 }
 
+// Where the last export of each paper went, kept outside the component: the
+// editor is mounted again when the export reloads the paper.
+const exportedFolders = new Map<string, string>();
+const exportedListeners = new Set<() => void>();
+function useExportedNotice(paperId: string) {
+  const folder = useSyncExternalStore(
+    (l) => {
+      exportedListeners.add(l);
+      return () => exportedListeners.delete(l);
+    },
+    () => exportedFolders.get(paperId) ?? null,
+    () => null,
+  );
+  const set = useCallback(
+    (f: string | null) => {
+      if (f === null) exportedFolders.delete(paperId);
+      else exportedFolders.set(paperId, f);
+      exportedListeners.forEach((l) => l());
+    },
+    [paperId],
+  );
+  return [folder, set] as const;
+}
+
 export function PaperEditor({
   view,
   allowAdvanced,
@@ -86,16 +112,25 @@ export function PaperEditor({
   allowAdvanced: boolean;
 }) {
   const paper = usePaper(view);
+  const router = useRouter();
+  // D56: Final and Printed papers are read-only until "Edit".
+  const locked = view.status !== "DRAFT";
   const [active, setActive] = useState<Set<string>>(new Set());
   const [focused, setFocused] = useState<EditorHandle | null>(null);
   const [showPreview, setShowPreview] = useState(true);
-  const [exported, setExported] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  // An export marks the paper Printed (D55) and reloads it; the notice outlives the reload.
+  const [exported, setExported] = useExportedNotice(view.id);
   const [previewWidth, setPreviewWidth] = useStoredWidth();
   const dragging = useRef<{ x: number; w: number } | null>(null);
 
-  const activate = useCallback((key: string) => {
-    setActive((s) => (s.has(key) ? s : new Set(s).add(key)));
-  }, []);
+  const activate = useCallback(
+    (key: string) => {
+      if (locked) return;
+      setActive((s) => (s.has(key) ? s : new Set(s).add(key)));
+    },
+    [locked],
+  );
 
   const problemsBySlot = useMemo(() => bySlot(paper.paperProblems), [paper.paperProblems]);
   const keyProblemsBySlot = useMemo(() => bySlot(paper.keyProblems), [paper.keyProblems]);
@@ -114,6 +149,7 @@ export function PaperEditor({
   // Ctrl/Cmd+Z outside a text field undoes the last paper-level change.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (locked) return;
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z" || e.shiftKey) return;
       const t = e.target as HTMLElement;
       if (t.closest("input, textarea, select, [contenteditable=true], math-field")) return;
@@ -122,7 +158,7 @@ export function PaperEditor({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [paper]);
+  }, [paper, locked]);
 
   const totals = useMemo(() => {
     let written = 0;
@@ -168,15 +204,18 @@ export function PaperEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100dvh-3.5rem-2rem-2px)] lg:flex-none">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-rule bg-surface px-4 py-2">
-        <Link href="/papers" className={`${linkStyles} text-small`}>
-          ← Papers
-        </Link>
-        <h1
-          className="min-w-0 flex-1 truncate font-paper text-lead font-semibold"
-          title={view.title}
-        >
-          {view.title}
-        </h1>
+        {/* On a phone the title gets its own row; the buttons wrap below it. */}
+        <div className="flex min-w-0 basis-full items-baseline gap-3 sm:min-w-64 sm:flex-1 sm:basis-64">
+          <Link href="/papers" className={`${linkStyles} shrink-0 text-small`}>
+            ← Papers
+          </Link>
+          <h1
+            className="min-w-0 flex-1 truncate font-paper text-lead font-semibold"
+            title={view.title}
+          >
+            {view.title}
+          </h1>
+        </div>
         <span
           role="status"
           className={`text-small ${paper.failed.length ? "text-danger" : "text-ink-2"}`}
@@ -186,15 +225,31 @@ export function PaperEditor({
         <button
           type="button"
           className={buttonStyles.quiet}
-          disabled={!paper.undoLabel}
+          disabled={locked || !paper.undoLabel}
           onClick={() => void paper.undo()}
           title={paper.undoLabel ? `Undo: ${paper.undoLabel}` : "Nothing to undo"}
         >
-          <Undo2 size={15} aria-hidden /> Undo
+          <Undo2 size={15} aria-hidden /> <span className="max-sm:sr-only">Undo</span>
         </button>
-        <DetailsButton view={view} />
-        <DuplicateButton paperId={view.id} title={view.title} examKind={view.examKind} />
-        <ExportButton paperId={view.id} flush={paper.flushAll} onExported={setExported} />
+        {locked ? null : <DetailsButton view={view} />}
+        {locked ? null : (
+          <MarkFinalButton view={view} flush={paper.flushAll} onError={setStatusError} />
+        )}
+        <VersionsButton view={view} />
+        <DuplicateButton
+          paperId={view.id}
+          title={view.title}
+          examKind={view.examKind}
+          academicYear={view.academicYear}
+        />
+        <ExportButton
+          paperId={view.id}
+          flush={paper.flushAll}
+          onExported={(folder) => {
+            setExported(folder);
+            router.refresh();
+          }}
+        />
         <DeletePaperButton paperId={view.id} title={view.title} flush={paper.flushAll} />
         <button
           type="button"
@@ -207,7 +262,7 @@ export function PaperEditor({
           ) : (
             <PanelRightOpen size={15} aria-hidden />
           )}
-          Preview
+          <span className="max-sm:sr-only">Preview</span>
         </button>
       </div>
 
@@ -220,11 +275,19 @@ export function PaperEditor({
           />
         ) : (
           <p className="text-small text-ink-3">
-            Click a question to write it. Press / in a question to insert.
+            {locked
+              ? "Read-only. Choose Edit to change this paper."
+              : "Click a question to write it. Press / in a question to insert."}
           </p>
         )}
       </div>
 
+      {locked ? <LockedBanner view={view} /> : null}
+      {statusError ? (
+        <div className="px-4 pt-3">
+          <FormAlert kind="error">{statusError}</FormAlert>
+        </div>
+      ) : null}
       {paper.restored ? (
         <div className="px-4 pt-3">
           <FormAlert kind="notice">
@@ -340,8 +403,8 @@ export function PaperEditor({
           ))}
         </nav>
 
-        <main className="min-h-0 flex-1 overflow-y-auto bg-canvas px-4 py-5 lg:px-8">
-          <article className="mx-auto flex max-w-3xl flex-col gap-4 rounded-lg bg-surface px-4 py-6 shadow-sheet sm:px-8">
+        <main className="min-h-0 flex-1 overflow-y-auto bg-canvas px-2 py-3 sm:px-4 sm:py-5 lg:px-8">
+          <article className="mx-auto flex max-w-3xl flex-col gap-4 rounded-lg bg-surface px-2 py-4 shadow-sheet sm:px-8 sm:py-6">
             <header className="flex flex-col items-center gap-0.5 border-b border-ink pb-3 text-center font-paper">
               <p className="text-small font-semibold tracking-[0.04em]">
                 {view.courseTitle || "Course title"} {view.courseCode ? `[${view.courseCode}]` : ""}
@@ -368,76 +431,78 @@ export function PaperEditor({
               </ul>
             ) : null}
 
-            {view.parts.map((part) => (
-              <section
-                key={part.key}
-                aria-label={part.title ?? "Questions"}
-                className="flex flex-col gap-4"
-              >
-                {part.title ? (
-                  <h2 className="text-center font-paper text-body font-semibold tracking-[0.04em]">
-                    {part.title}
-                  </h2>
-                ) : null}
-                {view.groups
-                  .filter((g) => g.partKey === part.key)
-                  .map((g) => (
-                    <section
-                      key={g.key}
-                      id={`g-${g.key}`}
-                      aria-label={g.label ?? g.heading}
-                      className="scroll-mt-20"
-                    >
-                      {g.numbering === "GROUP" ? (
-                        <h3 className="mb-1 flex items-baseline gap-3 font-paper text-body font-semibold">
-                          <span className="min-w-0 flex-1">
-                            {g.label} {g.heading}
-                          </span>
-                          <span className="shrink-0 tabular-nums">
-                            {marksLabel(view.marksStyle, groupMarks(g))}
-                          </span>
-                        </h3>
-                      ) : (
-                        <p className="mb-1 text-caption text-ink-3">
-                          {g.heading} (not printed: each question shows its own number)
-                        </p>
-                      )}
-                      <ol className="flex flex-col gap-1">
-                        {Array.from({ length: g.slots }, (_, i) => {
-                          const k = slotKey(g.key, i + 1);
-                          const state = paper.slots.get(k);
-                          if (!state) return null;
-                          return (
-                            <SlotCard
-                              key={k}
-                              slotKey={k}
-                              group={g}
-                              position={i + 1}
-                              state={state}
-                              problems={problemsBySlot.get(k) ?? []}
-                              keyProblems={keyProblemsBySlot.get(k) ?? []}
-                              coOptions={view.coOptions}
-                              allowAdvanced={allowAdvanced}
-                              upload={upload}
-                              active={active.has(k)}
-                              onActivate={activate}
-                              onChange={paper.change}
-                              onMarks={paper.setMarks}
-                              onRetry={paper.retry}
-                              onClear={(key) => void paper.clear(key)}
-                              onMove={moveBy}
-                              onEditorFocus={setFocused}
-                              onDuplicate={(key) =>
-                                void paper.duplicate(key).then((to) => to && activate(to))
-                              }
-                            />
-                          );
-                        })}
-                      </ol>
-                    </section>
-                  ))}
-              </section>
-            ))}
+            <fieldset disabled={locked} className="contents">
+              {view.parts.map((part) => (
+                <section
+                  key={part.key}
+                  aria-label={part.title ?? "Questions"}
+                  className="flex flex-col gap-4"
+                >
+                  {part.title ? (
+                    <h2 className="text-center font-paper text-body font-semibold tracking-[0.04em]">
+                      {part.title}
+                    </h2>
+                  ) : null}
+                  {view.groups
+                    .filter((g) => g.partKey === part.key)
+                    .map((g) => (
+                      <section
+                        key={g.key}
+                        id={`g-${g.key}`}
+                        aria-label={g.label ?? g.heading}
+                        className="scroll-mt-20"
+                      >
+                        {g.numbering === "GROUP" ? (
+                          <h3 className="mb-1 flex items-baseline gap-3 font-paper text-body font-semibold">
+                            <span className="min-w-0 flex-1">
+                              {g.label} {g.heading}
+                            </span>
+                            <span className="shrink-0 tabular-nums">
+                              {marksLabel(view.marksStyle, groupMarks(g))}
+                            </span>
+                          </h3>
+                        ) : (
+                          <p className="mb-1 text-caption text-ink-3">
+                            {g.heading} (not printed: each question shows its own number)
+                          </p>
+                        )}
+                        <ol className="flex flex-col gap-1">
+                          {Array.from({ length: g.slots }, (_, i) => {
+                            const k = slotKey(g.key, i + 1);
+                            const state = paper.slots.get(k);
+                            if (!state) return null;
+                            return (
+                              <SlotCard
+                                key={k}
+                                slotKey={k}
+                                group={g}
+                                position={i + 1}
+                                state={state}
+                                problems={problemsBySlot.get(k) ?? []}
+                                keyProblems={keyProblemsBySlot.get(k) ?? []}
+                                coOptions={view.coOptions}
+                                allowAdvanced={allowAdvanced}
+                                upload={upload}
+                                active={!locked && active.has(k)}
+                                onActivate={activate}
+                                onChange={paper.change}
+                                onMarks={paper.setMarks}
+                                onRetry={paper.retry}
+                                onClear={(key) => void paper.clear(key)}
+                                onMove={moveBy}
+                                onEditorFocus={setFocused}
+                                onDuplicate={(key) =>
+                                  void paper.duplicate(key).then((to) => to && activate(to))
+                                }
+                              />
+                            );
+                          })}
+                        </ol>
+                      </section>
+                    ))}
+                </section>
+              ))}
+            </fieldset>
           </article>
         </main>
 

@@ -129,7 +129,11 @@ function Leaf({ b, defaultColumns }: { b: LeafBlockNode; defaultColumns: number 
           {b.content.map((ch, i) => (
             <li
               key={i}
-              className={b.attrs?.correct === i ? "font-medium text-positive" : undefined}
+              // Long chemical names break inside their column, never into the next (D61).
+              className={
+                "min-w-0 hyphens-auto [overflow-wrap:anywhere]" +
+                (b.attrs?.correct === i ? " font-medium text-positive" : "")
+              }
             >
               <span className="font-paper font-semibold">{LETTERS[i]}.</span>{" "}
               <Inline nodes={ch.content} />

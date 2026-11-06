@@ -1,30 +1,57 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Badge } from "@/components/badge";
 import { Trash2 } from "lucide-react";
-import { buttonStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
+import { z } from "zod";
+import { AutoSelect } from "@/components/auto-select";
+import { buttonStyles, inputStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
+import { PaperStatus } from "@/generated/prisma/enums";
 import { actorOf } from "@/lib/auth/service";
 import { getData } from "@/lib/data";
-import { paperSnapshotSchema } from "@/lib/paper/snapshot";
-import { EXAM_KIND_LABEL, durationText, marksText } from "@/lib/templates/labels";
+import { EXAM_GROUPS, EXAM_GROUP_KEYS, PAPER_STATUS_LABEL } from "@/lib/templates/labels";
 import { requireUser } from "@/server/auth";
+import { PaperList } from "./paper-list";
 import { TrashedNotice } from "./trash-buttons";
 
 export const metadata: Metadata = { title: "Papers · DRAFTEX" };
 
-const when = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" });
+// Search and filters live in the address (D59): they work without scripts,
+// and Back returns to the same list. Anything unknown is ignored.
+const filterSchema = z.object({
+  q: z.string().max(100).optional().catch(undefined),
+  group: z.enum(EXAM_GROUP_KEYS).optional().catch(undefined),
+  year: z.string().max(20).optional().catch(undefined),
+  status: z.enum(PaperStatus).optional().catch(undefined),
+  course: z.string().max(40).optional().catch(undefined),
+  trashed: z.string().max(64).optional().catch(undefined),
+});
+
+const selectClass = `${inputStyles} w-full text-small sm:w-auto`;
 
 export default async function PapersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ trashed?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { user } = await requireUser();
-  const { trashed } = await searchParams;
+  const f = filterSchema.parse(await searchParams);
   const data = await getData();
   const actor = actorOf(user);
-  const [rows, trash] = await Promise.all([data.papers.list(actor), data.papers.listTrash(actor)]);
-  const justTrashed = trashed ? trash.find((p) => p.id === trashed) : undefined;
+  const filter = {
+    q: f.q?.trim() || undefined,
+    group: f.group,
+    year: f.year || undefined,
+    status: f.status,
+    course: f.course || undefined,
+  };
+  const filtered = Object.values(filter).some(Boolean);
+  const [rows, trash, options, any] = await Promise.all([
+    data.papers.list(actor, filter),
+    data.papers.listTrash(actor),
+    data.papers.filterOptions(actor),
+    filtered ? data.papers.recent(actor, 1) : null,
+  ]);
+  const hasPapers = filtered ? (any?.length ?? 0) > 0 : rows.length > 0;
+  const justTrashed = f.trashed ? trash.find((p) => p.id === f.trashed) : undefined;
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -41,54 +68,115 @@ export default async function PapersPage({
         </span>
       </div>
       {justTrashed ? <TrashedNotice id={justTrashed.id} title={justTrashed.title} /> : null}
+      {hasPapers ? (
+        <>
+          <form
+            // Remount on each filter change so the fields show the filters in the address.
+            key={JSON.stringify(filter)}
+            role="search"
+            aria-label="Find papers"
+            // Two filters per row on a phone, one row on a laptop.
+            className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap"
+            action="/papers"
+          >
+            <label className="col-span-2 flex flex-col gap-1 text-small font-medium sm:min-w-56 sm:flex-[2]">
+              Search
+              <input
+                type="search"
+                name="q"
+                defaultValue={filter.q}
+                maxLength={100}
+                placeholder="Title, course code or course title"
+                className={`${selectClass} w-full px-3`}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-small font-medium">
+              Exam
+              <AutoSelect name="group" defaultValue={filter.group ?? ""} className={selectClass}>
+                <option value="">Any</option>
+                {EXAM_GROUP_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {EXAM_GROUPS[k].label}
+                  </option>
+                ))}
+              </AutoSelect>
+            </label>
+            <label className="flex flex-col gap-1 text-small font-medium">
+              Year
+              <AutoSelect name="year" defaultValue={filter.year ?? ""} className={selectClass}>
+                <option value="">Any</option>
+                {options.years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </AutoSelect>
+            </label>
+            <label className="flex flex-col gap-1 text-small font-medium">
+              Status
+              <AutoSelect name="status" defaultValue={filter.status ?? ""} className={selectClass}>
+                <option value="">Any</option>
+                {Object.entries(PAPER_STATUS_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </AutoSelect>
+            </label>
+            <label className="col-span-2 flex min-w-0 flex-col gap-1 text-small font-medium sm:max-w-full">
+              Course
+              <AutoSelect
+                name="course"
+                defaultValue={filter.course ?? ""}
+                className={`${selectClass} sm:max-w-64`}
+              >
+                <option value="">Any</option>
+                {options.courses.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.title ? `${c.code} · ${c.title}` : c.code}
+                  </option>
+                ))}
+              </AutoSelect>
+            </label>
+            <button type="submit" className={`${buttonStyles.secondary} h-9`}>
+              Show
+            </button>
+            {filtered ? (
+              <Link href="/papers" className={`${buttonStyles.quiet} h-9`}>
+                Clear
+              </Link>
+            ) : null}
+          </form>
+          <p className="-mt-2 text-small text-ink-2" aria-live="polite">
+            {rows.length === 1 ? "1 paper" : `${rows.length} papers`}
+            {filtered ? " match" : ""}, most recently changed first
+          </p>
+        </>
+      ) : null}
       {rows.length === 0 ? (
         <div className={`${sheetStyles} px-6 py-12 text-center`}>
-          <p className="font-medium">You have no papers yet.</p>
-          <p className="mt-1 text-small text-ink-2">
-            Open a template and choose New paper. The paper keeps its own copy of the template.
-          </p>
+          {filtered ? (
+            <>
+              <p className="font-medium">No papers match.</p>
+              <p className="mt-1 text-small text-ink-2">
+                Try fewer words, or{" "}
+                <Link href="/papers" className="text-accent underline underline-offset-2">
+                  show every paper
+                </Link>
+                .
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium">You have no papers yet.</p>
+              <p className="mt-1 text-small text-ink-2">
+                Open a template and choose New paper. The paper keeps its own copy of the template.
+              </p>
+            </>
+          )}
         </div>
       ) : (
-        <ul className={`${sheetStyles} divide-y divide-rule overflow-hidden`}>
-          {rows.map((p) => {
-            const s = paperSnapshotSchema.safeParse(p.templateSnapshot);
-            return (
-              <li key={p.id}>
-                <Link
-                  href={`/papers/${p.id}`}
-                  className="flex items-stretch gap-4 px-5 py-3.5 hover:bg-sunk/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
-                >
-                  <span className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-paper text-lead font-semibold break-words [overflow-wrap:anywhere]">
-                        {p.title}
-                      </span>
-                      {p.status === "FINAL" ? (
-                        <Badge tone="green">Final</Badge>
-                      ) : (
-                        <Badge>Draft</Badge>
-                      )}
-                    </span>
-                    <span className="text-small text-ink-2 break-words">
-                      {[p.courseCode, p.courseTitle].filter(Boolean).join(" · ") || "No course"} ·{" "}
-                      {EXAM_KIND_LABEL[p.examKind]} · changed {when.format(p.updatedAt)}
-                    </span>
-                  </span>
-                  {s.success ? (
-                    <span className="dx-margin hidden w-36 shrink-0 flex-col justify-center text-body sm:flex">
-                      <span className="font-semibold text-ink">
-                        {marksText(s.data.maxMarks)} marks
-                      </span>
-                      <span className="text-small whitespace-normal text-ink-2">
-                        {durationText(s.data.durationMinutes)}
-                      </span>
-                    </span>
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <PaperList rows={rows} />
       )}
     </div>
   );

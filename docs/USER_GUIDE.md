@@ -19,7 +19,7 @@ The pictures in this guide use made-up names and questions.
 4. [Writing a paper](#4-writing-a-paper)
 5. [The answer key](#5-the-answer-key)
 6. [Exporting: the files you print or send](#6-exporting-the-files-you-print-or-send)
-7. [An ATKT copy of a paper](#7-an-atkt-copy-of-a-paper)
+7. [Copies for ATKT and next year; finding papers](#7-copies-for-atkt-and-next-year-finding-papers)
 8. [Templates](#8-templates)
 9. [Backups](#9-backups)
 10. [Colleagues and other computers](#10-colleagues-and-other-computers)
@@ -103,7 +103,9 @@ After that you see the home page:
 ![Home page with "Open my papers" and "Open the template library"](user-guide/02-home.png)
 
 The top bar has **Papers**, **Templates**, and for the administrator
-**People**, **Backups**, **Network** and **Activity**.
+**People**, **Backups**, **Network** and **Activity**. Under the buttons,
+**Recent papers** lists the five papers you changed last; click one to open
+it.
 
 ---
 
@@ -159,8 +161,32 @@ While you write a question:
 finds a problem (for example a question that cannot be printed), the question
 is marked and the message says what to change.
 
-**Details** changes the title, course, exam date and status (Draft or
-Final).
+**Details** changes the title, course, exam date and academic year.
+
+### Final and Printed papers
+
+When a paper is finished, click **Mark as Final**. A Final paper is
+read-only: a blue note at the top says so, and nothing in it can be changed
+by accident, from this window or another one. **Exporting** a paper (section
+6) marks it **Printed**, with the date.
+
+To change a Final or Printed paper, click **Edit** in the note. DRAFTEX asks
+first, then puts the paper back to **Draft**.
+
+### Versions
+
+Each time a paper is marked Final or exported, DRAFTEX keeps a copy of it as
+it was then: a **version**. Click **Versions** in the paper to see them.
+
+![Versions of a paper: open as PDF or restore](user-guide/12-versions.png)
+
+- **Paper PDF** and **Key PDF** show that version as it was printed. DRAFTEX
+  makes the PDF again, which takes a few seconds.
+- **Restore…** makes a new Draft paper from that version (with no exam
+  date); the paper you are in stays as it is.
+
+The newest 20 versions of each paper are kept. Versions are part of backups,
+and they go to Trash and are deleted with their paper.
 
 ### Deleting a paper
 
@@ -209,13 +235,44 @@ The export is saved twice:
 
 Exporting the same paper again on the same day replaces that day's folder.
 
+A successful export marks the paper **Printed** and keeps a version of it
+(section 4, "Versions").
+
 ---
 
-## 7. An ATKT copy of a paper
+## 7. Copies for ATKT and next year; finding papers
 
-Open the paper and click **Duplicate**. DRAFTEX suggests the exam
-*Supplementary (ATKT)* and the title "… (ATKT)". **Make the copy** copies the
-questions and the answer key; then change what you need.
+### Duplicate as…
+
+Open the paper and click **Duplicate as…**, then choose:
+
+- **Next academic year**: the same exam for the next year. DRAFTEX fills in
+  the year (2026-27 becomes 2027-28); if your paper's year is written some
+  other way, type the new one.
+- **ATKT copy**: the supplementary (ATKT) version for the same year. This is
+  the suggestion for an end-semester paper.
+- **Another copy**: choose the exam yourself.
+
+**Make the copy** copies the questions and the answer key into a new Draft
+paper with no exam date; then change what you need. The paper you copied
+stays as it is.
+
+### Finding a paper
+
+The **Papers** page lists your papers, the most recently changed first.
+
+![Papers page with search and filters](user-guide/11-papers.png)
+
+- Type in **Search** part of a title, a course code (BP604T) or a course
+  title, and click **Show**.
+- **Exam** narrows the list to Sessional, End-semester, ATKT, Practical or
+  Other papers; **Year**, **Status** (Draft, Final, Printed) and **Course**
+  offer what your own papers have.
+- **Clear** shows every paper again. The browser's Back button returns to
+  the list you had.
+
+The search looks at titles and courses, not at the questions. Like
+everything in DRAFTEX, it only ever shows your own papers.
 
 ---
 

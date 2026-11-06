@@ -1,5 +1,5 @@
 // Plain-English names for enum values (SPEC §12 copy rules). Client-safe.
-import type { CourseKind, ExamKind, Program } from "@/generated/prisma/enums";
+import type { CourseKind, ExamKind, PaperStatus, Program } from "@/generated/prisma/enums";
 import type { Group, Header, Structure, Style } from "@/lib/paper/schema";
 
 export const PROGRAM_LABEL: Record<Program, string> = {
@@ -19,6 +19,23 @@ export const EXAM_KIND_LABEL: Record<ExamKind, string> = {
   PRACTICAL_END: "Practical end-semester",
   SYNOPSIS: "Synopsis",
   CUSTOM: "Other",
+};
+
+/** Filter groups on the Papers list (D59): one table, every ExamKind in exactly one group. */
+export const EXAM_GROUPS = {
+  SESSIONAL: { label: "Sessional", kinds: ["SESSIONAL_1", "SESSIONAL_2", "SESSIONAL_IMPROVEMENT"] },
+  END_SEMESTER: { label: "End-semester", kinds: ["END_SEMESTER", "YEAR_END"] },
+  ATKT: { label: "ATKT", kinds: ["SUPPLEMENTARY_ATKT"] },
+  PRACTICAL: { label: "Practical", kinds: ["PRACTICAL_SESSIONAL", "PRACTICAL_END"] },
+  OTHER: { label: "Other", kinds: ["SYNOPSIS", "CUSTOM"] },
+} as const satisfies Record<string, { label: string; kinds: readonly ExamKind[] }>;
+export type ExamGroup = keyof typeof EXAM_GROUPS;
+export const EXAM_GROUP_KEYS = Object.keys(EXAM_GROUPS) as ExamGroup[];
+
+export const PAPER_STATUS_LABEL: Record<PaperStatus, string> = {
+  DRAFT: "Draft",
+  FINAL: "Final",
+  PRINTED: "Printed",
 };
 
 /** What the paper header calls the exam, for previews. */

@@ -22,7 +22,7 @@ export function DeletePaperButton({
     <Dialog.Root onOpenChange={(o) => o && setError(null)}>
       <Dialog.Trigger asChild>
         <button type="button" className={buttonStyles.quiet} title="Move this paper to Trash">
-          <Trash2 size={15} aria-hidden /> Delete
+          <Trash2 size={15} aria-hidden /> <span className="max-sm:sr-only">Delete</span>
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>

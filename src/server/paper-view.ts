@@ -53,6 +53,10 @@ export interface PaperEditorView {
   academicYear: string;
   examDate: string | null;
   status: PaperStatus;
+  /** ISO time of the last export (D55). */
+  printedAt: string | null;
+  /** Kept versions, newest first (D57). */
+  versions: { id: string; reason: "FINAL" | "EXPORT"; createdAt: string }[];
   templateTitle: string;
   maxMarks: number;
   maxMarksText: string;
@@ -90,6 +94,12 @@ export async function paperEditorView(
     academicYear: p.academicYear,
     examDate: p.examDate ? p.examDate.toISOString().slice(0, 10) : null,
     status: p.status,
+    printedAt: p.printedAt ? p.printedAt.toISOString() : null,
+    versions: (await data.papers.listVersions(actor, id)).map((v) => ({
+      id: v.id,
+      reason: v.reason,
+      createdAt: v.createdAt.toISOString(),
+    })),
     templateTitle: s.title,
     maxMarks: s.maxMarks,
     maxMarksText: marksText(s.maxMarks),

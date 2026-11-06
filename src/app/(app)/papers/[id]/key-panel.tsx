@@ -80,7 +80,7 @@ export function KeyPanel({
     onChange({ keyCriteria: criteria.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
 
   return (
-    <div className="border-t border-rule/70 px-3 py-1 pl-12">
+    <div className="border-t border-rule/70 px-3 py-1 pl-9 sm:pl-12">
       <button
         type="button"
         aria-expanded={open}

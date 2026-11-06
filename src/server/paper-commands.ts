@@ -49,12 +49,16 @@ export const newPaperSchema = z.object({
   examDate: z.coerce.date().nullable().default(null),
 });
 
-/** What the "Duplicate paper" dialog sends. */
+/** What the "Duplicate as…" dialog sends (D60). */
 export const duplicatePaperSchema = z.object({
   title: z.string().trim().min(1, "Give the copy a title.").max(200),
   examKind: z.enum(ExamKind),
   examDate: z.coerce.date().nullable().default(null),
+  academicYear: z.string().trim().max(20).optional(),
 });
+
+/** "Mark as Final" and "Edit" (back to Draft, D56); Printed comes from export only. */
+const statusSchema = z.enum(["DRAFT", "FINAL"]);
 
 /** Metadata the editor's header form can change. */
 export const paperDetailsSchema = paperMetaSchema
@@ -65,7 +69,6 @@ export const paperDetailsSchema = paperMetaSchema
     courseTitle: true,
     semesterOrYear: true,
     academicYear: true,
-    status: true,
     instructionsOverride: true,
   })
   .extend({ examDate: z.coerce.date().nullable() })
@@ -108,6 +111,40 @@ export function paperCommands(data: DataLayer, actor: Actor) {
           { ...p, ...(await courseFacts(p.courseId)) },
         );
         return saved.version;
+      });
+    },
+
+    /** Marks the paper Final, or puts a Final/Printed paper back to Draft; returns the version. */
+    async setStatus(
+      id: unknown,
+      version: unknown,
+      status: unknown,
+    ): Promise<CommandResult<number>> {
+      return run(async () => {
+        const saved = await data.papers.update(
+          actor,
+          idSchema.parse(id),
+          versionSchema.parse(version),
+          { status: statusSchema.parse(status) },
+        );
+        return saved.version;
+      });
+    },
+
+    /** Restores a version as a new Draft paper (D57); returns the new paper's id. */
+    async restoreVersion(
+      id: unknown,
+      versionId: unknown,
+      title: unknown,
+    ): Promise<CommandResult<string>> {
+      return run(async () => {
+        const copy = await data.papers.restoreVersion(
+          actor,
+          idSchema.parse(id),
+          idSchema.parse(versionId),
+          z.string().parse(title),
+        );
+        return copy.id;
       });
     },
 

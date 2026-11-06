@@ -71,7 +71,7 @@ async function exportFiles(api: APIRequestContext, base: string, id: string) {
 async function paperId(page: Page): Promise<string> {
   await page.goto("/papers");
   // The card's name starts with the title, then its status ("Draft"); the ATKT copy has "(ATKT)" between.
-  await page.getByRole("link", { name: new RegExp(`^${TITLE} (Draft|Final)`) }).click();
+  await page.getByRole("link", { name: new RegExp(`^${TITLE} (Draft|Final|Printed)`) }).click();
   await expect(page).toHaveURL(/\/papers\/[0-9a-f-]{36}$/);
   return page.url().split("/").pop() as string;
 }
@@ -162,6 +162,9 @@ test("npm run restore fills an empty data folder", () => {
       (r) => r.title,
     );
     expect(titles).toContain(TITLE);
+    // The paper's versions (D57) live in the database, so the backup carries them.
+    const versions = db.prepare("SELECT count(*) AS n FROM PaperSnapshot").get() as { n: number };
+    expect(versions.n).toBeGreaterThan(0);
   } finally {
     db.close();
   }

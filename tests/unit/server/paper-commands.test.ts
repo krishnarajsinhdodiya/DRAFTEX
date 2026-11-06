@@ -127,8 +127,36 @@ describe("paper commands", () => {
     expect(p.slots.find((x) => x.position === 3)?.keyCriteria).toEqual(key.keyCriteria);
     const invalid = await c.duplicate(paperId, { title: "", examKind: "NOPE" });
     expect(invalid.ok).toBe(false);
+    const next = await c.duplicate(paperId, {
+      title: "Next year",
+      examKind: "END_SEMESTER",
+      academicYear: "2027-28",
+    });
+    if (!next.ok) throw new Error(next.message);
+    expect((await t.data.papers.get(owner, next.value)).academicYear).toBe("2027-28");
     await t.data.papers.remove(owner, copy.value);
+    await t.data.papers.remove(owner, next.value);
     await c.clearSlot(paperId, { groupKey: "g1", position: 3 });
+  });
+
+  it("mark a copy Final, refuse changes, put it back to Draft and restore its version", async () => {
+    const c = paperCommands(t.data, owner);
+    const copy = await c.duplicate(paperId, { title: "Lockable", examKind: "END_SEMESTER" });
+    if (!copy.ok) throw new Error(copy.message);
+    const id = copy.value;
+    expect(await c.setStatus(id, 1, "FINAL")).toEqual({ ok: true, value: 2 });
+    const refused = await c.saveSlot(id, testSlot());
+    expect(refused).toMatchObject({ ok: false, message: expect.stringMatching(/Choose Edit/) });
+    expect((await c.setStatus(id, 2, "PRINTED")).ok).toBe(false);
+    expect((await c.updateDetails(id, 2, { status: "DRAFT", title: "x" })).ok).toBe(false);
+    expect(await c.setStatus(id, 2, "DRAFT")).toEqual({ ok: true, value: 3 });
+    const [v] = await t.data.papers.listVersions(owner, id);
+    const restored = await c.restoreVersion(id, v?.id, "Lockable again");
+    if (!restored.ok) throw new Error(restored.message);
+    expect((await t.data.papers.get(owner, restored.value)).status).toBe("DRAFT");
+    expect((await c.restoreVersion(id, "missing", "x")).ok).toBe(false);
+    await t.data.papers.remove(owner, id);
+    await t.data.papers.remove(owner, restored.value);
   });
 });
 
@@ -148,6 +176,8 @@ describe.each([
     ["duplicate a question", () => c().duplicateSlot(paperId, { groupKey: "g1", position: 2 })],
     ["duplicate it", () => c().duplicate(paperId, { title: "x", examKind: "SUPPLEMENTARY_ATKT" })],
     ["delete it", () => c().remove(paperId)],
+    ["mark it Final", () => c().setStatus(paperId, 1, "FINAL")],
+    ["restore a version of it", () => c().restoreVersion(paperId, "guess", "x")],
     [
       "start a paper from the owner's private template",
       () => c().create(privateTemplate, { title: "x" }),
