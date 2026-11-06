@@ -22,6 +22,8 @@ export interface PaperFormValues {
   semesterOrYear: number;
   academicYear: string;
   examDate: string | null;
+  /** Details only (D64): print "(Bloom: …)" after each question. */
+  showBloom?: boolean;
 }
 
 /** "2026-27" for papers set before June, the usual Indian academic year. */
@@ -238,6 +240,22 @@ export function PaperFormDialog({
                 )}
               </Row>
             </div>
+            {v.showBloom !== undefined ? (
+              <label className="flex items-start gap-2 text-small text-ink">
+                <input
+                  type="checkbox"
+                  checked={v.showBloom}
+                  onChange={(e) => set({ showBloom: e.target.checked })}
+                  className="mt-0.5 size-4 accent-accent"
+                />
+                <span>
+                  <span className="font-medium">Print Bloom levels</span>
+                  <span className="block text-caption text-ink-2">
+                    Adds “(Bloom: Remember)” after each question, on the paper and the answer key.
+                  </span>
+                </span>
+              </label>
+            ) : null}
             {error ? <FormAlert kind="error">{error}</FormAlert> : null}
             <div className="flex justify-end gap-2">
               <Dialog.Close className={buttonStyles.secondary}>Cancel</Dialog.Close>

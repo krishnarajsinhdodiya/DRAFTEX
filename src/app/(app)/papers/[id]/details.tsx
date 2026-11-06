@@ -23,6 +23,7 @@ export function DetailsButton({ view }: { view: PaperEditorView }) {
         semesterOrYear: view.semesterOrYear,
         academicYear: view.academicYear,
         examDate: view.examDate,
+        showBloom: view.showBloom,
       }}
       courses={view.courses}
       unit={view.program === "PHARM_D" ? "Year" : "Semester"}

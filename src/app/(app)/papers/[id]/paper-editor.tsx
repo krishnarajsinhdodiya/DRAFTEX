@@ -21,6 +21,7 @@ import { DuplicateButton, ExportButton } from "./export-duplicate";
 import { SlotCard } from "./slot-card";
 import { LockedBanner, MarkFinalButton, VersionsButton } from "./status";
 import { slotKey, usePaper } from "./use-paper";
+import { TagSummaryPanel } from "./tag-summary";
 
 const upload: Uploader = async (file) => {
   const body = new FormData();
@@ -430,6 +431,7 @@ export function PaperEditor({
                 ))}
               </ul>
             ) : null}
+            <TagSummaryPanel slots={paper.slots} />
 
             <fieldset disabled={locked} className="contents">
               {view.parts.map((part) => (

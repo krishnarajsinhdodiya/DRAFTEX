@@ -10,23 +10,18 @@ import {
   type Uploader,
 } from "@/components/editor/question-editor";
 import { StaticDoc } from "@/components/editor/static-doc";
+import { SubPartFieldsContext } from "@/components/editor/sub-part-fields";
 import { inputStyles } from "@/components/styles";
 import type { BloomLevel } from "@/generated/prisma/enums";
 import { isEmptyDoc } from "@/lib/editor/convert";
+import { BLOOM_LABEL } from "@/lib/paper/bloom";
+import { CO_TAG_HINT, CO_TAG_MAX, cleanCoTagInput } from "@/lib/paper/co-tag";
 import type { Problem } from "@/lib/paper/problems";
+import { subPartMarksNote } from "@/lib/paper/tags";
 import { marksText } from "@/lib/templates/labels";
 import type { EditorGroup } from "@/server/paper-view";
 import { KeyPanel } from "./key-panel";
 import type { SlotState, SlotValue } from "./use-paper";
-
-export const BLOOM_LABEL: Record<BloomLevel, string> = {
-  REMEMBER: "Remember",
-  UNDERSTAND: "Understand",
-  APPLY: "Apply",
-  ANALYZE: "Analyse",
-  EVALUATE: "Evaluate",
-  CREATE: "Create",
-};
 
 const iconButton =
   "inline-flex size-8 items-center justify-center rounded-md text-ink-2 hover:bg-sunk hover:text-ink " +
@@ -86,6 +81,7 @@ export const SlotCard = memo(function SlotCard({
   const bloomId = useId();
   const errors = problems.filter((p) => p.level === "error");
   const notes = problems.filter((p) => p.level === "note");
+  const partsNote = subPartMarksNote(state.doc, state.marks);
   const status = statusText(state);
   const changedMarks = state.marks !== group.marksEach;
 
@@ -108,15 +104,25 @@ export const SlotCard = memo(function SlotCard({
         </span>
         <div className="min-w-0 flex-1">
           {active ? (
-            <QuestionEditor
-              initial={state.doc}
-              label={`Text of ${name}`}
-              allowAdvanced={allowAdvanced}
-              upload={upload}
-              onProblem={setEditorProblem}
-              onChange={(doc) => onChange(slotKey, { doc })}
-              onFocus={onEditorFocus}
-            />
+            <SubPartFieldsContext.Provider
+              value={{
+                questionName: name,
+                coOptions,
+                showCo: group.showCoTag !== "NONE",
+                questionCo: state.coTag,
+                questionBloom: state.bloomLevel,
+              }}
+            >
+              <QuestionEditor
+                initial={state.doc}
+                label={`Text of ${name}`}
+                allowAdvanced={allowAdvanced}
+                upload={upload}
+                onProblem={setEditorProblem}
+                onChange={(doc) => onChange(slotKey, { doc })}
+                onFocus={onEditorFocus}
+              />
+            </SubPartFieldsContext.Provider>
           ) : (
             <button
               type="button"
@@ -182,12 +188,10 @@ export const SlotCard = memo(function SlotCard({
                   aria-label={`CO tag for ${name}`}
                   value={state.coTag ?? ""}
                   placeholder="none"
-                  pattern="[A-Za-z0-9.]{1,20}"
-                  maxLength={20}
+                  maxLength={CO_TAG_MAX}
+                  title={CO_TAG_HINT}
                   onChange={(e) =>
-                    onChange(slotKey, {
-                      coTag: e.target.value.replace(/[^A-Za-z0-9.]/g, "") || null,
-                    })
+                    onChange(slotKey, { coTag: cleanCoTagInput(e.target.value) || null })
                   }
                   className={`${inputStyles} h-7 w-28 px-1 text-caption`}
                 />
@@ -285,6 +289,9 @@ export const SlotCard = memo(function SlotCard({
         <p role="alert" className="px-3 pb-1.5 pl-9 sm:pl-12 text-caption text-danger">
           {editorProblem}
         </p>
+      ) : null}
+      {partsNote ? (
+        <p className="px-3 pb-1.5 pl-9 sm:pl-12 text-caption text-caution">{partsNote}</p>
       ) : null}
       {errors.length || notes.length ? (
         <ul className="flex flex-col gap-0.5 px-3 pb-2 pl-9 sm:pl-12 text-caption">

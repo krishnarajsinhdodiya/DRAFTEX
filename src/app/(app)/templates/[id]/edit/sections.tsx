@@ -651,6 +651,11 @@ export function PageSection({ f, edit }: { f: Fields; edit: Edit }) {
         checked={st.showMarksPerQuestion}
         onChange={(v) => edit((d) => void (d.style.showMarksPerQuestion = v))}
       />
+      <Check
+        label="Print the Bloom level after each question"
+        checked={st.showBloom}
+        onChange={(v) => edit((d) => void (d.style.showBloom = v))}
+      />
       <div className="grid grid-cols-2 gap-3">
         <SelectInput
           label="Text size"

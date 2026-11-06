@@ -82,15 +82,23 @@ export const INSERTS: Insert[] = [
     id: "subparts",
     label: "Sub-parts (a)(b)(c)",
     keywords: "parts subquestions abc",
-    run: (e) =>
-      e
-        .chain()
+    run: (e) => {
+      const from = e.state.selection.from;
+      e.chain()
         .focus()
         .insertContent({
           type: "subParts",
           content: Array.from({ length: 2 }, () => ({ type: "subPart", content: paragraphs(1) })),
         })
-        .run(),
+        .run();
+      // Put the cursor in (a), as Choices does with A.
+      let at: number | null = null;
+      e.state.doc.nodesBetween(Math.max(0, from - 1), e.state.doc.content.size, (n, pos) => {
+        if (at === null && n.type.name === "subParts") at = pos;
+        return at === null;
+      });
+      if (at !== null) e.commands.setTextSelection((at as number) + 3);
+    },
   },
   {
     id: "units",
