@@ -31,6 +31,7 @@ no chat history must be able to continue from this file alone.
 - Nothing half-done.
 
 ## Logged, not fixed
+- Stale `draftex.lock` with a reused process id: start is fixed (checks the app answers), but restore, move-data, reset-password, update-check and uninstall-check still trust the pid alone and would refuse until the next clean start replaces the lock.
 - Question text (not only choices) overflows on unsplittable chemical pieces such as `(4-isobutylphenyl)propanoic` in one column, with every option off (pre-existing; D61 covers choices only).
 - CI ubuntu renders of three old baselines drift 0.02–0.19% (limit 0.5%) with unchanged LaTeX; baselines not touched (memory.md).
 - A free-text CO tag keeps at most 20 characters before the suffix space; longer input is cut (rule-conformant).
