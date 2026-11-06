@@ -238,6 +238,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-06 · Performance after Phase 10 (same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 184 over the 16 ms floor); warm preview p50 415 ms, max 431 ms · targets met
 - 2026-11-06 · Sub-part fields are one line of facts under each sub-part that opens a popover (Marks, CO, Bloom; "As question" follows the question) · three inline fields took four lines in the editor column (seen in the guide screenshot)
 - 2026-11-06 · No migration in Phase 10: showBloom lives in the style JSON (snapshot and template), sub-part values in the slot content JSON; the upgrade fixture stays at v0.8.0 and the CI upgrade job installs v0.9.0 then updates · additive JSON with Zod defaults
+- 2026-11-06 · CI ubuntu re-renders of `reference-p1`, `kitchenSink-p1/p2` now differ from their committed baselines by 0.19% / 0.16% / 0.02% (gate 4 limit 0.5%) while their LaTeX is byte-identical to v0.9.0, so the drift is the runner's renderer, not the paper; baselines left unchanged · seen in run 42238327990; watch it, re-baseline only with the owner's approval if it nears 0.5%
 - 2026-11-06 · Group CO option "On the group" (`showCoTag: GROUP`) prints nothing: the serializer only acts on SLOT. Not changed in Phase 10 (would alter existing papers) · open question for the owner
 
 ## Pinned versions
