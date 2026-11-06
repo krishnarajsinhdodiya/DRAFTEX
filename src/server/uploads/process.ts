@@ -4,6 +4,8 @@
 // resolution data and ICC v4, memory.md). SVG never reaches LaTeX: resvg
 // renders it to PNG at 300 DPI. A PDF is kept as it is once it has one page.
 import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
 
@@ -113,19 +115,68 @@ function checkSvg(svg: string): void {
 }
 
 /**
- * Only a drawing with text needs the system fonts. Loading them scans every
- * installed font, synchronously, on each upload: 1.5 s cold on the owner's
- * Mac and more than 30 s once on a busy Windows runner (run 42251776929).
+ * Only a drawing with text needs fonts. Asking resvg for the system fonts
+ * scans every installed font, synchronously, on each upload: 1.5 s cold on
+ * the owner's Mac and more than 30 s on windows-latest (runs 42251776929,
+ * 42256729532), blocking the server. So text gets a short list of common
+ * font files instead (CorelDRAW labels such as CH3 or OH use these).
  */
 export function svgNeedsFonts(svg: string): boolean {
   return /<(?:[A-Za-z_][\w.-]*:)?text[\s>/]/.test(svg);
+}
+
+const FONT_CANDIDATES = [
+  // Windows
+  ...[
+    "arial.ttf",
+    "arialbd.ttf",
+    "ariali.ttf",
+    "times.ttf",
+    "timesbd.ttf",
+    "calibri.ttf",
+    "symbol.ttf",
+  ].map((f) => path.join(process.env.WINDIR ?? "C:\\Windows", "Fonts", f)),
+  // macOS
+  "/System/Library/Fonts/Supplemental/Arial.ttf",
+  "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+  "/System/Library/Fonts/Supplemental/Arial Italic.ttf",
+  "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+  "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf",
+  "/System/Library/Fonts/Helvetica.ttc",
+  // Linux (CI)
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+  "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+  "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+];
+
+let fontFiles: string[] | undefined;
+/** The candidate font files this computer has; looked up once. */
+export function svgFontFiles(): string[] {
+  fontFiles ??= FONT_CANDIDATES.filter((f) => fs.existsSync(f));
+  return fontFiles;
+}
+
+/** resvg font options for one drawing. */
+export function svgFontOptions(svg: string) {
+  if (!svgNeedsFonts(svg)) return { loadSystemFonts: false };
+  const files = svgFontFiles();
+  // A computer with none of the usual fonts still gets text, the slow way.
+  if (files.length === 0) return { loadSystemFonts: true };
+  return {
+    loadSystemFonts: false,
+    fontFiles: files,
+    defaultFontFamily: files.some((f) => /arial/i.test(f)) ? "Arial" : undefined,
+    sansSerifFamily: files.some((f) => /arial/i.test(f)) ? "Arial" : undefined,
+    serifFamily: files.some((f) => /times/i.test(f)) ? "Times New Roman" : undefined,
+  };
 }
 
 function svgToPng(input: Buffer): Buffer {
   const svg = input.toString("utf8");
   checkSvg(svg);
   // CorelDRAW keeps text as text unless told otherwise; system fonts let it render.
-  const font = { loadSystemFonts: svgNeedsFonts(svg) };
+  const font = svgFontOptions(svg);
   let r: Resvg;
   try {
     r = new Resvg(svg, {
