@@ -222,7 +222,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-06 · Bloom wording on printed papers (Phase 10): the level names, spelled as the editor already shows them: Remember, Understand, Apply, Analyse (British), Evaluate, Create; printed as `(Bloom: Remember)`; L1–L6 not used. One label table shared by the editor and the printed paper · owner answer
 - 2026-11-06 · Owner's Mac data folder migrated to the paper_snapshots migration (`npm run db:migrate`) · owner confirmed
 
-- 2026-11-06 · Elective course codes and CO tags: the paper prints the option's own code (`BP607T AEC1`, `BP212P SEC1`; most courses are plain `BP604T`). A CO tag is the base code, the CO number, then the suffix: `BP607T.01 AEC1` (plain courses stay `BP604T.01`). Supersedes the `coTag` default `BP607TAEC1.01`; needs the slot tag rule to allow one space before an AEC/SEC suffix. To build in Phase 10 (D63); two-digit CO numbers assumed as on the reference papers, owner to confirm · owner answer
+- 2026-11-06 · Elective course codes and CO tags: the paper prints the option's own code (`BP607T AEC1`, `BP212P SEC1`; most courses are plain `BP604T`). A CO tag is the base code, the CO number, then the suffix: `BP607T.01 AEC1` (plain courses stay `BP604T.01`). Supersedes the `coTag` default `BP607TAEC1.01`; needs the slot tag rule to allow one space before an AEC/SEC suffix. To build in Phase 10 (D63); CO numbers are two digits (`.01`), owner confirmed 2026-11-06 · owner answer
 
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.

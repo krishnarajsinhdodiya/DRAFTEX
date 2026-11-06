@@ -38,7 +38,7 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps (Phase 10, follow docs/ROADMAP-9-12.md WP-C)
 1. Session start per the operating rules; branch `phase/10-bloom-co` from `main`.
-2. Plan first: D-numbers from D63, each with cost/risk; wait for "go". D63 = elective CO tag format `BP607T.01 AEC1` / `BP212P.01 SEC1` (coTag helper, slot tag rule allows one space before the AEC/SEC suffix, CO picker, tests); no real elective papers exist yet, so no stored tags need rewriting unless the owner has made some. Bloom wording is decided: names (Remember … Create, "Analyse" spelling), from one label table shared with the editor's `BLOOM_LABEL` (memory.md).
+2. Plan first: D-numbers from D63, each with cost/risk; wait for "go". D63 = elective CO tag format (two-digit CO number, confirmed) `BP607T.01 AEC1` / `BP212P.01 SEC1` (coTag helper, slot tag rule allows one space before the AEC/SEC suffix, CO picker, tests); no real elective papers exist yet, so no stored tags need rewriting unless the owner has made some. Bloom wording is decided: names (Remember … Create, "Analyse" spelling), from one label table shared with the editor's `BLOOM_LABEL` (memory.md).
 3. Measure performance before (`node scripts/e2e-server.ts 3212` then `node scripts/measure-performance.ts http://127.0.0.1:3212`).
 4. The upgrade fixture for Phase 10 should be regenerated from v0.9.0 (`scripts/make-upgrade-fixture.ts` against a v0.9.0 worktree build) or kept at v0.8.0 and a v0.9.0 one added; the CI upgrade job picks the previous tag automatically.
 
@@ -46,7 +46,6 @@ no chat history must be able to continue from this file alone.
 - Install on the father's Windows 11 laptop as a `git clone` into `C:\DRAFTEX` (guide §13) and time it.
 - Try the firewall helper once (UAC prompt, rule created, rule removed).
 - Try one real `update-windows.bat` with the read-only token.
-- Confirm CO numbers stay two digits (`.01`) on elective tags too. (Bloom wording and elective format answered.)
 - Note: papers he marked Final before this update now open read-only; Edit puts them back to Draft.
 
 ## Failing tests
@@ -68,7 +67,6 @@ no chat history must be able to continue from this file alone.
 - A v0.8.0 worktree may remain at `/tmp/draftex-v080` (`git worktree remove /tmp/draftex-v080` to drop it).
 
 ## Questions for owner
-- CO numbers on elective tags: two digits (`BP607T.01 AEC1`), as on the reference papers?
 - Later: should the app offer Times at all?
 
 ## Phase checklist
