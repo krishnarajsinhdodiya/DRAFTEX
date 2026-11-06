@@ -96,7 +96,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-03 · Syllabus PDF page numbers: rules JSON cites printed pages; the catalogue cites PDF pages (printed + 15 in the regulations part) · both appear in messages and docs, so say which
 - 2026-11-03 · Syllabus PDF contradictions found (kept in the seed's `discrepancies`): Curricular Structure page credits per semester differ from Table IX (Table IX matches Tables I-VIII and X); BP708T AEC7 Precision Medicine has a course page but is missing from Table VII; BP802T prints unit VII twice; BP805T unit hours add to 44 of 45; BP607T AEC1, BP708T AEC7, BP806T AEC6 repeat CO 1 as CO 5 · verified against the PDF text
 - 2026-11-03 · Unit titles are best effort: the bold heading at the top of each unit cell; 34 units have no heading in the PDF and keep an empty title; a few titles carry a bold sub-heading. CO text matched the PDF word for word (545/545) · units are informational in v1
-- 2026-11-03 · CO tag helper `coTag(code, n)` drops spaces: `BP607T AEC1` → `BP607TAEC1.01` · slot `coTag` allows no spaces; owner to confirm how electives are tagged on real papers
+- 2026-11-03 · CO tag helper `coTag(code, n)` drops spaces: `BP607T AEC1` → `BP607TAEC1.01` · slot `coTag` allows no spaces; owner to confirm how electives are tagged on real papers [SUPERSEDED 2026-11-06 → see "Elective course codes and CO tags"]
 
 - 2026-11-03 · D15: built-in templates are owned by the first administrator; `data.system.syncBuiltInTemplates()` runs at startup and right after first-run setup, keyed by `Template.seedKey` (adds missing, rewrites changed in place with version + 1, never deletes); before setup it does nothing · no fake system user, so "first-run only when no user exists" stays exact; owner approved
 - 2026-11-03 · D16: the KSV and KBIPER logos are `assets/logos/*.png`, tracked since the owner's first pack (no new files); until uploads (Phase 5) they are the only header images, resolved by hash in `src/lib/templates/logos.ts` · owner approved
@@ -222,6 +222,8 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-06 · Bloom wording on printed papers (Phase 10): the level names, spelled as the editor already shows them: Remember, Understand, Apply, Analyse (British), Evaluate, Create; printed as `(Bloom: Remember)`; L1–L6 not used. One label table shared by the editor and the printed paper · owner answer
 - 2026-11-06 · Owner's Mac data folder migrated to the paper_snapshots migration (`npm run db:migrate`) · owner confirmed
 
+- 2026-11-06 · Elective course codes and CO tags: the paper prints the option's own code (`BP607T AEC1`, `BP212P SEC1`; most courses are plain `BP604T`). A CO tag is the base code, the CO number, then the suffix: `BP607T.01 AEC1` (plain courses stay `BP604T.01`). Supersedes the `coTag` default `BP607TAEC1.01`; needs the slot tag rule to allow one space before an AEC/SEC suffix. To build in Phase 10 (D63); two-digit CO numbers assumed as on the reference papers, owner to confirm · owner answer
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -244,8 +246,8 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Should Phase 9 add an offline admin password reset (`npm run reset-password -- <email>`, run on the DRAFTEX computer with the app stopped)? Today a forgotten sole-admin password cannot be recovered. [ANSWERED 2026-11-04 → see "D49"]
 - New-format KSV external paper header/layout: none issued yet. Built-in PCI 2026 end-sem template uses old KSV header + PCI groups. Revisit when the first new-format paper appears.
 - Should restoring a backup keep this computer's config.json (network settings) instead of the backup's? [ANSWERED 2026-11-04 → see "Restore keeps config"]
-- Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable.
-- How are COs of elective options tagged on real papers? Default `BP607TAEC1.01` (see `coTag`).
+- Which code does KSV print on an elective paper: the slot code (`BP607T`) or the option code (`BP607T AEC1`)? The catalogue stores the option code; the paper's course code stays editable. [ANSWERED 2026-11-06 → the option code]
+- How are COs of elective options tagged on real papers? Default `BP607TAEC1.01` (see `coTag`). [ANSWERED 2026-11-06 → `BP607T.01 AEC1`, see "Elective course codes and CO tags"]
 - Backups made by hand, before an update or before a restore are never pruned (D31) and the Backups screen has no Delete; each update adds one. Keep that, prune "before-update" to the newest 5, or add a Delete button? [ANSWERED 2026-11-04 → see "Delete backups"]
 - Pharm.D (and other) papers number each question (Q.1 … Q.10); templates number groups. Should Phase 5 add "number each question" to a group? [ANSWERED 2026-11-03 → yes, see "Per-question numbering"]
 - shadcn/ui: keep the direct Radix + own-styles approach, or adopt the shadcn CLI components? [ANSWERED 2026-11-03]
