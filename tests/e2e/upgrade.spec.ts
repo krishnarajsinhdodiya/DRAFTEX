@@ -1,0 +1,147 @@
+// Upgrading from the previous version (roadmap rule; D28, D35): a backup made
+// by v0.8.0 (tests/fixtures/upgrade, invented data, made by
+// scripts/make-upgrade-fixture.ts) is restored into this version with
+// `npm run restore`; the start applies the newer migrations. Its templates,
+// papers and questions must come through unchanged, and its export must look
+// exactly like the one v0.8.0 made.
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import Database from "better-sqlite3";
+import { unzipSync } from "fflate";
+import { expect, request, test } from "@playwright/test";
+import { diffPages, renderPdf } from "../support/pdf";
+import { signIn } from "./support";
+
+test.describe.configure({ mode: "serial", timeout: 180_000 });
+
+const FROM = "v0.8.0";
+const FIXTURE = path.resolve("tests", "fixtures", "upgrade");
+const ADMIN = { name: "Upgrade Admin", email: "upgrade@example.test", password: "upgrade fixture" };
+const PAPER = "Upgrade Example Paper";
+const PORT = 3220;
+const BASE = `http://127.0.0.1:${PORT}`;
+const realTools = path.join(os.tmpdir(), "draftex-e2e-3211", "tools");
+const dir = path.join(os.tmpdir(), "draftex-e2e-upgrade");
+let server: ChildProcess | undefined;
+
+function removeFolder(d: string): void {
+  const link = path.join(d, "tools");
+  if (fs.lstatSync(link, { throwIfNoEntry: false })?.isSymbolicLink()) fs.unlinkSync(link);
+  fs.rmSync(d, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+}
+
+const env = {
+  ...process.env,
+  DRAFTEX_DATA_DIR: dir,
+  CHECKPOINT_DISABLE: "1",
+  NEXT_TELEMETRY_DISABLED: "1",
+};
+
+/** The rows a user made, without columns added by later migrations. */
+function rows(file: string) {
+  const db = new Database(file, { readonly: true });
+  try {
+    return {
+      templates: db
+        .prepare(
+          "SELECT id, ownerId, title, visibility, structure, style, header, version FROM Template ORDER BY id",
+        )
+        .all(),
+      papers: db
+        .prepare(
+          `SELECT id, ownerId, templateId, templateSnapshot, title, courseId, courseCode, courseTitle,
+             program, semesterOrYear, examKind, academicYear, examDate, instructionsOverride, status,
+             version FROM Paper ORDER BY id`,
+        )
+        .all(),
+      slots: db.prepare("SELECT * FROM Slot ORDER BY id").all(),
+      assets: db.prepare("SELECT * FROM Asset ORDER BY sha256").all(),
+    };
+  } finally {
+    db.close();
+  }
+}
+
+test.afterAll(async () => {
+  if (server && server.exitCode === null) {
+    const exited = new Promise((resolve) => server?.once("exit", resolve));
+    server.kill();
+    await exited;
+  }
+  removeFolder(dir);
+});
+
+test(`a ${FROM} backup restores into this version unchanged`, async ({ browser }) => {
+  removeFolder(dir);
+  fs.mkdirSync(dir, { recursive: true });
+  if (fs.existsSync(realTools)) {
+    fs.symlinkSync(fs.realpathSync(realTools), path.join(dir, "tools"), "junction");
+  }
+  const zip = path.join(FIXTURE, `${FROM}-backup.zip`);
+  execFileSync(process.execPath, ["scripts/restore.ts", zip, "--yes"], { env, stdio: "pipe" });
+  fs.writeFileSync(path.join(dir, "config.json"), JSON.stringify({ port: PORT }));
+  const original = path.join(dir, "original.db");
+  fs.writeFileSync(
+    original,
+    unzipSync(new Uint8Array(fs.readFileSync(zip)))["data.db"] as Uint8Array,
+  );
+  const before = rows(original);
+  expect(before.papers.length).toBeGreaterThan(0);
+  expect(before.slots.length).toBeGreaterThan(0);
+
+  // The start applies the migrations this version added.
+  server = spawn(process.execPath, [path.resolve("server.ts")], { env, stdio: "ignore" });
+  const api = await request.newContext({ baseURL: BASE });
+  await expect
+    .poll(async () => (await api.get("/login").catch(() => null))?.status(), { timeout: 90_000 })
+    .toBe(200);
+  await api.dispose();
+  expect(rows(path.join(dir, "data.db"))).toEqual(before);
+
+  const ctx = await browser.newContext({ baseURL: BASE });
+  try {
+    const page = await ctx.newPage();
+    await signIn(page, ADMIN.email, ADMIN.password);
+    await expect(page.getByRole("heading", { name: `Welcome, ${ADMIN.name}` })).toBeVisible();
+
+    // The private template opens and its preview compiles.
+    const template = before.templates.find(
+      (t) => (t as { title: string }).title === "Upgrade Example Template",
+    ) as { id: string } | undefined;
+    expect(template).toBeDefined();
+    const preview = await page.request.get(`/api/templates/${template?.id}/preview`);
+    expect(preview.status()).toBe(200);
+
+    // A paper marked Final in v0.8.0 is Final here, so it opens read-only (D56).
+    await page.goto("/papers");
+    await page.getByRole("link", { name: new RegExp(`^${PAPER} Final`) }).click();
+    await expect(page.getByRole("note").filter({ hasText: "This paper is Final." })).toBeVisible();
+    const id = page.url().split("/").pop() as string;
+
+    // Its export looks exactly like the one v0.8.0 made.
+    const res = await page.request.post(`/api/papers/${id}/export`, {
+      headers: { Origin: BASE },
+      data: { confirmed: true },
+      timeout: 120_000,
+    });
+    expect(res.status(), await res.text().catch(() => "")).toBe(200);
+    const files = Object.fromEntries(
+      Object.entries(unzipSync(new Uint8Array(await res.body()))).map(([n, b]) => [
+        n.split("/").slice(1).join("/"),
+        b,
+      ]),
+    );
+    for (const name of ["paper", "key"]) {
+      const [a, b] = await Promise.all([
+        renderPdf(files[`${name}.pdf`] as Uint8Array),
+        renderPdf(new Uint8Array(fs.readFileSync(path.join(FIXTURE, `${FROM}-${name}.pdf`)))),
+      ]);
+      expect(a.length, name).toBe(b.length);
+      for (const d of diffPages(a, b)) expect(d.changedPixels, `${name} page ${d.page}`).toBe(0);
+    }
+  } finally {
+    await ctx.close();
+  }
+});
