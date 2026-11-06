@@ -15,8 +15,8 @@ import {
   type BankFields,
   type BankFieldsInput,
   bankFieldsSchema,
-  bankProblems,
-  coProblem,
+  bankCheck,
+  coNote,
   courseCodeSchema,
   dupSource,
   isEmptyDoc,
@@ -70,7 +70,8 @@ export interface SkipRow {
   reason: string;
 }
 export interface AddReport {
-  added: { label: string; id: string }[];
+  /** Added questions; `warning` names a CO or unit outside the syllabus lists (D85). */
+  added: { label: string; id: string; warning?: string }[];
   skipped: SkipRow[];
 }
 
@@ -158,7 +159,8 @@ export function bank(db: Db) {
       ? await db.course.findUnique({ where: { id: input.courseId }, include: courseDetail })
       : await db.course.findUnique({ where: { code: input.courseCode }, include: courseDetail });
     if (input.courseId && !c) throw new NotFoundError("Course");
-    if (c) return { ...c, program: c.program };
+    // The syllabus gives defaults only (D85): a typed title wins over the catalogue's.
+    if (c) return { ...c, title: input.courseTitle || c.title, program: c.program };
     return {
       id: null,
       code: input.courseCode,
@@ -191,7 +193,10 @@ export function bank(db: Db) {
     });
   }
 
-  /** Checks a question against the catalogue and the rules; throws with every problem. */
+  /**
+   * Checks a question; throws with every error. Returns the fields as stored
+   * and the warnings (a CO or unit outside the syllabus lists, D85).
+   */
   async function validated(actor: Actor, input: BankFieldsInput, prev: Doc[]) {
     const parsed = bankFieldsSchema.parse(input);
     const course = await resolveCourse(parsed);
@@ -202,14 +207,14 @@ export function bank(db: Db) {
       courseTitle: course.title,
       program: course.program,
     };
-    const problems = bankProblems(f, course);
-    if (problems.length) throw new InvalidQuestionError(problems);
+    const { errors, warnings } = bankCheck(f, course);
+    if (errors.length) throw new InvalidQuestionError(errors);
     await assertOwnsAssets(db, actor.userId, [
       ...imageShas(f.content),
       ...(f.answerKey ? imageShas(f.answerKey) : []),
     ]);
     await checkAdvanced(actor, [f.content, ...(f.answerKey ? [f.answerKey] : [])], prev);
-    return f;
+    return { f, warnings };
   }
 
   function columns(f: BankFields) {
@@ -342,8 +347,22 @@ export function bank(db: Db) {
         : false;
       return {
         ...shape(q),
-        /** False for a course without a CO list (D72 amended): only the CO's shape was checked. */
-        coChecked: (course?.outcomes.length ?? 0) > 0,
+        /** A CO or unit outside the syllabus lists (D85), shown as a note. */
+        warnings: q.coTag
+          ? bankCheck(
+              {
+                coTag: q.coTag,
+                unit: q.unit,
+                content: docSchema.parse(q.content) as Doc,
+                answerKey: null,
+              },
+              {
+                code: q.courseCode ?? "",
+                outcomes: course?.outcomes ?? [],
+                units: course?.units ?? [],
+              },
+            ).warnings
+          : [],
         ownerName: owner?.name ?? "",
         mine: q.ownerId === actor.userId,
         courseShared,
@@ -356,19 +375,19 @@ export function bank(db: Db) {
      * question written by hand; they come back so the screen can warn.
      */
     async create(actor: Actor, input: BankFieldsInput, sourcePaperId: string | null = null) {
-      const f = await validated(actor, input, []);
+      const { f, warnings } = await validated(actor, input, []);
       const cols = columns(f);
       const q = await db.question.create({
         data: { ...cols, ownerId: actor.userId, sourcePaperId },
       });
       await audit(actor, "create", q.id);
       const duplicates = await duplicatesOf(actor, f.courseCode, cols.dupKey, q.id);
-      return { question: shape(q), duplicates };
+      return { question: shape(q), duplicates, warnings };
     },
 
     async update(actor: Actor, id: string, version: number, input: BankFieldsInput) {
       const before = await findOwn(actor, id);
-      const f = await validated(actor, input, storedDocs(before));
+      const { f, warnings } = await validated(actor, input, storedDocs(before));
       const cols = columns(f);
       const { count } = await db.question.updateMany({
         where: { id, ownerId: actor.userId, deletedAt: null, version },
@@ -377,7 +396,7 @@ export function bank(db: Db) {
       if (count === 0) throw new ConflictError(STALE_VERSION);
       await audit(actor, "update", id);
       const duplicates = await duplicatesOf(actor, f.courseCode, cols.dupKey, id);
-      return { question: shape(await findOwn(actor, id)), duplicates };
+      return { question: shape(await findOwn(actor, id)), duplicates, warnings };
     },
 
     /** Private or shared with every colleague (D73); the author only. */
@@ -573,13 +592,14 @@ export function bank(db: Db) {
           skip("No CO.");
           continue;
         }
-        const problems = [
-          coProblem(slot.coTag, course),
+        const notes = [
+          coNote(slot.coTag, course),
           ...[...new Set(subPartCoTags(content))].map((t) => {
-            const p = coProblem(t, course);
+            const p = coNote(t, course);
             return p && `Sub-part: ${p}`;
           }),
         ].filter((p): p is string => Boolean(p));
+        const problems: string[] = [];
         const bad = [
           ...unprintableChars(content),
           ...(answerKey ? unprintableChars(answerKey) : []),
@@ -645,7 +665,7 @@ export function bank(db: Db) {
           });
           return created;
         });
-        report.added.push({ label, id: q.id });
+        report.added.push({ label, id: q.id, ...(notes.length && { warning: notes.join(" ") }) });
       }
       if (report.added.length) {
         await audit(actor, "add-from-paper", paper.id, String(report.added.length));
@@ -712,7 +732,7 @@ export function bank(db: Db) {
      */
     async createMany(actor: Actor, rows: BankFieldsInput[]) {
       const checked = [];
-      for (const r of rows) checked.push(await validated(actor, r, []));
+      for (const r of rows) checked.push((await validated(actor, r, [])).f);
       const created = await db.$transaction(
         checked.map((f) =>
           db.question.create({

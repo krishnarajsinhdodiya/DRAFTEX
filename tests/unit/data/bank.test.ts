@@ -109,26 +109,32 @@ afterAll(async () => {
   await t.close();
 });
 
-describe("saving (D72 amended, D77)", () => {
+describe("saving (D72 amended, D77, D85)", () => {
   it("stores the catalogue course's code, title and programme", async () => {
     const q = await t.data.bank.get(a, q1);
     expect(q).toMatchObject({
       courseCode: "XX604T",
       courseTitle: "Invented XX604T",
-      coChecked: true,
+      warnings: [],
     });
     expect(q.searchText).toBe("Private invented question.");
   });
 
-  it("uses the catalogue when a typed code is a catalogue code", async () => {
+  it("links a typed catalogue code and saves a CO the syllabus does not list, with a warning (D85)", async () => {
     const q = await t.data.bank.get(a, q3);
     expect(q.courseId).not.toBeNull();
-    await expect(
-      t.data.bank.create(
-        a,
-        fields("x", { courseId: null, courseCode: "XX605T", coTag: "XX605T.05" }),
-      ),
-    ).rejects.toThrow(/not a CO of XX605T/);
+    const r = await t.data.bank.create(
+      a,
+      fields("Old-syllabus invented question.", {
+        courseId: null,
+        courseCode: "XX605T",
+        courseTitle: "Old title typed by the user",
+        coTag: "XX605T.05",
+      }),
+    );
+    expect(r.warnings).toEqual(["CO XX605T.05 is not in the syllabus list for XX605T."]);
+    expect(r.question.courseTitle).toBe("Old title typed by the user");
+    expect((await t.data.bank.get(a, r.question.id)).warnings).toEqual(r.warnings);
   });
 
   it("takes courses outside the catalogue with a CO of that code", async () => {
@@ -144,16 +150,18 @@ describe("saving (D72 amended, D77)", () => {
       }),
     );
     const q = await t.data.bank.get(a, r.question.id);
-    expect(q).toMatchObject({ courseId: null, program: "M_PHARM", coChecked: false, unit: 5 });
+    expect(q).toMatchObject({ courseId: null, program: "M_PHARM", warnings: [], unit: 5 });
+    const odd = await t.data.bank.create(
+      a,
+      fields("y", { courseId: null, courseCode: "MPH101T", coTag: "CO1" }),
+    );
+    expect(odd.warnings[0]).toMatch(/does not look like a CO of MPH101T/);
     await expect(
-      t.data.bank.create(
-        a,
-        fields("y", { courseId: null, courseCode: "MPH101T", coTag: "XX604T.01" }),
-      ),
+      t.data.bank.create(a, fields(" ", { courseId: null, courseCode: "MPH101T" })),
     ).rejects.toBeInstanceOf(InvalidQuestionError);
   });
 
-  it("checks elective tags (D63) and courses without COs by shape", async () => {
+  it("knows elective tags (D63) and courses without COs", async () => {
     await expect(
       t.data.bank.create(
         a,
@@ -164,12 +172,11 @@ describe("saving (D72 amended, D77)", () => {
         }),
       ),
     ).resolves.toBeTruthy();
-    await expect(
-      t.data.bank.create(
-        a,
-        fields("z", { courseId: null, courseCode: "XX607T AEC1", coTag: "XX607TAEC1.02" }),
-      ),
-    ).rejects.toThrow(/not a CO/);
+    const z = await t.data.bank.create(
+      a,
+      fields("z", { courseId: null, courseCode: "XX607T AEC1", coTag: "XX607TAEC1.02" }),
+    );
+    expect(z.warnings[0]).toMatch(/not in the syllabus list/);
     await expect(
       t.data.bank.create(
         a,
@@ -182,11 +189,16 @@ describe("saving (D72 amended, D77)", () => {
     ).resolves.toBeTruthy();
   });
 
-  it("refuses a missing Bloom level, a bad unit and another person's picture", async () => {
+  it("refuses a missing Bloom level, a missing CO and another person's picture", async () => {
     await expect(
       t.data.bank.create(a, { ...fields("w"), bloomLevel: undefined as never }),
     ).rejects.toThrow();
-    await expect(t.data.bank.create(a, fields("w", { unit: 3 }))).rejects.toThrow(/no unit 3/);
+    await expect(
+      t.data.bank.create(a, { ...fields("w"), coTag: undefined as never }),
+    ).rejects.toThrow();
+    expect((await t.data.bank.create(a, fields("w", { unit: 3 }))).warnings).toEqual([
+      "Unit 3 is not in the syllabus list for XX604T.",
+    ]);
     await t.data.assets.add(b, {
       sha256: SHA,
       mime: "image/png",
@@ -413,11 +425,13 @@ describe("add from a paper (D76, D77)", () => {
     await slot("g2", 2, "Printable? 😀", { coTag: "XX604T.01", bloomLevel: "APPLY" });
 
     const first = await t.data.bank.addFromPaper(a, paper.id);
-    expect(first.added.map((x) => x.label)).toEqual(["Q.1(1)"]);
+    expect(first.added.map(({ label, warning }) => ({ label, warning }))).toEqual([
+      { label: "Q.1(1)", warning: undefined },
+      { label: "Q.1(4)", warning: "CO XX605T.01 is not in the syllabus list for XX604T." },
+    ]);
     expect(first.skipped).toEqual([
       { label: "Q.1(2)", reason: "No Bloom level." },
       { label: "Q.1(3)", reason: "No CO." },
-      { label: "Q.1(4)", reason: "CO XX605T.01 is not a CO of XX604T." },
       { label: "Q.1(5)", reason: "Same as Q.1(1) on this paper." },
       { label: "Q.2(1)", reason: "Already in your bank." },
       { label: "Q.2(2)", reason: expect.stringMatching(/cannot be printed/) as unknown },
@@ -454,7 +468,7 @@ describe("add from a paper (D76, D77)", () => {
     expect(await t.data.bank.get(a, r.added[0]?.id ?? "")).toMatchObject({
       courseCode: "PD301T",
       program: "PHARM_D",
-      coChecked: false,
+      warnings: [],
     });
 
     const none = await t.data.papers.create(a, templateId, paperMeta({ courseCode: "" }));

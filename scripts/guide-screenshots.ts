@@ -137,7 +137,7 @@ await page.keyboard.type("Describe how the example drug works.");
 await page.keyboard.press("ArrowDown");
 await page.keyboard.type("Evaluate its use in an example patient.");
 const long = page.getByRole("listitem", { name: "Q.3(1)", exact: true });
-await long.getByLabel("CO tag for Q.3(1)", { exact: true }).selectOption("BP604T.02");
+await long.getByLabel("CO tag for Q.3(1)", { exact: true }).fill("BP604T.02");
 await long.getByLabel("Bloom level for Q.3(1)", { exact: true }).selectOption({ label: "Apply" });
 for (const [part, marks, level] of [
   ["a", "6", "Understand"],

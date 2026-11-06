@@ -15,7 +15,7 @@ import { inputStyles } from "@/components/styles";
 import type { BloomLevel } from "@/generated/prisma/enums";
 import { isEmptyDoc } from "@/lib/editor/convert";
 import { BLOOM_LABEL } from "@/lib/paper/bloom";
-import { CO_TAG_HINT, CO_TAG_MAX, cleanCoTagInput } from "@/lib/paper/co-tag";
+import { CoTagInput } from "@/components/editor/co-tag-input";
 import type { Problem } from "@/lib/paper/problems";
 import { subPartMarksNote } from "@/lib/paper/tags";
 import { marksText } from "@/lib/templates/labels";
@@ -167,35 +167,15 @@ export const SlotCard = memo(function SlotCard({
           {group.showCoTag !== "NONE" ? (
             <label htmlFor={coId} className="flex items-center gap-1">
               CO
-              {coOptions.length ? (
-                <select
-                  id={coId}
-                  aria-label={`CO tag for ${name}`}
-                  value={state.coTag ?? ""}
-                  onChange={(e) => onChange(slotKey, { coTag: e.target.value || null })}
-                  className={`${inputStyles} h-7 max-w-48 px-1 text-caption`}
-                >
-                  <option value="">None</option>
-                  {coOptions.map((o) => (
-                    <option key={o.value} value={o.value} title={o.label}>
-                      {o.value}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id={coId}
-                  aria-label={`CO tag for ${name}`}
-                  value={state.coTag ?? ""}
-                  placeholder="none"
-                  maxLength={CO_TAG_MAX}
-                  title={CO_TAG_HINT}
-                  onChange={(e) =>
-                    onChange(slotKey, { coTag: cleanCoTagInput(e.target.value) || null })
-                  }
-                  className={`${inputStyles} h-7 w-28 px-1 text-caption`}
-                />
-              )}
+              <CoTagInput
+                id={coId}
+                label={`CO tag for ${name}`}
+                value={state.coTag ?? null}
+                placeholder="none"
+                options={coOptions}
+                onChange={(coTag) => onChange(slotKey, { coTag })}
+                className={`${inputStyles} h-7 w-36 px-1 text-caption`}
+              />
             </label>
           ) : null}
           <label htmlFor={bloomId} className="flex items-center gap-1">

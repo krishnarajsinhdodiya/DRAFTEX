@@ -76,7 +76,11 @@ test("questions take text, choices, an equation, a table and a picture", async (
     await page.keyboard.type(option);
   }
   await question(page, "Q.1(1)").getByLabel("A is the correct answer").check();
-  await page.getByLabel("CO tag for Q.1(1)").selectOption({ index: 1 });
+  // The CO field is free text with the syllabus COs as suggestions (D85); take the first one.
+  const co = page.getByLabel("CO tag for Q.1(1)");
+  const list = await co.getAttribute("list");
+  const firstCo = await page.locator(`[id="${list}"] option`).first().getAttribute("value");
+  await co.fill(firstCo ?? "");
 
   // An equation through MathLive.
   await open(page, "Q.2(1)");

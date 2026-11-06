@@ -152,7 +152,7 @@ export function PaperFormDialog({
               label="Course"
               hint={
                 course
-                  ? `${unit} ${course.semesterOrYear}. Code and title come from the syllabus.`
+                  ? "Code, title and semester are filled from the 2026 syllabus. Change them if your paper differs."
                   : undefined
               }
             >
@@ -160,10 +160,23 @@ export function PaperFormDialog({
                 <select
                   id={id}
                   value={v.courseId ?? ""}
-                  onChange={(e) => set({ courseId: e.target.value || null })}
+                  onChange={(e) => {
+                    // The syllabus fills defaults (D85); the fields below stay editable.
+                    const c = courses.find((x) => x.id === e.target.value);
+                    set(
+                      c
+                        ? {
+                            courseId: c.id,
+                            courseCode: c.code,
+                            courseTitle: c.title,
+                            semesterOrYear: c.semesterOrYear,
+                          }
+                        : { courseId: null },
+                    );
+                  }}
                   className={inputStyles}
                 >
-                  <option value="">Not from the catalogue (type below)</option>
+                  <option value="">Not from the syllabus (type below)</option>
                   {courses.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.code} · {c.title}
@@ -172,49 +185,47 @@ export function PaperFormDialog({
                 </select>
               )}
             </Row>
-            {!v.courseId ? (
-              <div className="grid grid-cols-[1fr_2fr] gap-3">
-                <Row label="Course code">
-                  {(id) => (
-                    <input
-                      id={id}
-                      value={v.courseCode}
-                      maxLength={40}
-                      onChange={(e) => set({ courseCode: e.target.value })}
-                      className={inputStyles}
-                    />
-                  )}
-                </Row>
-                <Row label="Course title">
-                  {(id) => (
-                    <input
-                      id={id}
-                      value={v.courseTitle}
-                      maxLength={200}
-                      onChange={(e) => set({ courseTitle: e.target.value })}
-                      className={inputStyles}
-                    />
-                  )}
-                </Row>
-                <Row label={unit}>
-                  {(id) => (
-                    <input
-                      id={id}
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={v.semesterOrYear}
-                      onChange={(e) =>
-                        set({
-                          semesterOrYear: Math.min(10, Math.max(1, Number(e.target.value) || 1)),
-                        })
-                      }
-                      className={inputStyles}
-                    />
-                  )}
-                </Row>
-              </div>
-            ) : null}
+            <div className="grid grid-cols-[1fr_2fr] gap-3">
+              <Row label="Course code">
+                {(id) => (
+                  <input
+                    id={id}
+                    value={v.courseCode}
+                    maxLength={40}
+                    onChange={(e) => set({ courseCode: e.target.value })}
+                    className={inputStyles}
+                  />
+                )}
+              </Row>
+              <Row label="Course title">
+                {(id) => (
+                  <input
+                    id={id}
+                    value={v.courseTitle}
+                    maxLength={200}
+                    onChange={(e) => set({ courseTitle: e.target.value })}
+                    className={inputStyles}
+                  />
+                )}
+              </Row>
+              <Row label={unit}>
+                {(id) => (
+                  <input
+                    id={id}
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={v.semesterOrYear}
+                    onChange={(e) =>
+                      set({
+                        semesterOrYear: Math.min(10, Math.max(1, Number(e.target.value) || 1)),
+                      })
+                    }
+                    className={inputStyles}
+                  />
+                )}
+              </Row>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Row label="Exam date">
                 {(id) => (

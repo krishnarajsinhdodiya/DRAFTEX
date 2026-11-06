@@ -3,8 +3,8 @@
 import { describe, expect, it } from "vitest";
 import {
   bankFieldsSchema,
-  bankProblems,
-  coProblem,
+  bankCheck,
+  coNote,
   courseCodeSchema,
   courseCoTags,
   dupSource,
@@ -39,26 +39,26 @@ describe("course codes", () => {
   });
 });
 
-describe("CO check", () => {
+describe("CO notes (D85: the syllabus lists are defaults)", () => {
   it("lists a catalogue course's tags, elective suffix after the number (D63)", () => {
     expect(courseCoTags(catalogue)).toEqual(["XX604T.01", "XX604T.02"]);
     expect(courseCoTags(elective)).toEqual(["XX607T.01 AEC1"]);
   });
-  it("accepts only the catalogue's COs when there is a list", () => {
-    expect(coProblem("XX604T.02", catalogue)).toBeNull();
-    expect(coProblem("XX604T.03", catalogue)).toMatch(/not a CO of XX604T/);
-    expect(coProblem("XX607T.01 AEC1", elective)).toBeNull();
-    expect(coProblem("XX607TAEC1.01", elective)).toMatch(/not a CO/);
+  it("notes a CO the syllabus does not list", () => {
+    expect(coNote("XX604T.02", catalogue)).toBeNull();
+    expect(coNote("XX604T.03", catalogue)).toMatch(/not in the syllabus list for XX604T/);
+    expect(coNote("XX607T.01 AEC1", elective)).toBeNull();
+    expect(coNote("XX607TAEC1.01", elective)).toMatch(/not in the syllabus list/);
   });
-  it("checks only the shape for a course without a list (D72 amended)", () => {
-    expect(coProblem("MPH101T.07", typed)).toBeNull();
-    expect(coProblem("MPH101T.7", typed)).toMatch(/MPH101T\.01/);
-    expect(coProblem("BP604T.01", typed)).toMatch(/does not belong to MPH101T/);
-    expect(coProblem("YY1.01 AEC2", { code: "YY1 AEC2", outcomes: [] })).toBeNull();
+  it("notes only an unusual shape for a course without a list", () => {
+    expect(coNote("MPH101T.07", typed)).toBeNull();
+    expect(coNote("MPH101T.7", typed)).toMatch(/MPH101T\.01, MPH101T\.02/);
+    expect(coNote("CO1", typed)).toMatch(/does not look like a CO of MPH101T/);
+    expect(coNote("YY1.01 AEC2", { code: "YY1 AEC2", outcomes: [] })).toBeNull();
   });
 });
 
-describe("bankProblems", () => {
+describe("bankCheck", () => {
   const base = {
     coTag: "XX604T.01",
     unit: null,
@@ -67,9 +67,9 @@ describe("bankProblems", () => {
   };
 
   it("passes a good question", () => {
-    expect(bankProblems(base, catalogue)).toEqual([]);
+    expect(bankCheck(base, catalogue)).toEqual({ errors: [], warnings: [] });
   });
-  it("checks sub-part COs, units, empty text and unprintable characters", () => {
+  it("warns on sub-part COs and units; errors on empty text and unprintable characters", () => {
     const content = doc(para("Explain 😀."), {
       type: "subParts",
       content: [
@@ -77,21 +77,25 @@ describe("bankProblems", () => {
         { type: "subPart", attrs: { coTag: "XX604T.09" }, content: [para("b")] },
       ],
     });
-    const p = bankProblems({ ...base, unit: 4, content }, catalogue);
-    expect(p).toEqual([
-      "Sub-part: CO XX604T.09 is not a CO of XX604T.",
-      "XX604T has no unit 4.",
-      expect.stringMatching(/cannot be printed: 😀 \(U\+1F600\)/),
-    ]);
-    expect(bankProblems({ ...base, content: doc(para(" ")) }, catalogue)).toContain(
+    expect(bankCheck({ ...base, unit: 4, content }, catalogue)).toEqual({
+      warnings: [
+        "Sub-part: CO XX604T.09 is not in the syllabus list for XX604T.",
+        "Unit 4 is not in the syllabus list for XX604T.",
+      ],
+      errors: [expect.stringMatching(/cannot be printed: 😀 \(U\+1F600\)/)],
+    });
+    expect(bankCheck({ ...base, content: doc(para(" ")) }, catalogue).errors).toContain(
       "The question is empty.",
     );
   });
   it("allows any unit for a course with no unit list", () => {
-    expect(bankProblems({ ...base, coTag: "MPH101T.01", unit: 7 }, typed)).toEqual([]);
+    expect(bankCheck({ ...base, coTag: "MPH101T.01", unit: 7 }, typed)).toEqual({
+      errors: [],
+      warnings: [],
+    });
   });
   it("checks the answer key's characters too", () => {
-    expect(bankProblems({ ...base, answerKey: doc(para("ok \u0007")) }, catalogue)[0]).toMatch(
+    expect(bankCheck({ ...base, answerKey: doc(para("ok \u0007")) }, catalogue).errors[0]).toMatch(
       /U\+0007/,
     );
   });

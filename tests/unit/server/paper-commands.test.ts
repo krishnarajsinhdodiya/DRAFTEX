@@ -72,6 +72,25 @@ describe("paper commands", () => {
     expect(coOptions(course)[0]).toEqual({ value: "BP604T.01", label: course.outcomes[0]?.text });
   });
 
+  it("keep what the user typed over the syllabus defaults (D85)", async () => {
+    const course = await t.data.courses.getByCode(owner, "BP604T");
+    const c = paperCommands(t.data, owner);
+    const r = await c.create(privateTemplate, {
+      title: "Older syllabus",
+      courseId: course.id,
+      courseCode: "BP604TX",
+      courseTitle: "Invented older title",
+      semesterOrYear: 5,
+    });
+    const id = (r as { value: string }).value;
+    expect(await t.data.papers.get(owner, id)).toMatchObject({
+      courseId: course.id,
+      courseCode: "BP604TX",
+      courseTitle: "Invented older title",
+      semesterOrYear: 5,
+    });
+  });
+
   it("report invalid input field by field", async () => {
     const r = await paperCommands(t.data, owner).create(privateTemplate, { title: " " });
     expect(r).toMatchObject({

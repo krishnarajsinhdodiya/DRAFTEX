@@ -64,9 +64,9 @@ export type BankFieldsInput = z.input<typeof bankFieldsSchema>;
 export type BankFields = z.output<typeof bankFieldsSchema>;
 
 /**
- * A course as the bank checks it: its code, and the COs and units of a
- * catalogue course. A course outside the catalogue (or one whose catalogue
- * entry has no COs) has empty lists, and only the shape of its CO is checked.
+ * A course as the bank knows it: its code, and the COs and units the
+ * syllabus lists for that code (empty for a course outside the catalogue).
+ * The lists are defaults and suggestions, never a rule (D85).
  */
 export interface BankCourse {
   code: string;
@@ -74,31 +74,27 @@ export interface BankCourse {
   units: readonly { number: number }[];
 }
 
-/** Shown on questions whose course has no CO list (D72 amended). */
-export const CO_UNCHECKED = "CO not checked against a list";
 /** Two-digit CO numbers (memory.md, owner 2026-11-06). */
 const CO_NUMBERS = Array.from({ length: 99 }, (_, i) => i + 1);
 
-/** The CO tags of a catalogue course: `BP604T.01`, `BP607T.01 AEC1` (D63). */
+/** The CO tags the syllabus lists for a course: `BP604T.01`, `BP607T.01 AEC1` (D63). */
 export function courseCoTags(course: Pick<BankCourse, "code" | "outcomes">): string[] {
   return course.outcomes.map((o) => coTag(course.code, o.number));
 }
 
-/** True when the course has a CO list to check against. */
-export function hasCoList(course: Pick<BankCourse, "outcomes">): boolean {
-  return course.outcomes.length > 0;
-}
-
-/** Names the problem with a CO tag for this course, or null when it fits. */
-export function coProblem(
-  tag: string,
-  course: Pick<BankCourse, "code" | "outcomes">,
-): string | null {
-  if (hasCoList(course)) {
-    return courseCoTags(course).includes(tag) ? null : `CO ${tag} is not a CO of ${course.code}.`;
+/**
+ * A warning when a CO tag does not fit the course (D85), or null: not one
+ * the syllabus lists for the code, or (with no list) not the code plus a
+ * number. Never an error: syllabi change and the user's own tag wins.
+ */
+export function coNote(tag: string, course: Pick<BankCourse, "code" | "outcomes">): string | null {
+  if (course.outcomes.length > 0) {
+    return courseCoTags(course).includes(tag)
+      ? null
+      : `CO ${tag} is not in the syllabus list for ${course.code}.`;
   }
   if (CO_NUMBERS.some((n) => coTag(course.code, n) === tag)) return null;
-  return `CO ${tag} does not belong to ${course.code}; write it as ${coTag(course.code, 1)}, ${coTag(course.code, 2)} and so on.`;
+  return `CO ${tag} does not look like a CO of ${course.code} (${coTag(course.code, 1)}, ${coTag(course.code, 2)} …).`;
 }
 
 type AnyNode = {
@@ -200,38 +196,46 @@ export function unprintableChars(doc: Doc): string[] {
   return [...bad];
 }
 
+export interface BankCheck {
+  /** Block the save: empty question, characters the paper cannot print. */
+  errors: string[];
+  /** Shown, never blocking (D85): CO or unit not in the syllabus lists. */
+  warnings: string[];
+}
+
 /**
- * Everything wrong with a question for this course (D77): the CO and every
- * sub-part CO must be the course's, the unit must exist, the text must print.
- * Bloom and the shape of each field are checked by `bankFieldsSchema`.
+ * Checks a question for its course. The syllabus lists are defaults (D85),
+ * so a CO or unit outside them is a warning; only what cannot be saved or
+ * printed is an error. Bloom and each field's shape are `bankFieldsSchema`'s.
  */
-export function bankProblems(
+export function bankCheck(
   q: { coTag: string; unit: number | null; content: Doc; answerKey: Doc | null },
   course: BankCourse,
-): string[] {
-  const out: string[] = [];
-  const co = coProblem(q.coTag, course);
-  if (co) out.push(co);
+): BankCheck {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const co = coNote(q.coTag, course);
+  if (co) warnings.push(co);
   for (const tag of new Set(subPartCoTags(q.content))) {
-    const p = coProblem(tag, course);
-    if (p) out.push(`Sub-part: ${p}`);
+    const p = coNote(tag, course);
+    if (p) warnings.push(`Sub-part: ${p}`);
   }
   if (
     q.unit !== null &&
     course.units.length > 0 &&
     !course.units.some((u) => u.number === q.unit)
   ) {
-    out.push(`${course.code} has no unit ${q.unit}.`);
+    warnings.push(`Unit ${q.unit} is not in the syllabus list for ${course.code}.`);
   }
-  if (isEmptyDoc(q.content)) out.push("The question is empty.");
+  if (isEmptyDoc(q.content)) errors.push("The question is empty.");
   const bad = [
     ...unprintableChars(q.content),
     ...(q.answerKey ? unprintableChars(q.answerKey) : []),
   ];
   if (bad.length) {
-    out.push(
+    errors.push(
       `This text contains characters that cannot be printed: ${[...new Set(bad)].join(", ")}.`,
     );
   }
-  return out;
+  return { errors, warnings };
 }
