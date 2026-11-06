@@ -8,14 +8,8 @@ import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "../paper/bloom.ts";
 import { coTag } from "../paper/co-tag.ts";
 import type { Doc } from "../paper/schema.ts";
 import { GROUP_TYPE_LABEL } from "../templates/labels.ts";
-import type {
-  BANK_PROGRAMS} from "./question.ts";
-import {
-  BANK_TYPES,
-  type BankFieldsInput,
-  type BankType,
-  TAGS_MAX,
-} from "./question.ts";
+import type { BANK_PROGRAMS } from "./question.ts";
+import { BANK_TYPES, type BankFieldsInput, type BankType, TAGS_MAX } from "./question.ts";
 
 export const CSV_MAX_BYTES = 1024 * 1024;
 export const CSV_MAX_ROWS = 1000;

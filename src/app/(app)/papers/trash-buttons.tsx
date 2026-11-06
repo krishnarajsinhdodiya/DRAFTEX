@@ -8,6 +8,14 @@ import { FormAlert } from "@/components/form";
 import { buttonStyles, dialogStyles } from "@/components/styles";
 import type { CommandResult } from "@/server/template-commands";
 import { emptyTrashAction, purgePaperAction, restorePaperAction } from "@/server/paper-actions";
+import {
+  emptyQuestionTrashAction,
+  purgeQuestionAction,
+  restoreQuestionAction,
+} from "@/server/bank-actions";
+
+/** Papers (D51) and bank questions (D82) share the Trash. */
+type Kind = "paper" | "question";
 
 const UNREACHABLE = "DRAFTEX is not reachable. Check that it is still running, then try again.";
 
@@ -55,7 +63,15 @@ export function TrashedNotice({ id, title }: { id: string; title: string }) {
   );
 }
 
-export function RestoreButton({ id, title }: { id: string; title: string }) {
+export function RestoreButton({
+  id,
+  title,
+  kind = "paper",
+}: {
+  id: string;
+  title: string;
+  kind?: Kind;
+}) {
   const router = useRouter();
   const { pending, error, run } = useCommand(() => router.refresh());
   return (
@@ -65,7 +81,9 @@ export function RestoreButton({ id, title }: { id: string; title: string }) {
         className={buttonStyles.quiet}
         disabled={pending}
         aria-label={`Restore ${title}`}
-        onClick={() => run(() => restorePaperAction(id))}
+        onClick={() =>
+          run(() => (kind === "paper" ? restorePaperAction(id) : restoreQuestionAction(id)))
+        }
       >
         <RotateCcw size={14} aria-hidden /> Restore
       </button>
@@ -126,7 +144,15 @@ function Confirm({
 const FOREVER =
   "It cannot be restored afterwards, except from a backup made while it still existed.";
 
-export function PurgeButton({ id, title }: { id: string; title: string }) {
+export function PurgeButton({
+  id,
+  title,
+  kind = "paper",
+}: {
+  id: string;
+  title: string;
+  kind?: Kind;
+}) {
   const router = useRouter();
   const { pending, error, run } = useCommand(() => router.refresh());
   return (
@@ -141,16 +167,28 @@ export function PurgeButton({ id, title }: { id: string; title: string }) {
         </button>
       }
       title={`Delete “${title}” forever?`}
-      description={`The paper, its questions and its answer key are deleted. ${FOREVER}`}
+      description={
+        kind === "paper"
+          ? `The paper, its questions and its answer key are deleted. ${FOREVER}`
+          : `The question and its model answer are deleted from the bank. Papers that use it keep their own copy. ${FOREVER}`
+      }
       action="Delete forever"
-      onConfirm={() => run(() => purgePaperAction(id))}
+      onConfirm={() =>
+        run(() => (kind === "paper" ? purgePaperAction(id) : purgeQuestionAction(id)))
+      }
       pending={pending}
       error={error}
     />
   );
 }
 
-export function EmptyTrashButton({ count }: { count: number }) {
+export function EmptyTrashButton({ papers, questions }: { papers: number; questions: number }) {
+  const what = [
+    papers ? (papers === 1 ? "1 paper" : `${papers} papers`) : null,
+    questions ? (questions === 1 ? "1 bank question" : `${questions} bank questions`) : null,
+  ]
+    .filter(Boolean)
+    .join(" and ");
   const router = useRouter();
   const { pending, error, run } = useCommand(() => router.refresh());
   return (
@@ -160,10 +198,16 @@ export function EmptyTrashButton({ count }: { count: number }) {
           <Trash2 size={14} aria-hidden /> Empty Trash
         </button>
       }
-      title={count === 1 ? "Delete 1 paper forever?" : `Delete ${count} papers forever?`}
-      description={`Every paper in Trash is deleted with its questions and answer key. ${FOREVER}`}
+      title={`Delete ${what} forever?`}
+      description={`Everything in Trash is deleted, papers with their questions and answer keys. ${FOREVER}`}
       action="Empty Trash"
-      onConfirm={() => run(() => emptyTrashAction())}
+      onConfirm={() =>
+        run(async () => {
+          const a = await emptyTrashAction();
+          if (!a.ok) return a;
+          return emptyQuestionTrashAction();
+        })
+      }
       pending={pending}
       error={error}
     />

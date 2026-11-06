@@ -2,7 +2,7 @@
 // One question on the paper: its number, the text (read-only until clicked,
 // then a live editor), and in the marks margin its marks. Below: CO tag,
 // Bloom level and the question's actions.
-import { ArrowDown, ArrowUp, Copy, Eraser } from "lucide-react";
+import { ArrowDown, ArrowUp, BookmarkPlus, Copy, Eraser, Library } from "lucide-react";
 import { memo, useId, useState } from "react";
 import {
   type EditorHandle,
@@ -51,6 +51,7 @@ export const SlotCard = memo(function SlotCard({
   onClear,
   onMove,
   onDuplicate,
+  onBank,
   onEditorFocus,
 }: {
   slotKey: string;
@@ -70,6 +71,8 @@ export const SlotCard = memo(function SlotCard({
   onClear: (key: string) => void;
   onMove: (key: string, by: -1 | 1) => void;
   onDuplicate: (key: string) => void;
+  /** "Insert from bank" opens the picker; "Add to bank" adds this question (D77, D78). */
+  onBank: (key: string, action: "insert" | "add") => void;
   onEditorFocus: (handle: EditorHandle) => void;
 }) {
   const name = group.slotLabels[position - 1] ?? slotKey;
@@ -244,6 +247,25 @@ export const SlotCard = memo(function SlotCard({
               onClick={() => onDuplicate(slotKey)}
             >
               <Copy size={15} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={iconButton}
+              aria-label={`Use a bank question for ${name}`}
+              title="Insert from the question bank"
+              onClick={() => onBank(slotKey, "insert")}
+            >
+              <Library size={15} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={iconButton}
+              aria-label={`Add ${name} to the question bank`}
+              title="Add to the question bank"
+              disabled={empty}
+              onClick={() => onBank(slotKey, "add")}
+            >
+              <BookmarkPlus size={15} aria-hidden />
             </button>
             <button
               type="button"

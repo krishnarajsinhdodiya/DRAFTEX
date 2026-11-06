@@ -1,11 +1,19 @@
 "use client";
 // The paper editor (SPEC §8): outline on the left, the paper's questions in
 // print order in the centre, the PDF on the right (resizable, collapsible).
-import { Download, PanelRightClose, PanelRightOpen, RefreshCw, Undo2 } from "lucide-react";
+import {
+  BookmarkPlus,
+  Download,
+  PanelRightClose,
+  PanelRightOpen,
+  RefreshCw,
+  Undo2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { type EditorHandle, Toolbar, type Uploader } from "@/components/editor/question-editor";
+import { type EditorHandle, Toolbar } from "@/components/editor/question-editor";
+import { upload } from "@/components/editor/upload";
 import { FormAlert } from "@/components/form";
 import { PciBadge } from "@/components/badge";
 import { PdfView } from "@/components/pdf-view";
@@ -22,27 +30,8 @@ import { SlotCard } from "./slot-card";
 import { LockedBanner, MarkFinalButton, VersionsButton } from "./status";
 import { slotKey, usePaper } from "./use-paper";
 import { TagSummaryPanel } from "./tag-summary";
-
-const upload: Uploader = async (file) => {
-  const body = new FormData();
-  body.set("file", file);
-  let res: Response;
-  try {
-    res = await fetch("/api/assets", { method: "POST", body });
-  } catch {
-    throw new Error("DRAFTEX is not reachable, so the picture was not added.");
-  }
-  const json = (await res.json().catch(() => ({}))) as {
-    message?: string;
-    sha256?: string;
-    ext?: "png" | "jpg" | "pdf";
-    width?: number;
-  };
-  if (!res.ok || !json.sha256 || !json.ext) {
-    throw new Error(json.message ?? "The picture could not be added.");
-  }
-  return { sha256: json.sha256, ext: json.ext, width: json.width ?? 600 };
-};
+import { BankPicker, BankReport } from "./bank-dialogs";
+import type { AddReport } from "@/lib/data/bank";
 
 function bySlot(problems: Problem[]): Map<string, Problem[]> {
   const m = new Map<string, Problem[]>();
@@ -120,6 +109,27 @@ export function PaperEditor({
   const [focused, setFocused] = useState<EditorHandle | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [statusError, setStatusError] = useState<string | null>(null);
+  // Question bank (D77, D78): the place the picker inserts into, and the last "Add to bank" report.
+  const [picking, setPicking] = useState<string | null>(null);
+  const [bankReport, setBankReport] = useState<AddReport | null>(null);
+  const [marksNote, setMarksNote] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const addToBank = useCallback(
+    async (key?: string) => {
+      setAdding(true);
+      const r = await paper.addToBank(key);
+      setAdding(false);
+      if (r) setBankReport(r);
+    },
+    [paper],
+  );
+  const onBank = useCallback(
+    (key: string, action: "insert" | "add") => {
+      if (action === "insert") setPicking(key);
+      else void addToBank(key);
+    },
+    [addToBank],
+  );
   // An export marks the paper Printed (D55) and reloads it; the notice outlives the reload.
   const [exported, setExported] = useExportedNotice(view.id);
   const [previewWidth, setPreviewWidth] = useStoredWidth();
@@ -237,6 +247,16 @@ export function PaperEditor({
           <MarkFinalButton view={view} flush={paper.flushAll} onError={setStatusError} />
         )}
         <VersionsButton view={view} />
+        <button
+          type="button"
+          className={buttonStyles.quiet}
+          disabled={adding}
+          onClick={() => void addToBank()}
+          title="Add every question with a Bloom level and a CO to your question bank"
+        >
+          <BookmarkPlus size={15} aria-hidden />{" "}
+          <span className="max-sm:sr-only">{adding ? "Adding…" : "Add to bank"}</span>
+        </button>
         <DuplicateButton
           paperId={view.id}
           title={view.title}
@@ -318,6 +338,45 @@ export function PaperEditor({
           </FormAlert>
         </div>
       ) : null}
+      {marksNote ? (
+        <div className="px-4 pt-2">
+          <FormAlert kind="caution">{marksNote}</FormAlert>
+        </div>
+      ) : null}
+      <BankReport report={bankReport} onClose={() => setBankReport(null)} />
+      {picking
+        ? (() => {
+            const dot = picking.lastIndexOf(".");
+            const g = view.groups.find((x) => x.key === picking.slice(0, dot));
+            const st = paper.slots.get(picking);
+            const name = g?.slotLabels[Number(picking.slice(dot + 1)) - 1] ?? "the question";
+            return (
+              <BankPicker
+                key={picking}
+                open
+                onOpenChange={(o) => {
+                  if (!o) setPicking(null);
+                }}
+                slotName={name}
+                slotEmpty={!st || isEmptyDoc(st.doc)}
+                courseCode={view.courseCode}
+                marks={st?.marks ?? g?.marksEach ?? 1}
+                onPick={async (q) => {
+                  const r = await paper.insertFromBank(picking, q);
+                  if (r) {
+                    activate(picking);
+                    setMarksNote(
+                      r.marksDiffer
+                        ? `${name} keeps its ${marksText(st?.marks ?? 0)} marks; the bank question was written for a different number. Check the question fits.`
+                        : null,
+                    );
+                  }
+                  return r;
+                }}
+              />
+            );
+          })()
+        : null}
       {paper.opError ? (
         <div className="px-4 pt-3">
           <FormAlert kind="error">{paper.opError}</FormAlert>
@@ -475,7 +534,7 @@ export function PaperEditor({
                             if (!state) return null;
                             return (
                               <SlotCard
-                                key={k}
+                                key={`${k}#${state.mount ?? 0}`}
                                 slotKey={k}
                                 group={g}
                                 position={i + 1}
@@ -493,6 +552,7 @@ export function PaperEditor({
                                 onClear={(key) => void paper.clear(key)}
                                 onMove={moveBy}
                                 onEditorFocus={setFocused}
+                                onBank={onBank}
                                 onDuplicate={(key) =>
                                   void paper.duplicate(key).then((to) => to && activate(to))
                                 }

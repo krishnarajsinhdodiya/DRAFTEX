@@ -6,6 +6,7 @@
 // the previous tag:
 // 1. (in the old worktree) node scripts/e2e-server.ts 3219
 // 2. (here) node scripts/make-upgrade-fixture.ts http://127.0.0.1:3219 /tmp/draftex-e2e-3219 v0.8.0
+// The tag picks the old screens' steps: v0.8.0, or v0.10.0 (Mark as Final, Bloom shown).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -122,12 +123,23 @@ await page
   .filter({ hasText: "All changes saved" })
   .waitFor({ timeout: 15_000 });
 
-// Mark it Final through the old Details dialog (v0.8.0 had no lock).
-await page.getByRole("button", { name: "Details" }).click();
-const details = page.getByRole("dialog", { name: "Paper details" });
-await details.getByLabel("Status").selectOption("FINAL");
-await details.getByRole("button", { name: "Save details" }).click();
-await expect(details).toBeHidden();
+if (tag === "v0.8.0") {
+  // Mark it Final through the old Details dialog (v0.8.0 had no lock).
+  await page.getByRole("button", { name: "Details" }).click();
+  const details = page.getByRole("dialog", { name: "Paper details" });
+  await details.getByLabel("Status").selectOption("FINAL");
+  await details.getByRole("button", { name: "Save details" }).click();
+  await expect(details).toBeHidden();
+} else {
+  // v0.10.0 and later: print Bloom levels (D64), then "Mark as Final" (D56).
+  await page.getByRole("button", { name: "Details" }).click();
+  const details = page.getByRole("dialog", { name: "Paper details" });
+  await details.getByLabel("Print Bloom levels").check();
+  await details.getByRole("button", { name: "Save details" }).click();
+  await expect(details).toBeHidden();
+  await page.getByRole("button", { name: "Mark as Final" }).click();
+  await page.getByRole("note").filter({ hasText: "This paper is Final." }).waitFor();
+}
 
 // That version's export of the paper: the reference for "compiles the same".
 await page.reload();

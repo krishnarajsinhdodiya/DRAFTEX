@@ -17,6 +17,8 @@ import {
   saveSlotAction,
 } from "@/server/paper-actions";
 import type { EditorGroup, PaperEditorView } from "@/server/paper-view";
+import { addToBankAction, insertFromBankAction } from "@/server/bank-actions";
+import type { AddReport } from "@/lib/data/bank";
 
 export const SAVE_DELAY_MS = 1000;
 export const PREVIEW_DELAY_MS = 1500;
@@ -39,6 +41,18 @@ export interface SlotState extends SlotValue {
   error?: string;
   /** Bumped on every local change; a save only counts for the revision it sent. */
   rev: number;
+  /** Bumped when the server replaced the question (insert from the bank), so its editor remounts. */
+  mount?: number;
+}
+
+/** A bank question as the picker hands it to the paper (D78). */
+export interface BankPick {
+  id: string;
+  content: Doc;
+  coTag: string | null;
+  bloomLevel: BloomLevel | null;
+  answerKey: Doc | null;
+  keyCriteria: KeyCriterion[] | null;
 }
 
 export interface PreviewState {
@@ -546,10 +560,96 @@ export function usePaper(view: PaperEditorView) {
   const saving = [...slots.values()].some((s) => s.status === "pending" || s.status === "saving");
   const failed = [...slots.entries()].filter(([, s]) => s.status === "error");
 
+  /**
+   * "Add to bank" (D77): one question, or every question when `key` is left
+   * out. Unsaved changes are saved first, since the server adds what it has.
+   */
+  const addToBank = useCallback(
+    async (key?: string): Promise<AddReport | null> => {
+      let ok: boolean;
+      if (key) {
+        await flush(key);
+        ok = slotsRef.current.get(key)?.status === "saved";
+      } else {
+        ok = await flushAll();
+      }
+      if (!ok) {
+        setOpError("Some changes are not saved yet, so nothing was added. Try again in a moment.");
+        return null;
+      }
+      const r = await addToBankAction(view.id, key ? place(key) : undefined);
+      if (!r.ok) {
+        setOpError(r.message);
+        return null;
+      }
+      setOpError(null);
+      return r.value;
+    },
+    [flush, flushAll, view.id],
+  );
+
+  /**
+   * Inserts a bank question into a place (D78): a copy, so later edits on
+   * either side do not touch the other. The place keeps its marks. Undo
+   * puts back what was there.
+   */
+  const insertFromBank = useCallback(
+    async (key: string, q: BankPick): Promise<{ marksDiffer: boolean } | null> => {
+      await flush(key);
+      const before = slotsRef.current.get(key);
+      const g = groups.get(place(key).groupKey);
+      if (!before || !g) return null;
+      const r = await insertFromBankAction(q.id, view.id, place(key));
+      if (!r.ok) {
+        setOpError(r.message);
+        return null;
+      }
+      setOpError(null);
+      patchSlot(key, {
+        doc: q.content,
+        coTag: q.coTag,
+        bloomLevel: q.bloomLevel,
+        answerKey: q.answerKey,
+        keyCriteria: q.keyCriteria ?? [],
+        status: "saved",
+        mount: (before.mount ?? 0) + 1,
+      });
+      void dropDraft(view.id, key);
+      const wasEmpty = isEmptyDoc(before.doc);
+      pushUndo({
+        label: `Insert into ${label(g, key)}`,
+        run: async () => {
+          if (wasEmpty) {
+            await clearSlotAction(view.id, place(key));
+            patchSlot(key, {
+              doc: EMPTY_DOC,
+              marks: g.marksEach,
+              coTag: null,
+              bloomLevel: null,
+              answerKey: null,
+              keyCriteria: [],
+              status: "saved",
+              mount: (slotsRef.current.get(key)?.mount ?? 0) + 1,
+            });
+          } else {
+            patchSlot(key, { mount: (slotsRef.current.get(key)?.mount ?? 0) + 1 });
+            await restore(key, valueOf(before));
+          }
+        },
+      });
+      lastEdit.current = Date.now();
+      schedulePreview();
+      return { marksDiffer: r.value.marksDiffer };
+    },
+    [flush, groups, patchSlot, pushUndo, restore, schedulePreview, view.id],
+  );
+
   return {
     groups,
     slots,
     change,
+    addToBank,
+    insertFromBank,
     setMarks,
     retry,
     clear,

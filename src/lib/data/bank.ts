@@ -407,6 +407,17 @@ export function bank(db: Db) {
       await audit(actor, s === "SHARED" ? "share" : "unshare", id);
     },
 
+    /** The course codes of the actor's own questions (not in Trash), for "share a course". */
+    async ownCourses(actor: Actor) {
+      const rows = await db.question.findMany({
+        where: { ownerId: actor.userId, deletedAt: null, courseCode: { not: null } },
+        distinct: ["courseCode"],
+        select: { courseCode: true, courseTitle: true },
+        orderBy: { courseCode: "asc" },
+      });
+      return rows.map((r) => ({ code: r.courseCode ?? "", title: r.courseTitle ?? "" }));
+    },
+
     /** The courses whose questions the actor shares as a whole (D73). */
     async courseShares(actor: Actor) {
       return db.bankCourseShare.findMany({

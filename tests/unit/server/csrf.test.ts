@@ -39,6 +39,8 @@ describe("route handlers", () => {
     ).toEqual([
       "src/app/api/admin/backups/[name]/route.ts",
       "src/app/api/assets/[file]/route.ts",
+      // D79: the CSV template, a fixed file with invented rows; no data read.
+      "src/app/api/bank/template/route.ts",
       "src/app/api/papers/[id]/preview/route.ts",
       // D57: compiles a stored version, writes nothing; owner-only like the preview.
       "src/app/api/papers/[id]/versions/[versionId]/route.ts",
