@@ -9,6 +9,7 @@ import {
   UploadError,
   processUpload,
   sniff,
+  svgNeedsFonts,
 } from "@/server/uploads/process";
 import { assetFile, storeUpload } from "@/server/uploads/store";
 import { jpegWithMetadata, pdfWithPages, pngClaiming, solid, svg } from "../../support/images";
@@ -80,6 +81,15 @@ describe("processUpload: SVG", () => {
   it("renders the drawing to PNG at 300 DPI", async () => {
     const out = await processUpload(svg('<rect width="96" height="48" fill="#000"/>'));
     expect(out).toMatchObject({ ext: "png", from: "svg", width: 300, height: 150 });
+  });
+
+  it("loads the system fonts only for drawings with text", async () => {
+    expect(svgNeedsFonts('<svg><rect width="1" height="1"/></svg>')).toBe(false);
+    expect(svgNeedsFonts("<svg><!-- context --><textPath/></svg>")).toBe(false);
+    expect(svgNeedsFonts('<svg><text x="1">CH3</text></svg>')).toBe(true);
+    expect(svgNeedsFonts("<svg:svg><svg:text>OH</svg:text></svg:svg>")).toBe(true);
+    const out = await processUpload(svg('<text x="4" y="30" font-size="24">CH3</text>'));
+    expect(out).toMatchObject({ ext: "png", from: "svg" });
   });
 
   it("renders a huge drawing smaller instead of refusing it", async () => {
