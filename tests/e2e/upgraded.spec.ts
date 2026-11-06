@@ -29,7 +29,9 @@ test("the updated copy keeps its administrator and makes a Final paper", async (
   await page.getByRole("button", { name: "Mark as Final" }).click();
   await expect(page.getByRole("note").filter({ hasText: "This paper is Final." })).toBeVisible();
   await page.getByRole("button", { name: /^Versions/ }).click();
-  await expect(page.getByRole("dialog", { name: "Versions" }).getByText("Marked Final")).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Versions" }).getByText("Marked Final", { exact: true }),
+  ).toBeVisible();
 
   await page.goto("/papers?q=upgraded");
   await expect(page.getByText("1 paper match")).toBeVisible();

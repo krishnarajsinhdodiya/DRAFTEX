@@ -83,8 +83,7 @@ export class Writer {
  * the word follows ("N-(4-hydroxyphenyl)acetamide"). A comma before a digit
  * stays ("1,000", "2,6-dione" breaks after the hyphen instead).
  */
-const BREAK_AFTER =
-  /(?<=[\p{L}\p{N})\]]-|[)\]])(?=[^\s,.;:)\]-])|(?<=,)(?=[^\s\p{N},.;:)\]-])/u;
+const BREAK_AFTER = /(?<=[\p{L}\p{N})\]]-|[)\]])(?=[^\s,.;:)\]-])|(?<=,)(?=[^\s\p{N},.;:)\]-])/u;
 
 export function text(s: string, issues: Issues, quotes?: QuoteState, breakable = false): string {
   if (breakable) {

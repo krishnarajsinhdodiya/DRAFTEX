@@ -58,7 +58,10 @@ const write = async (name: string, text: string) => {
   await page.keyboard.type(text);
 };
 for (const q of ["Q.1(1)", "Q.1(2)", "Q.1(3)", "Q.2(1)"]) await write(q, "Example question text. ");
-await page.getByRole("status").filter({ hasText: "All changes saved" }).waitFor({ timeout: 15_000 });
+await page
+  .getByRole("status")
+  .filter({ hasText: "All changes saved" })
+  .waitFor({ timeout: 15_000 });
 
 // Input latency: observe every key event's duration while typing.
 await page.evaluate(() => {

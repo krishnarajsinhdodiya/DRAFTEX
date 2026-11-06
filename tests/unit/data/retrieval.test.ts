@@ -98,9 +98,7 @@ describe("Final and Printed papers (D55, D56)", () => {
     ).rejects.toEqual(locked);
     const v3 = await t.data.papers.update(me, p.id, 2, { status: "DRAFT" });
     expect(v3).toMatchObject({ status: "DRAFT", version: 3 });
-    expect(
-      await t.db.auditLog.count({ where: { entityId: p.id, action: "reopen" } }),
-    ).toBe(1);
+    expect(await t.db.auditLog.count({ where: { entityId: p.id, action: "reopen" } })).toBe(1);
     await t.data.papers.saveSlot(me, p.id, testSlot({ marks: 2 }));
     // Trash still works on a locked paper.
     await t.data.papers.update(me, p.id, 3, { status: "FINAL" });
@@ -150,7 +148,8 @@ describe("versions (D57, D58)", () => {
     const p = await paper();
     let version = 1;
     for (let i = 1; i <= VERSION_HISTORY + 3; i++) {
-      if (i > 1) version = (await t.data.papers.update(me, p.id, version, { status: "DRAFT" })).version;
+      if (i > 1)
+        version = (await t.data.papers.update(me, p.id, version, { status: "DRAFT" })).version;
       await t.data.papers.saveSlot(me, p.id, testSlot({ marks: i }));
       version = await t.data.papers.markPrinted(me, p.id);
     }
@@ -186,7 +185,11 @@ describe("versions (D57, D58)", () => {
     });
     const full = await t.data.papers.getWithSlots(me, copy.id);
     expect(full.slots).toHaveLength(1);
-    expect(full.slots[0]).toMatchObject({ coTag: "XX101T.01", bloomLevel: "APPLY", answerKey: key });
+    expect(full.slots[0]).toMatchObject({
+      coTag: "XX101T.01",
+      bloomLevel: "APPLY",
+      answerKey: key,
+    });
     await expect(t.data.papers.restoreVersion(me, p.id, v?.id ?? "", " ")).rejects.toThrow(
       "Give the copy a title.",
     );
