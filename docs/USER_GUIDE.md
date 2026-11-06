@@ -170,9 +170,9 @@ is marked and the message says what to change.
 has **Print Bloom levels**:
 
 - When it is ticked, each question prints its level right after its text,
-  like "(Bloom: Remember)", with the CO tag at the right as before. A sub-part
-  with its own level or CO prints them on its own line; otherwise the
-  question's line carries them.
+  like "(Bloom: Remember)", with the CO tag at the right as before. A
+  question with sub-parts prints the level and CO on each sub-part line
+  (a), (b), (c) instead, using the question's own where a sub-part has none.
 - The answer key then shows the level too: a **Level** column for
   multiple-choice answers, and the level and CO after each question number.
 - The switch belongs to this paper. A new paper starts with its template's
