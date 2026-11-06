@@ -49,17 +49,36 @@ test("a paper for an elective course offers CO tags as BP607T.01 AEC1", async ({
   await co.selectOption("BP607T.01 AEC1");
   await q.getByLabel("Bloom level for Q.3(1)", { exact: true }).selectOption({ label: "Apply" });
   // A sub-part follows the question until it gets its own value (D66).
-  await expect(q.getByLabel("Bloom level for Q.3(1) (b)").locator("option").first()).toHaveText(
+  const fields = async (part: string) => {
+    await page
+      .getByRole("button", {
+        name: new RegExp(`^Marks, CO and Bloom for Q\\.3\\(1\\) \\(${part}\\)`),
+      })
+      .click();
+    return page.getByRole("dialog", { name: `Marks, CO and Bloom for Q.3(1) (${part})` });
+  };
+  let pop = await fields("b");
+  await expect(pop.getByLabel("Bloom level for Q.3(1) (b)").locator("option").first()).toHaveText(
     "As question (Apply)",
   );
-  await q.getByLabel("Marks for Q.3(1) (a)").fill("6");
-  await q.getByLabel("Bloom level for Q.3(1) (a)").selectOption({ label: "Understand" });
-  await q.getByLabel("CO tag for Q.3(1) (a)").selectOption("BP607T.02 AEC1");
-  await q.getByLabel("Marks for Q.3(1) (b)").fill("3");
+  await pop.getByLabel("Marks for Q.3(1) (b)").fill("3");
+  await pop.getByRole("button", { name: "Done" }).click();
+  pop = await fields("a");
+  await pop.getByLabel("Marks for Q.3(1) (a)").fill("6");
+  await pop.getByLabel("Bloom level for Q.3(1) (a)").selectOption({ label: "Understand" });
+  await pop.getByLabel("CO tag for Q.3(1) (a)").selectOption("BP607T.02 AEC1");
+  await pop.getByRole("button", { name: "Done" }).click();
+  await expect(
+    page.getByRole("button", {
+      name: /^Marks, CO and Bloom for Q\.3\(1\) \(a\): 6 marks · BP607T\.02 AEC1 · Understand$/,
+    }),
+  ).toBeVisible();
   await expect(
     q.getByText("The sub-part marks add up to 9, but the question is worth 10."),
   ).toBeVisible();
-  await q.getByLabel("Marks for Q.3(1) (b)").fill("4");
+  pop = await fields("b");
+  await pop.getByLabel("Marks for Q.3(1) (b)").fill("4");
+  await page.keyboard.press("Escape");
   await expect(q.getByText(/sub-part marks add up/)).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "All changes saved" })).toBeVisible({
     timeout: 15_000,
