@@ -538,6 +538,47 @@ export function bloomPaper(): PaperInput {
   };
 }
 
+const adv = (latex: string): LeafBlockNode => ({ type: "advancedLatex", attrs: { latex } });
+
+/** Every Advanced LaTeX package of Phase 12 (D86). */
+export function packagesPaper(): PaperInput {
+  const base = referencePaper();
+  return {
+    ...base,
+    meta: { ...base.meta, courseTitle: "Invented Course: Packages", courseCode: "BP000T" },
+    slots: [
+      slot("g1", 1, [p("Balance the reaction: "), adv("\\ce{2H2 + O2 -> 2H2O}")]),
+      slot("g1", 2, [
+        adv("A strip of ten tablets costs \\rupee{}\\,45. What does one tablet cost?"),
+      ]),
+      slot("g2", 1, [p("Name the compound drawn below."), adv("\\chemfig{*6(=-=(-COOH)-=-)}")]),
+      slot("g2", 2, [
+        p("For the equilibrium below, write the constant."),
+        adv(
+          "$\\prescript{14}{6}{C} \\xrightleftharpoons[k_2]{k_1} X$ and $K \\coloneqq \\frac{k_1}{k_2}$",
+        ),
+      ]),
+      slot("g3", 1, [
+        adv(
+          "\\begin{tabular}{|c|c|}\\hline \\multirow{2}{*}{Dose} & 5 mg\\\\ & 10 mg\\\\ \\hline\\end{tabular}",
+        ),
+      ]),
+      slot("g3", 2, [
+        p("List two of the following:"),
+        adv(
+          "\\begin{enumerate}[label=(\\roman*), nosep]\\item Absorption\\item Distribution\\end{enumerate}",
+        ),
+      ]),
+      slot("g3", 3, [
+        p("Answer from the note below."),
+        adv(
+          "\\begin{framed}\\textcolor{gray}{Note:} Read the label before answering.\\end{framed}",
+        ),
+      ]),
+    ],
+  };
+}
+
 export const FIXTURES = {
   reference: referencePaper,
   legacy: legacyPaper,
@@ -546,6 +587,7 @@ export const FIXTURES = {
   synopsis: synopsisPaper,
   kitchenSink: kitchenSinkPaper,
   bloom: bloomPaper,
+  packages: packagesPaper,
 } as const;
 
 export const ALL_ASSETS = Object.values(ASSETS);
