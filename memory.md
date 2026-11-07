@@ -299,6 +299,8 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-07 · Worst-case data for the Advanced LaTeX box: tests/break-ui/worst-advanced.ts (4 KB block, over-cap, longest refusals, all eight packages) at 1366/900/375 px; a 60-letter command name overflowed the popover by 77 px on a phone (fixed with wrap-anywhere); the admin navigation still scrolls sideways on a phone (carried) · /break-ui
 - 2026-11-07 · Performance after Phase 12 (same method and machine), two runs: key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (130 / 93 over the 16 ms floor); warm preview p50 478 / 428 ms, max 560 / 482 ms. A paper using every package compiles warm in ~0.9 s (reference 0.4 s), so no "slower preview" hint · targets met
 
+- 2026-11-07 · On windows-latest the pinned engine read a file at an absolute `C:/` path but did not write one with `\openout` (run 42354386185); macOS writes it. The write self-check logs this on Windows instead of failing; every write form is refused by the sanitiser on all systems. Canary folders use `fs.realpathSync.native` because the runner's temp path is an 8.3 short name with "~", which mhchem refuses · found by CI
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
