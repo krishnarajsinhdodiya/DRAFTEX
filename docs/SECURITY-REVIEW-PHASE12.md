@@ -117,3 +117,18 @@ is in them.
   into later questions. **Tested** in the exam class: `\large` in question 1
   printed question 2, its number included, at 14.3 pt instead of 12 pt.
   Wrapping blocks would change the output of existing papers that use this.
+
+## 6. As built (v0.12.0)
+
+- Allow-list: `PACKAGE_COMMANDS` and `PACKAGE_ENVIRONMENTS` in
+  `src/lib/latex/sanitize.ts`; preamble lines from `src/lib/latex/packages.ts`.
+- Unit tests (gate 7): `tests/unit/latex/sanitize-packages.test.ts`, every
+  attack form, grammar edge and blocklist name.
+- Engine tests (D93): `tests/golden/packages-security.test.ts` refuses 28
+  attack forms before the engine (paper and key), compiles accepted forms that
+  hold the canary's path as text without leaking it, checks that a read and a
+  write would be seen, and compiles every allowed command once. This test
+  found that the bundled mhchem has no `\pu`, so it is not offered.
+- Fuzz (gate 6): `tests/golden/fuzz-packages.test.ts`, 200 seeded snippets.
+- Byte identity (D94): `tests/unit/latex/byte-identity.test.ts` against
+  `tests/fixtures/latex/v0.11.0-hashes.json`.

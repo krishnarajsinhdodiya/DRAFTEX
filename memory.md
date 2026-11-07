@@ -289,6 +289,16 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-07 · D96: warm-up loads the new packages (chemfig brings pgf/tikz files into the cache, not usable from user text); install time re-measured (D48) · owner approved
 - 2026-11-07 · D97: Advanced LaTeX blocks stay ungrouped: a size command carries into later questions (tested: `\large` in Q1 printed Q2 at 14.3 pt); logged, not fixed, because a fix changes existing papers · owner approved
 
+- 2026-11-07 · D86-D91 as built: `sanitizeLatex` returns the packages a block uses; `PACKAGE_COMMANDS`/`PACKAGE_ENVIRONMENTS` in src/lib/latex/sanitize.ts are the allow-list; `packagesUsed()`/`packageLines()` in src/lib/latex/packages.ts write the preamble lines after the fixed set (paper) or after enumitem (key, which always loads it) · as built
+- 2026-11-07 · mhchem's `\pu` is not offered: the bundled mhchem v4.09 does not define it (MathJax-only); found by the engine test that compiles every allowed command (tests/golden/packages-security.test.ts) · verified
+- 2026-11-07 · chemfig loads under `\XeTeXdefaultencoding "iso-8859-1"` and switches back to utf-8 after it · its simplekv.tex in the pinned bundle has Latin-1 comments, which XeTeX reports as nine invalid UTF-8 engine warnings; the code is ASCII and text after it still reads as UTF-8 (tested)
+- 2026-11-07 · A `framed` box first in a question prints before the question number; the guide and fixture put text first · seen in the fixture render
+- 2026-11-07 · Starting a DRAFTEX server sweeps every job folder under `<OS temp>/DRAFTEX`, including those of goldens or another copy running at the same time; never start a server while the golden suite runs · two goldens failed with "No such file or directory" when the e2e server was restarted mid-run, and passed alone
+- 2026-11-07 · Fresh `setup:tectonic` with the Phase 12 warm-up on the owner's Mac: 279 s (engine download, bundle digest, first package download and warm-up), against 4.6 min for the LaTeX first download before · D96/D48; network dominates
+- 2026-11-07 · Upgrade fixtures `tests/fixtures/upgrade/v0.11.0-*` (tag v0.11.0: CO typed as text, Print Bloom levels, Mark as Final, an Advanced LaTeX block in Q.3(2)); its export is pixel-identical after the update · D95
+- 2026-11-07 · Worst-case data for the Advanced LaTeX box: tests/break-ui/worst-advanced.ts (4 KB block, over-cap, longest refusals, all eight packages) at 1366/900/375 px; a 60-letter command name overflowed the popover by 77 px on a phone (fixed with wrap-anywhere); the admin navigation still scrolls sideways on a phone (carried) · /break-ui
+- 2026-11-07 · Performance after Phase 12 (same method and machine), two runs: key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (130 / 93 over the 16 ms floor); warm preview p50 478 / 428 ms, max 560 / 482 ms. A paper using every package compiles warm in ~0.9 s (reference 0.4 s), so no "slower preview" hint · targets met
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
