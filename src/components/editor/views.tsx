@@ -140,7 +140,7 @@ function MathView({ node, updateAttributes, deleteNode, selected, editor }: Node
           onDone={done}
         />
         <p
-          className={`text-caption ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
+          className={`text-caption wrap-anywhere ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
           role="status"
         >
           {check && !check.ok
@@ -207,7 +207,7 @@ function AdvancedView({ node, updateAttributes, deleteNode, selected }: NodeView
           className={`${inputStyles} h-auto py-2 font-mono text-small`}
         />
         <p
-          className={`text-caption ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
+          className={`text-caption wrap-anywhere ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
           role="status"
         >
           {check && !check.ok
