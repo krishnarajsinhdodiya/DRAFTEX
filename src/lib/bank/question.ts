@@ -15,7 +15,9 @@ export const BANK_PROGRAMS = ["B_PHARM", "M_PHARM", "PHARM_D"] as const;
  * A course code as printed: a code, optionally one space and an elective
  * suffix (`BP607T AEC1`). Typed codes are upper-cased and spaces folded.
  */
-export const COURSE_CODE_RE = /^[A-Z0-9]{1,20}(?: [A-Z0-9]{1,8})?$/;
+// The base is at most 17 characters, so its CO tag (base + ".NN") fits the
+// 20 characters CO_TAG_RE allows before the suffix (found by /break-ui).
+export const COURSE_CODE_RE = /^[A-Z0-9]{1,17}(?: [A-Z0-9]{1,8})?$/;
 export const courseCodeSchema = z
   .string()
   .transform((s) => s.trim().replace(/\s+/g, " ").toUpperCase())

@@ -224,6 +224,12 @@ describe("rowToInput", () => {
     ]);
   });
 
+  it("names every unprintable character of a cell at once", () => {
+    expect(
+      rowToInput({ ...good, question: "Smile 😀 and bell \u0007 again 😀" }, 2).errors,
+    ).toEqual(["question contains characters that cannot be printed: 😀 (U+1F600), U+0007."]);
+  });
+
   it("handles hostile cells as plain text or a named error", () => {
     const tex = rowToInput(
       { ...good, question: "\\input{/etc/hosts} \\csname input\\endcsname" },
@@ -241,11 +247,19 @@ describe("rowToInput", () => {
     expect(rowToInput({ ...good, question: "x".repeat(4001) }, 2).errors).toEqual([
       "question is longer than 4,000 characters.",
     ]);
+    // Ten 30-character tags and a 200-character title fit, as in the bank.
+    const tenTags = Array.from({ length: 10 }, (_, i) => `${i}`.padEnd(30, "t")).join("; ");
+    expect(rowToInput({ ...good, tags: tenTags, courseTitle: "T".repeat(200) }, 2).errors).toEqual(
+      [],
+    );
+    expect(rowToInput({ ...good, courseTitle: "T".repeat(201) }, 2).errors).toEqual([
+      "course title is longer than 200 characters.",
+    ]);
     expect(rowToInput({ ...good, co: "1".repeat(101) }, 2).errors).toEqual([
       "co is longer than 100 characters.",
     ]);
     expect(rowToInput({ ...good, question: "bell\u0007 nul\u0000" }, 2).errors).toEqual([
-      "question contains control characters that cannot be printed: U+0007, U+0000.",
+      "question contains characters that cannot be printed: U+0007, U+0000.",
     ]);
   });
 });

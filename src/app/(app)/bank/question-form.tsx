@@ -163,7 +163,7 @@ export function QuestionForm({
             Course code
             <input
               value={v.courseCode}
-              maxLength={40}
+              maxLength={26}
               list={`${ids}-courses`}
               autoComplete="off"
               required

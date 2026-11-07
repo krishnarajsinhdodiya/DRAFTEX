@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/badge";
 import { FormAlert } from "@/components/form";
 import { StaticDoc } from "@/components/editor/static-doc";
 import { eyebrowStyles, linkStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
@@ -14,6 +13,7 @@ import { requireUser } from "@/server/auth";
 import { bankCommands } from "@/server/bank-commands";
 import { QuestionForm } from "../question-form";
 import { CopyButton, TrashQuestionButton } from "./buttons";
+import { OwnerBadge } from "../bank-list";
 
 export const metadata: Metadata = { title: "Question · DRAFTEX" };
 
@@ -72,8 +72,8 @@ export default async function QuestionPage({
             ← Question bank
           </Link>
           <h1 className={pageTitleStyles}>Shared question</h1>
-          <p className="flex flex-wrap items-center gap-2 text-small text-ink-2">
-            <Badge tone="blue">From {q.ownerName}</Badge>
+          <p className="flex min-w-0 flex-wrap items-center gap-2 text-small text-ink-2">
+            <OwnerBadge name={q.ownerName} />
             <span className="break-words [overflow-wrap:anywhere]">
               {[
                 q.courseCode,

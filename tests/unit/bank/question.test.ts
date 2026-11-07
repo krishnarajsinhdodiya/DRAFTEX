@@ -31,10 +31,23 @@ const elective = { code: "XX607T AEC1", outcomes: [{ number: 1 }], units: [] };
 const typed = { code: "MPH101T", outcomes: [], units: [] };
 
 describe("course codes", () => {
+  it("keeps the base short enough for its CO tag", () => {
+    const code = courseCodeSchema.parse(`${"A".repeat(17)} SUFFIX99`);
+    expect(
+      bankFieldsSchema.safeParse({
+        courseCode: code,
+        coTag: `${"A".repeat(17)}.99 SUFFIX99`,
+        bloomLevel: "APPLY",
+        marks: 1,
+        type: "SHORT",
+        content: doc(para("x")),
+      }).success,
+    ).toBe(true);
+  });
   it("upper-cases and folds spaces", () => {
     expect(courseCodeSchema.parse("  xx607t   aec1 ")).toBe("XX607T AEC1");
   });
-  it.each(["", "BP 604T X", "BP604T;", "A".repeat(21)])("refuses %j", (raw) => {
+  it.each(["", "BP 604T X", "BP604T;", "A".repeat(18)])("refuses %j", (raw) => {
     expect(courseCodeSchema.safeParse(raw).success).toBe(false);
   });
 });

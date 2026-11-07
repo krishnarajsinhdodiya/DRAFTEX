@@ -136,7 +136,11 @@ export function ImportClient() {
             </span>
             <span>{preview.counts.valid} ready</span>
             <span>{preview.counts.invalid} with problems</span>
-            <span>{preview.counts.duplicate} duplicates</span>
+            <span>
+              {preview.counts.duplicate === 1
+                ? "1 duplicate"
+                : `${preview.counts.duplicate} duplicates`}
+            </span>
           </div>
           {saved !== null ? (
             <FormAlert kind="notice">
@@ -183,35 +187,35 @@ export function ImportClient() {
             ) : null}
           </div>
           <div className={`${sheetStyles} overflow-x-auto`}>
-            <table className="w-full min-w-[36rem] text-left text-small">
+            {/* Three columns, the course inside the last one, so the reasons fit a phone (/break-ui). */}
+            <table className="w-full table-fixed text-left text-small">
               <caption className="sr-only">Rows of the file and what happens to each</caption>
               <thead className="border-b border-rule text-caption text-ink-3 uppercase">
                 <tr>
-                  <th scope="col" className="w-14 px-4 py-2 font-semibold">
+                  <th scope="col" className="w-12 px-3 py-2 font-semibold sm:w-14 sm:px-4">
                     Row
                   </th>
-                  <th scope="col" className="w-28 px-2 py-2 font-semibold">
+                  <th scope="col" className="w-24 px-2 py-2 font-semibold">
                     Status
                   </th>
-                  <th scope="col" className="w-28 px-2 py-2 font-semibold">
-                    Course
-                  </th>
                   <th scope="col" className="px-2 py-2 font-semibold">
-                    Question and notes
+                    Course, question and notes
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
                 {rows.map((r) => (
                   <tr key={r.row} className="align-top">
-                    <td className="px-4 py-2 tabular-nums">{r.row}</td>
+                    <td className="px-3 py-2 tabular-nums sm:px-4">{r.row}</td>
                     <td className="px-2 py-2">
                       <Badge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</Badge>
                     </td>
-                    <td className="px-2 py-2 break-words [overflow-wrap:anywhere]">
-                      {r.courseCode}
-                    </td>
                     <td className="px-2 py-2">
+                      {r.courseCode ? (
+                        <span className="block text-caption text-ink-3 break-words [overflow-wrap:anywhere]">
+                          {r.courseCode}
+                        </span>
+                      ) : null}
                       <span className="block break-words [overflow-wrap:anywhere]">
                         {r.summary || <span className="text-ink-3">(empty)</span>}
                       </span>

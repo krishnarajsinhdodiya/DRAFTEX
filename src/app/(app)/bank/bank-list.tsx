@@ -25,6 +25,21 @@ export interface BankRow {
   lastUse: { paperTitle: string; usedAt: Date } | null;
 }
 
+/**
+ * "From <author>": truncated with the full name on hover, since names run to
+ * 120 characters and a badge that cannot wrap widened the page (/break-ui).
+ */
+export function OwnerBadge({ name }: { name: string }) {
+  return (
+    <span
+      title={`From ${name}`}
+      className="inline-block h-5 max-w-full min-w-0 truncate rounded px-1.5 align-middle text-caption leading-5 font-medium text-accent ring-1 ring-accent/25 ring-inset bg-accent-soft sm:max-w-80"
+    >
+      From {name}
+    </span>
+  );
+}
+
 /** "Q text…": the first line of the question, for lists. */
 export function firstLine(text: string | null, max = 160): string {
   const s = (text ?? "").replace(/\s+/g, " ").trim();
@@ -65,14 +80,23 @@ export function BankList({ rows }: { rows: BankRow[] }) {
               <span className="font-paper text-body break-words [overflow-wrap:anywhere] text-ink">
                 {firstLine(q.searchText)}
               </span>
-              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-small text-ink-2">
-                <span className="break-words [overflow-wrap:anywhere]">{facts(q)}</span>
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-small text-ink-2">
+                <span className="break-words [overflow-wrap:anywhere]">
+                  {facts(q)}
+                  {/* The marks margin is hidden on a phone; the marks stay in the facts line. */}
+                  {q.marks !== null ? (
+                    <span className="sm:hidden">
+                      {" "}
+                      · {marksText(q.marks)} {q.marks === 1 ? "mark" : "marks"}
+                    </span>
+                  ) : null}
+                </span>
                 {q.mine ? (
                   q.sharing === "SHARED" ? (
                     <Badge tone="blue">Shared</Badge>
                   ) : null
                 ) : (
-                  <Badge tone="blue">From {q.ownerName}</Badge>
+                  <OwnerBadge name={q.ownerName} />
                 )}
                 {q.tags.slice(0, 3).map((t) => (
                   <Badge key={t}>{t}</Badge>

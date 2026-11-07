@@ -5,7 +5,6 @@
 // (D77), listing what was added and what was skipped, with the reason.
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Badge } from "@/components/badge";
 import { StaticDoc } from "@/components/editor/static-doc";
 import { FormAlert } from "@/components/form";
 import { buttonStyles, dialogStyles, inputStyles } from "@/components/styles";
@@ -13,7 +12,7 @@ import type { AddReport } from "@/lib/data/bank";
 import { BLOOM_LABEL, BLOOM_LEVELS } from "@/lib/paper/bloom";
 import { marksText } from "@/lib/templates/labels";
 import { searchBankAction } from "@/server/bank-actions";
-import { LastUse, facts, firstLine } from "../../bank/bank-list";
+import { LastUse, OwnerBadge, facts, firstLine } from "../../bank/bank-list";
 import type { BankPick } from "./use-paper";
 
 type Results = Awaited<ReturnType<typeof searchBankAction>>;
@@ -177,7 +176,7 @@ export function BankPicker({
               : results
                 ? results.total === 1
                   ? "1 question"
-                  : `${results.total} questions${results.total > results.rows.length ? `, showing the newest ${results.rows.length}` : ""}`
+                  : `${results.total} questions${results.total > results.rows.length ? `, showing the newest ${results.rows.length}; narrow them with the filters` : ""}`
                 : ""}
           </p>
           {error ? <FormAlert kind="error">{error}</FormAlert> : null}
@@ -239,7 +238,8 @@ function PickerRow({
   return (
     <li className="flex flex-col gap-1 px-4 py-3">
       <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
+        {/* At least 14rem for the text, so the buttons wrap below it on a phone. */}
+        <span className="flex min-w-0 flex-[1_1_14rem] flex-col gap-1">
           <span className="font-paper text-body break-words [overflow-wrap:anywhere]">
             {firstLine(q.searchText, 200)}
           </span>
@@ -250,7 +250,7 @@ function PickerRow({
                 {marksText(q.marks)} {q.marks === 1 ? "mark" : "marks"}
               </span>
             ) : null}
-            {q.mine ? null : <Badge tone="blue">From {q.ownerName}</Badge>}
+            {q.mine ? null : <OwnerBadge name={q.ownerName} />}
           </span>
           <LastUse use={q.lastUse} />
         </span>

@@ -288,7 +288,9 @@ export function bank(db: Db) {
             select: { paperTitle: true, usedAt: true, paperId: true },
           },
         },
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+        // The id breaks ties: an import saves many rows in the same millisecond,
+        // and without it pages could repeat or skip rows (/break-ui).
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "asc" }],
       });
       const q = f.q?.toLocaleLowerCase("en");
       const hits = q

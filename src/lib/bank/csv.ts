@@ -4,12 +4,13 @@
 // serializer escapes). CSV that DRAFTEX writes guards cells that start with
 // = + - @ against spreadsheet formulas. Pure; the server adds course lookup
 // and duplicates (src/server/bank-import.ts).
+import { describeChar, escapeText } from "../latex/escape.ts";
 import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "../paper/bloom.ts";
 import { coTag } from "../paper/co-tag.ts";
 import type { Doc } from "../paper/schema.ts";
 import { GROUP_TYPE_LABEL } from "../templates/labels.ts";
 import type { BANK_PROGRAMS } from "./question.ts";
-import { BANK_TYPES, type BankFieldsInput, type BankType, TAGS_MAX } from "./question.ts";
+import { BANK_TYPES, type BankFieldsInput, type BankType, TAG_MAX, TAGS_MAX } from "./question.ts";
 
 export const CSV_MAX_BYTES = 1024 * 1024;
 export const CSV_MAX_ROWS = 1000;
@@ -42,6 +43,16 @@ export const CSV_COLUMNS = [
   { key: "programme", header: "programme", required: false, long: false },
 ] as const;
 export type CsvKey = (typeof CSV_COLUMNS)[number]["key"];
+
+/**
+ * Short cells whose bank limit is above SHORT_CELL_MAX: ten tags of 30
+ * characters with "; " between them, and a 200-character course title
+ * (the CSV must accept what the bank does; found by /break-ui).
+ */
+const CELL_MAX: Partial<Record<CsvKey, number>> = {
+  tags: TAGS_MAX * (TAG_MAX + 2),
+  courseTitle: 200,
+};
 export type CsvRow = Partial<Record<CsvKey, string>>;
 
 /**
@@ -190,14 +201,19 @@ function unguard(s: string): string {
   return /^'[=+\-@\t\r]/.test(s) ? s.slice(1) : s;
 }
 
-/** Control characters other than line breaks and tabs, named. */
-function controlChars(s: string): string[] {
+/**
+ * Every character in a cell the paper cannot print, named once each: control
+ * characters by code (U+0007), the rest as "😀 (U+1F600)". Line breaks and
+ * tabs are fine. All of them at once, so one fix clears the row (/break-ui).
+ */
+function unprintable(s: string): string[] {
   const out = new Set<string>();
-  for (const ch of s) {
-    const c = ch.codePointAt(0) as number;
-    if ((c < 0x20 && c !== 0x0a && c !== 0x09) || (c >= 0x7f && c <= 0x9f)) {
-      out.add(`U+${c.toString(16).toUpperCase().padStart(4, "0")}`);
-    }
+  const r = escapeText(s.replace(/[\n\t]/g, " "));
+  if (r.ok) return [];
+  for (const { char } of r.bad) {
+    const c = char.codePointAt(0) as number;
+    const control = c < 0x20 || (c >= 0x7f && c <= 0x9f);
+    out.add(control ? `U+${c.toString(16).toUpperCase().padStart(4, "0")}` : describeChar(char));
   }
   return [...out];
 }
@@ -263,17 +279,15 @@ export function rowToInput(cells: CsvRow, row: number): RowResult {
   const failed = new Set<CsvKey>();
   for (const c of CSV_COLUMNS) {
     const raw = unguard(cells[c.key] ?? "");
-    const max = c.long ? LONG_CELL_MAX : SHORT_CELL_MAX;
+    const max = c.long ? LONG_CELL_MAX : (CELL_MAX[c.key] ?? SHORT_CELL_MAX);
     if (raw.length > max) {
       errors.push(`${c.header} is longer than ${max.toLocaleString("en")} characters.`);
       failed.add(c.key);
       continue;
     }
-    const bad = controlChars(raw);
+    const bad = unprintable(raw);
     if (bad.length) {
-      errors.push(
-        `${c.header} contains control characters that cannot be printed: ${bad.join(", ")}.`,
-      );
+      errors.push(`${c.header} contains characters that cannot be printed: ${bad.join(", ")}.`);
       failed.add(c.key);
       continue;
     }
