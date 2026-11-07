@@ -145,7 +145,11 @@ describe("built-in template", () => {
     ["its owner (the first admin)", () => admin],
     ["a faculty member", () => other],
   ])("%s: view and copy only", async (_, who) => {
-    const [b] = await t.data.templates.list(who(), { scope: "BUILT_IN" });
+    // The blank built-in, by key: the list order among seeds made in the same
+    // millisecond is not fixed, and an admin may delete any other one (D50).
+    const b = (await t.data.templates.list(who(), { scope: "BUILT_IN" })).find(
+      (x) => x.seedKey === "blank",
+    );
     expect(b).toBeDefined();
     const tpl = b as NonNullable<typeof b>;
     expect(templateAccess(tpl, who())).toEqual({
