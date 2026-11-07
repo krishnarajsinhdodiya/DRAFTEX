@@ -2,8 +2,13 @@
 // class size, font and content type the generator can emit, so the Tectonic
 // cache holds every file and later compiles work offline.
 import type { PaperInput, TemplateInput } from "../paper/schema.ts";
+import { packageLines } from "./packages.ts";
+import { ADVANCED_PACKAGES } from "./sanitize.ts";
 
-/** Loads every package SPEC §9 lists, including ones only Advanced users reach. */
+/**
+ * Loads every package SPEC §9 lists, including ones only Advanced users reach,
+ * and every Advanced LaTeX package (D96) exactly as the serializer loads it.
+ */
 export const PACKAGES_DOCUMENT = String.raw`\RequirePackage{fix-cm}
 \documentclass[11pt, a4paper]{exam}
 \usepackage{geometry}
@@ -21,12 +26,17 @@ export const PACKAGES_DOCUMENT = String.raw`\RequirePackage{fix-cm}
 \usepackage{xcolor}
 \usepackage{tikz}
 \usepackage{tcolorbox}
+${packageLines(ADVANCED_PACKAGES).join("\n")}
 \begin{document}
 \uline{Warm-up} \textcolor{gray}{text}
 \begin{tcolorbox}Box\end{tcolorbox}
 \tikz\draw (0,0) -- (1,1);
 \begin{enumerate}[label=(\alph*)]\item a\end{enumerate}
 \begin{tabular}{>{\bfseries}l}x\\\end{tabular}
+\ce{2H2 + O2 -> 2H2O} \chemfig{*6(=-=(-[:30]OH)-=-)}
+$\prescript{14}{6}{C} \coloneqq \xrightleftharpoons[b]{a}$ \rupee{}\,5
+\begin{tabular}{cc}\multirow{2}{*}{a} & b\\ & c\end{tabular}
+\begin{framed}Framed\end{framed}
 \end{document}
 `;
 

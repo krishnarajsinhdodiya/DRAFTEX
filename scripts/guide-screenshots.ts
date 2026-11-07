@@ -73,6 +73,7 @@ await dialog.getByLabel("Exam date").fill("2026-11-20");
 await shot(page, "04-new-paper");
 await dialog.getByRole("button", { name: "Create paper" }).click();
 await page.waitForURL(/\/papers\/[0-9a-f-]{36}$/);
+const paperUrl = page.url();
 await page.getByRole("img", { name: /page 1 of/ }).waitFor({ timeout: 90_000 });
 
 const write = async (name: string, text: string) => {
@@ -251,5 +252,30 @@ await shot(page, "09-people");
 await page.goto("/admin/network");
 await page.getByRole("heading", { level: 1 }).waitFor();
 await shot(page, "10-network");
+
+// Phase 12: Advanced LaTeX with the chemistry packages (needs the admin's permission).
+await page.goto("/admin/users");
+await page
+  .getByRole("row")
+  .filter({ hasText: ADMIN.email })
+  .getByRole("button", { name: "Allow Advanced LaTeX" })
+  .click();
+await page.getByText("May use Advanced LaTeX").waitFor();
+await page.goto(paperUrl);
+// The export above marked the paper Printed (D55); put it back to Draft (D56).
+await page.getByRole("button", { name: "Edit", exact: true }).click();
+await page
+  .getByRole("dialog", { name: /^Edit this (printed|final) paper\?$/ })
+  .getByRole("button", { name: "Back to Draft and edit" })
+  .click();
+await write("Q.2(4)", "Name the compound and balance the reaction.");
+await page.getByRole("button", { name: "Insert" }).click();
+await page.getByRole("menuitem", { name: "Advanced LaTeX" }).click();
+await page
+  .getByLabel("Advanced LaTeX (checked before it reaches the paper)")
+  .fill("\\chemfig{*6(=-=(-COOH)-=-)}\n\n\\ce{2H2 + O2 -> 2H2O}");
+await page.getByText("Chemistry, colour and list commands").click();
+await shot(page, "18-advanced-latex");
+await page.getByRole("button", { name: "Done" }).click();
 
 await browser.close();

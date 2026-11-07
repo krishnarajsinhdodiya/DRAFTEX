@@ -140,7 +140,7 @@ function MathView({ node, updateAttributes, deleteNode, selected, editor }: Node
           onDone={done}
         />
         <p
-          className={`text-caption ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
+          className={`text-caption wrap-anywhere ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
           role="status"
         >
           {check && !check.ok
@@ -156,6 +156,18 @@ function MathView({ node, updateAttributes, deleteNode, selected, editor }: Node
     </NodeViewWrapper>
   );
 }
+
+/** Shown under Advanced LaTeX: what the allowed packages offer (D86-D90). */
+const ADVANCED_EXAMPLES: Array<[string, string]> = [
+  ["\\ce{2H2 + O2 -> 2H2O}", "reactions and formulae"],
+  ["\\chemfig{*6(=-=-=-)}", "structures; bond options only as angle and length, e.g. -[:30]"],
+  ["$\\prescript{14}{6}{C}$", "isotopes; also \\coloneqq and labelled arrows"],
+  ["\\multirow{2}{*}{Dose}", "a cell over two table rows"],
+  ["\\begin{enumerate}[label=(\\alph*), nosep]", "list labels and spacing"],
+  ["\\textcolor{red}{text}", "named colours only"],
+  ["\\begin{framed} … \\end{framed}", "a box around text"],
+  ["\\rupee{}", "the rupee sign"],
+];
 
 function AdvancedView({ node, updateAttributes, deleteNode, selected }: NodeViewProps) {
   const latex = node.attrs.latex as string;
@@ -195,13 +207,31 @@ function AdvancedView({ node, updateAttributes, deleteNode, selected }: NodeView
           className={`${inputStyles} h-auto py-2 font-mono text-small`}
         />
         <p
-          className={`text-caption ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
+          className={`text-caption wrap-anywhere ${check && !check.ok ? "text-danger" : "text-ink-3"}`}
           role="status"
         >
           {check && !check.ok
             ? check.issues[0]?.message
-            : "File, shell and definition commands are refused."}
+            : check?.packages.length
+              ? `Uses ${check.packages.join(", ")}; the paper loads ${check.packages.length === 1 ? "it" : "them"} for you.`
+              : "File, shell and definition commands are refused."}
         </p>
+        <details className="text-caption text-ink-3">
+          <summary className="cursor-pointer text-ink-2">
+            Chemistry, colour and list commands
+          </summary>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {ADVANCED_EXAMPLES.map(([code, what]) => (
+              <li key={code}>
+                <code className="font-mono text-ink-2">{code}</code> {what}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5">
+            Pictures go in Insert › Picture. TikZ, pgfplots, listings and file commands are not
+            available.
+          </p>
+        </details>
         <Actions
           onDone={done}
           onRemove={() => (setOpen(false), deleteNode())}

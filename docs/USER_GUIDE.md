@@ -168,6 +168,31 @@ While you write a question:
   question from the bank or add it to the bank (section 8), or clear it.
   **Undo** at the top brings back a cleared, moved or inserted question.
 
+**Advanced LaTeX** (Insert, only after an administrator allows it for you
+under **People**) takes LaTeX typed by hand for things the buttons cannot
+make. DRAFTEX checks it before it reaches the paper: commands that read or
+write files, run programs or define new commands are refused, and the box
+says why. It also offers these, and loads them for the paper by itself:
+
+![Advanced LaTeX with a structure and a reaction](user-guide/18-advanced-latex.png)
+
+- `\ce{2H2 + O2 -> 2H2O}`: reactions and formulae.
+- `\chemfig{*6(=-=-=-)}`: structures. A bond may say only its angle and
+  length, such as `-[:30]` or `-[2,1.5]`; colours, styles and arrows
+  between molecules are not offered.
+- `$\prescript{14}{6}{C}$`, `\coloneqq` and labelled arrows such as
+  `\xrightleftharpoons{k_1}`.
+- `\multirow{2}{*}{Dose}` inside a table: one cell over two rows.
+- `\begin{enumerate}[label=(\alph*), nosep]`: list labels and spacing.
+- `\textcolor{red}{text}` with a named colour; `\begin{framed} … \end{framed}`
+  for a box; `\rupee{}` for the ₹ sign (a ₹ typed as ordinary text still
+  prints "Rs.").
+
+Pictures, including structures drawn in CorelDRAW, go in the **Picture**
+block. TikZ drawings, pgfplots graphs and program listings are not available.
+A size command such as `\large` in Advanced LaTeX also changes the questions
+after it, so wrap it in braces: `{\large text}`.
+
 "**All changes saved**" at the top means everything is stored. If DRAFTEX
 finds a problem (for example a question that cannot be printed), the question
 is marked and the message says what to change.

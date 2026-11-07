@@ -17,7 +17,7 @@ function rejects(src: string, mode: SanitizeMode, msg?: RegExp) {
 
 function accepts(src: string, mode: SanitizeMode) {
   const r = sanitizeLatex(src, mode);
-  expect(r, JSON.stringify(src)).toEqual({ ok: true, value: src });
+  expect(r, JSON.stringify(src)).toEqual({ ok: true, value: src, packages: [] });
 }
 
 describe("forbidden primitives (SPEC §8 list)", () => {
@@ -63,7 +63,7 @@ describe("obfuscated forms", () => {
     ["^^5c^^69nput", /\^\^/],
     ["^^^^005cinput", /\^\^/],
     ["x^^M", /\^\^/],
-    ["\\expandafter\\input", /\\expandafter is not a supported command/],
+    ["\\expandafter\\input", /\\expandafter is not allowed for safety/],
     ["\\lowercase{\\INPUT}", /\\lowercase/],
     ["\\uppercase{\\input}", /\\uppercase/],
     ["\\scantokens{\\input x}", /\\scantokens/],

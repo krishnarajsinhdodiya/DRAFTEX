@@ -1,9 +1,24 @@
 // Allow-list sanitiser for user LaTeX (math snippets and "Advanced LaTeX").
 // Tectonic's --untrusted mode blocks shell escape but still lets \input read
-// absolute paths (verified 2026-11-03), so this is the only barrier between
-// user text and TeX's file primitives. Anything not explicitly allowed fails.
+// and \openout write absolute paths (verified 2026-11-03 and 2026-11-07), so
+// this is the only barrier between user text and TeX's file primitives.
+// Anything not explicitly allowed fails. docs/SECURITY-REVIEW-PHASE12.md has
+// the review behind the package commands (D86-D91).
 
 export type SanitizeMode = "math" | "advanced";
+
+/** Packages an Advanced LaTeX block may pull in (D86), in preamble order. */
+export const ADVANCED_PACKAGES = [
+  "mhchem",
+  "chemfig",
+  "mathtools",
+  "multirow",
+  "enumitem",
+  "xcolor",
+  "framed",
+  "tfrupee",
+] as const;
+export type AdvancedPackage = (typeof ADVANCED_PACKAGES)[number];
 
 export interface SanitizeIssue {
   message: string;
@@ -11,7 +26,8 @@ export interface SanitizeIssue {
   offset: number;
 }
 
-export type SanitizeResult = { ok: true; value: string } | { ok: false; issues: SanitizeIssue[] };
+export type SanitizeResult =
+  { ok: true; value: string; packages: AdvancedPackage[] } | { ok: false; issues: SanitizeIssue[] };
 
 export const MAX_SNIPPET_BYTES = 4096;
 
@@ -37,6 +53,49 @@ export const FORBIDDEN_PRIMITIVES = [
   "jobname",
   "endinput",
   "makeatletter",
+  // D91: second layer. None of these is on the allow-list; naming them gives
+  // a clear message and a tripwire test (docs/SECURITY-REVIEW-PHASE12.md).
+  "RequirePackage",
+  "ShellEscape",
+  "closein",
+  "closeout",
+  "newwrite",
+  "newread",
+  "scantokens",
+  "expandafter",
+  "string",
+  "uppercase",
+  "lowercase",
+  "edef",
+  "gdef",
+  "xdef",
+  "newcommand",
+  "renewcommand",
+  "providecommand",
+  "DeclareRobustCommand",
+  "newenvironment",
+  "renewenvironment",
+  "IfFileExists",
+  "InputIfFileExists",
+  "XeTeXpicfile",
+  "XeTeXpdffile",
+  "includegraphics",
+  "lstinputlisting",
+  "addplot",
+  "pgfplotstableread",
+  "usetikzlibrary",
+  "tcbuselibrary",
+  "tikzset",
+  "pgfkeys",
+  "chemmove",
+  "definesubmol",
+  "setchemfig",
+  "setlist",
+  "newlist",
+  "pagecolor",
+  "definecolor",
+  "DeclarePairedDelimiter",
+  "mathtoolsset",
 ] as const;
 
 const words = (s: string) => s.trim().split(/\s+/);
@@ -97,6 +156,46 @@ const ADVANCED_ENVIRONMENTS = new Set([
   choices equation* align* gather* multline* displaymath math`),
 ]);
 
+/** Commands each package adds, accepted only in Advanced LaTeX (D88). */
+export const PACKAGE_COMMANDS: Record<string, AdvancedPackage> = {
+  ce: "mhchem",
+  chemfig: "chemfig",
+  multirow: "multirow",
+  textcolor: "xcolor",
+  rupee: "tfrupee",
+  ...Object.fromEntries(
+    words(`coloneqq eqqcolon Coloneqq prescript mathclap mathllap mathrlap
+    xleftrightarrow xLeftarrow xRightarrow xLeftrightarrow xhookleftarrow xhookrightarrow
+    xmapsto xrightharpoonup xrightharpoondown xleftharpoonup xleftharpoondown
+    xrightleftharpoons xleftrightharpoons underbracket overbracket`).map((c) => [c, "mathtools"]),
+  ),
+};
+
+export const PACKAGE_ENVIRONMENTS: Record<string, AdvancedPackage> = {
+  framed: "framed",
+  dcases: "mathtools",
+  "dcases*": "mathtools",
+  rcases: "mathtools",
+  "pmatrix*": "mathtools",
+  "bmatrix*": "mathtools",
+};
+
+/** D90: the colours \textcolor may name, optionally mixed as red!50 or red!50!black. */
+const COLOURS = words(`black white gray darkgray lightgray red green blue cyan magenta yellow
+  brown orange purple teal olive violet`);
+const COLOUR_RE = new RegExp(
+  `^(?:${COLOURS.join("|")})(?:!(?:100|\\d{1,2})(?:!(?:${COLOURS.join("|")}))?)?$`,
+);
+
+const DIM = String.raw`-?(?:\d+(?:\.\d+)?|\.\d+)(?:pt|mm|cm|em|ex|in)|0`;
+const LABEL = String.raw`(?:[A-Za-z0-9 ().:\-]|\\(?:alph|Alph|roman|Roman|arabic)\*)+`;
+/** D90: enumitem keys a list may set; no code hooks (before, after, first), no setters. */
+const ENUM_KEY_RE = new RegExp(
+  String.raw`^(?:label\*?=(?:${LABEL}|\{${LABEL}\})|start=\d{1,3}|(?:leftmargin|labelindent|itemindent|labelwidth)=(?:${DIM}|\*)|(?:itemsep|topsep|parsep|partopsep|labelsep)=(?:${DIM})|align=(?:left|right|parleft)|nosep|noitemsep|wide)$`,
+);
+
+const MAX_MULTIROW = 20;
+
 /** Control symbols (\ followed by one non-letter). */
 const MATH_SYMBOLS = new Set([..."\\,;:! {}%&#$_|>"]);
 const ADVANCED_SYMBOLS = new Set([...MATH_SYMBOLS, "(", ")", "[", "]", "-", "/", "'", "`", '"']);
@@ -117,6 +216,12 @@ export function sanitizeLatex(src: string, mode: SanitizeMode): SanitizeResult {
   }
 
   const commands = mode === "math" ? MATH_COMMANDS : new Set([...MATH_COMMANDS, ...ADVANCED_ONLY]);
+  const packageCommands: Record<string, AdvancedPackage> = mode === "math" ? {} : PACKAGE_COMMANDS;
+  const packageEnvironments: Record<string, AdvancedPackage> =
+    mode === "math" ? {} : PACKAGE_ENVIRONMENTS;
+  const used = new Set<AdvancedPackage>();
+  /** Brace depth at which an open \chemfig argument closes (D89). */
+  let chemfigDepth = -1;
   const environments = mode === "math" ? MATH_ENVIRONMENTS : ADVANCED_ENVIRONMENTS;
   const symbols = mode === "math" ? MATH_SYMBOLS : ADVANCED_SYMBOLS;
 
@@ -164,7 +269,30 @@ export function sanitizeLatex(src: string, mode: SanitizeMode): SanitizeResult {
     }
     if (ch === "}") {
       if (braces.pop() === undefined) fail("There is a } without a matching {.", i);
+      if (braces.length < chemfigDepth) chemfigDepth = -1;
       continue;
+    }
+    if (chemfigDepth >= 0) {
+      // D89: inside \chemfig, [..] is a bond's options; only angle, length and
+      // the two atom numbers (fields 1-4) are allowed: the 5th field and any
+      // key reach tikz, which can open files.
+      if (ch === "[") {
+        const close = src.indexOf("]", i);
+        const body = close < 0 ? "" : src.slice(i + 1, close);
+        if (close < 0 || !/^[0-9:.+\-, ]*$/.test(body) || body.split(",").length > 4) {
+          fail(
+            "In \\chemfig, bond options may only hold an angle, a length and two atom numbers, such as [:30] or [2,1.5].",
+            i,
+          );
+          if (close < 0) break;
+        }
+        i = close;
+        continue;
+      }
+      if (ch === "!" || ch === "@") {
+        fail(`“${ch}” is not allowed inside \\chemfig.`, i);
+        continue;
+      }
     }
     if (ch !== "\\") continue;
 
@@ -188,6 +316,52 @@ export function sanitizeLatex(src: string, mode: SanitizeMode): SanitizeResult {
       fail(`\\${name} is not allowed for safety.`, start);
       continue;
     }
+    const pkg = packageCommands[name];
+    if (pkg) {
+      const rest = src.slice(j);
+      if (name === "chemfig") {
+        if (chemfigDepth >= 0) {
+          fail("\\chemfig cannot sit inside another \\chemfig.", start);
+          continue;
+        }
+        if (rest[0] !== "{") {
+          fail(
+            "\\chemfig must be followed directly by the molecule in braces, with no options.",
+            start,
+          );
+          continue;
+        }
+        chemfigDepth = braces.length + 1;
+      } else if (name === "textcolor") {
+        const m = /^\{([^{}]*)\}\{/.exec(rest);
+        if (!m || !COLOUR_RE.test(m[1] as string)) {
+          fail(
+            `\\textcolor needs a colour from this list, then the text: ${COLOURS.join(", ")}.`,
+            start,
+          );
+          continue;
+        }
+        i = j + m[0].length - 2; // the text's "{" is read by the loop
+      } else if (name === "multirow") {
+        const m = /^\{(\d{1,2})\}\{(\*|[^{}]*)\}\{/.exec(rest);
+        const n = m ? Number(m[1]) : 0;
+        if (
+          !m ||
+          n < 1 ||
+          n > MAX_MULTIROW ||
+          !(m[2] === "*" || new RegExp(`^(?:${DIM})$`).test(m[2] as string))
+        ) {
+          fail(
+            `\\multirow needs {rows}{width or *}{text}, with 1 to ${MAX_MULTIROW} rows and a width such as 3cm.`,
+            start,
+          );
+          continue;
+        }
+        i = j + m[0].length - 2;
+      }
+      used.add(pkg);
+      continue;
+    }
     if (!commands.has(name)) {
       fail(`\\${name} is not a supported command here.`, start);
       continue;
@@ -200,9 +374,33 @@ export function sanitizeLatex(src: string, mode: SanitizeMode): SanitizeResult {
       }
       const env = m[1] as string;
       i = j + m[0].length - 1;
-      if (!environments.has(env)) {
+      const envPkg = packageEnvironments[env];
+      if (envPkg) used.add(envPkg);
+      else if (!environments.has(env)) {
         fail(`The environment “${env}” is not allowed here.`, start);
         continue;
+      }
+      // LaTeX looks past spaces and one line break for an optional argument.
+      const optAt = i + 1 + (/^\s*/.exec(src.slice(i + 1))?.[0].length ?? 0);
+      if (
+        name === "begin" &&
+        mode === "advanced" &&
+        (env === "enumerate" || env === "itemize") &&
+        src[optAt] === "["
+      ) {
+        // D90: enumitem options, read whole here; each key must be on the list.
+        const close = src.indexOf("]", optAt);
+        const body = close < 0 ? "" : src.slice(optAt + 1, close);
+        const keys = body.split(",").map((k) => k.trim());
+        const bad = close < 0 ? [body] : keys.filter((k) => !ENUM_KEY_RE.test(k));
+        if (bad.length) {
+          fail(
+            `List option “${bad[0]}” is not allowed. Use label, start, nosep, noitemsep, wide, align or a spacing such as itemsep=2pt.`,
+            optAt,
+          );
+          if (close < 0) break;
+        } else used.add("enumitem");
+        i = close;
       }
       if (name === "begin") envs.push({ name: env, offset: start });
       else {
@@ -220,5 +418,7 @@ export function sanitizeLatex(src: string, mode: SanitizeMode): SanitizeResult {
   if (dollars % 2 === 1) fail("There is a $ without a matching $.", lastDollar);
 
   issues.sort((a, b) => a.offset - b.offset);
-  return issues.length === 0 ? { ok: true, value: src } : { ok: false, issues };
+  return issues.length === 0
+    ? { ok: true, value: src, packages: ADVANCED_PACKAGES.filter((p) => used.has(p)) }
+    : { ok: false, issues };
 }

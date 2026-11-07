@@ -10,6 +10,7 @@ import {
   m,
   md,
   p,
+  packagesPaper,
   qty,
   referencePaper,
   table,
@@ -205,9 +206,45 @@ export function bloomKey(): KeyFixture {
   };
 }
 
+/** Phase 12 (D87): a key whose answers use package commands the paper does not. */
+export function packagesKey(): KeyFixture {
+  const adv = (latex: string): BlockNode => ({ type: "advancedLatex", attrs: { latex } });
+  return {
+    paper: packagesPaper(),
+    keys: [
+      {
+        groupKey: "g1",
+        position: 1,
+        answerKey: doc(adv("\\ce{2H2 + O2 -> 2H2O}")),
+        keyCriteria: [],
+      },
+      {
+        groupKey: "g2",
+        position: 1,
+        answerKey: doc(p("Benzoic acid:"), adv("\\chemfig{*6(=-=(-[:30]COOH)-=-)}")),
+        keyCriteria: [
+          { text: "Name", marks: 2 },
+          { text: "Structure", marks: 2 },
+        ],
+      },
+      {
+        groupKey: "g3",
+        position: 2,
+        answerKey: doc(
+          adv(
+            "\\begin{enumerate}[label=\\alph*), nosep]\\item Absorption\\item Distribution\\end{enumerate}",
+          ),
+        ),
+        keyCriteria: [],
+      },
+    ],
+  };
+}
+
 export const KEY_FIXTURES = {
   "key-reference": referenceKey,
   "key-legacy": legacyKey,
   "key-own-numbers": ownNumbersKey,
   "key-bloom": bloomKey,
+  "key-packages": packagesKey,
 } as const;
