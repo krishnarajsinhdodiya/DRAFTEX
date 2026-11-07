@@ -1,10 +1,11 @@
 // Upgrading from earlier versions (roadmap rule; D28, D35, D84): backups made
-// by v0.8.0 and v0.10.0 (tests/fixtures/upgrade, invented data, made by
+// by v0.8.0, v0.10.0 and v0.11.0 (tests/fixtures/upgrade, invented data, made by
 // scripts/make-upgrade-fixture.ts) are restored into this version with
 // `npm run restore`; the start applies the newer migrations. Their templates,
 // papers and questions must come through unchanged, their exports must look
 // exactly like the ones those versions made, and their questions must go into
-// the question bank (Phase 11).
+// the question bank (Phase 11). The v0.11.0 paper holds an Advanced LaTeX
+// block, so its unchanged export also covers the Phase 12 sanitiser (D95).
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -19,7 +20,7 @@ test.describe.configure({ mode: "serial", timeout: 180_000 });
 
 test.afterEach(closeOpenContexts);
 
-const FROMS = ["v0.8.0", "v0.10.0"] as const;
+const FROMS = ["v0.8.0", "v0.10.0", "v0.11.0"] as const;
 const FIXTURE = path.resolve("tests", "fixtures", "upgrade");
 const ADMIN = { name: "Upgrade Admin", email: "upgrade@example.test", password: "upgrade fixture" };
 const PAPER = "Upgrade Example Paper";

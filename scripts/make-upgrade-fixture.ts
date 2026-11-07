@@ -6,7 +6,8 @@
 // the previous tag:
 // 1. (in the old worktree) node scripts/e2e-server.ts 3219
 // 2. (here) node scripts/make-upgrade-fixture.ts http://127.0.0.1:3219 /tmp/draftex-e2e-3219 v0.8.0
-// The tag picks the old screens' steps: v0.8.0, or v0.10.0 (Mark as Final, Bloom shown).
+// The tag picks the old screens' steps: v0.8.0, or v0.10.0 (Mark as Final, Bloom shown),
+// or v0.11.0 (as v0.10.0, CO typed as text, plus an Advanced LaTeX block).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +37,18 @@ await page.getByLabel("Password", { exact: true }).fill(ADMIN.password);
 await page.getByLabel("Type the password again").fill(ADMIN.password);
 await page.getByRole("button", { name: "Create administrator" }).click();
 await page.getByRole("heading", { name: `Welcome, ${ADMIN.name}` }).waitFor();
+const advanced = tag !== "v0.8.0" && tag !== "v0.10.0";
+
+if (advanced) {
+  // v0.11.0: a block of Advanced LaTeX written before Phase 12 must compile the same after it.
+  await page.goto("/admin/users");
+  await page
+    .getByRole("row")
+    .filter({ hasText: ADMIN.email })
+    .getByRole("button", { name: "Allow Advanced LaTeX" })
+    .click();
+  await page.getByText("May use Advanced LaTeX").waitFor();
+}
 
 // A private template: a copy of a built-in with its own title and marks.
 await page.goto("/templates");
@@ -84,7 +97,8 @@ for (const [i, o] of ["Inventolol", "Fictropine", "Madeupamol", "Placebine"].ent
 }
 const q11 = page.getByRole("listitem", { name: "Q.1(1)", exact: true });
 await q11.getByLabel("A is the correct answer").check();
-await page.getByLabel("CO tag for Q.1(1)").selectOption({ index: 1 });
+if (advanced) await page.getByLabel("CO tag for Q.1(1)").fill("BP604T.01");
+else await page.getByLabel("CO tag for Q.1(1)").selectOption({ index: 1 });
 await page.getByLabel("Bloom level for Q.1(1)").selectOption("REMEMBER");
 
 await open(page, "Q.2(1)");
@@ -110,6 +124,17 @@ await page.keyboard.type("Dose");
 
 await open(page, "Q.3(1)");
 await page.keyboard.type("Describe the mechanism of action of an invented diuretic.");
+
+if (advanced) {
+  await open(page, "Q.3(2)");
+  await page.keyboard.type("Explain the expression below.");
+  await page.getByRole("button", { name: "Insert" }).click();
+  await page.getByRole("menuitem", { name: "Advanced LaTeX" }).click();
+  await page
+    .getByLabel("Advanced LaTeX (checked before it reaches the paper)")
+    .fill("\\begin{center}\\textbf{Invented} $\\frac{a}{b} + x^2$\\end{center}");
+  await page.getByRole("button", { name: "Done" }).click();
+}
 
 const q21 = page.getByRole("listitem", { name: "Q.2(1)", exact: true });
 await q21.getByRole("button", { name: /^Answer key/ }).click();
