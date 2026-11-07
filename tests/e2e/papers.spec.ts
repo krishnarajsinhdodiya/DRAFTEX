@@ -161,6 +161,54 @@ test("Advanced LaTeX is offered only after an admin allows it", async ({ browser
   await page.keyboard.press("Escape");
 });
 
+test("Advanced LaTeX loads chemistry packages and refuses file commands (D86-D88)", async ({
+  browser,
+}) => {
+  const admin = await asUser(browser, ADMIN, ADMIN.password);
+  await admin.goto("/admin/users");
+  const row = admin.getByRole("row").filter({ hasText: FACULTY.email });
+  await row.getByRole("button", { name: "Allow Advanced LaTeX" }).click();
+  await expect(row.getByText("May use Advanced LaTeX")).toBeVisible();
+
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto(paperUrl);
+  await open(page, "Q.2(3)");
+  await page.getByRole("button", { name: "Insert" }).click();
+  await page.getByRole("menuitem", { name: "Advanced LaTeX" }).click();
+  const box = page.getByLabel("Advanced LaTeX (checked before it reaches the paper)");
+  const done = page.getByRole("button", { name: "Done" });
+
+  await box.fill("\\lstinputlisting{/etc/hosts}");
+  await expect(page.getByText("\\lstinputlisting is not allowed for safety.")).toBeVisible();
+  await expect(done).toBeDisabled();
+  await box.fill("\\chemfig{A-[,,,,draw=none]B}");
+  await expect(page.getByText(/bond options may only hold an angle/)).toBeVisible();
+  await expect(done).toBeDisabled();
+
+  await box.fill("\\ce{2H2 + O2 -> 2H2O} \\chemfig{*6(=-=-=-)}");
+  await expect(page.getByText("Uses mhchem, chemfig; the paper loads them for you.")).toBeVisible();
+  await page.getByText("Chemistry, colour and list commands").click();
+  await expect(page.getByText("TikZ, pgfplots, listings and file commands are not")).toBeVisible();
+  const preview = page.waitForResponse(
+    (r) => r.url().includes("/preview") && r.request().method() === "GET" && r.status() === 200,
+    { timeout: 60_000 },
+  );
+  await done.click();
+  await saved(page);
+  expect((await preview).headers()["content-type"]).toContain("application/pdf");
+  await expect(page.getByText(/has an unmatched|could not be typeset|need fixing/)).toHaveCount(0, {
+    timeout: 30_000,
+  });
+
+  // Leave the paper and the account as the later tests expect them.
+  await question(page, "Q.2(3)").getByText("\\ce{2H2 + O2 -> 2H2O}", { exact: false }).click();
+  await page.getByRole("button", { name: "Remove" }).click();
+  await saved(page);
+  await admin.reload();
+  await row.getByRole("button", { name: "Turn off Advanced LaTeX" }).click();
+  await expect(row.getByText("May use Advanced LaTeX")).toHaveCount(0);
+});
+
 test("the answer key is written with the question and previewed", async ({ browser }) => {
   const page = await asUser(browser, FACULTY, FACULTY.own);
   await page.goto(paperUrl);
