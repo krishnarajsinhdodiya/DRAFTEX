@@ -281,7 +281,8 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-07 · D89: chemfig only as `\chemfig{...}` with bond options limited to numbers and angles (fields 1-4); no `\chemfig[...]`, no 5th (tikz) field, no `\chemmove`, `\definesubmol`, `\setchemfig`, `!` submol calls or reaction schemes · bond field 5 reaches tikz keys (`insert path={plot file{..}}` opened a file); owner approved
 - 2026-11-07 · D90: argument grammars: `\textcolor` takes a name from a fixed list; enumitem options take listed keys only (no `before`/`after`/`first` hooks, no `\setlist`/`\newlist`); `\multirow` rows capped · owner approved
 - 2026-11-07 · D91: the named blocklist grows to the brief's list plus names found in the review; the allow-list remains the barrier · owner approved
-- 2026-11-07 · D92: `₹` in ordinary text prints as `\rupee{}` (tfrupee loaded only when used), for every user · today `₹` is an error, so no existing paper changes; owner approved
+- 2026-11-07 · D92: `₹` in ordinary text prints as `\rupee{}` (tfrupee loaded only when used), for every user · today `₹` is an error, so no existing paper changes; owner approved [SUPERSEDED 2026-11-07 → see "D92 withdrawn"]
+- 2026-11-07 · D92 withdrawn: `₹` in plain text already prints "Rs." (escape.ts, since Phase 1), so the premise was wrong and switching it would change existing papers; plain `₹` stays "Rs.", the symbol is `\rupee` in Advanced LaTeX only. Whether plain `₹` should print the symbol is an open question for the owner · found while building the fixture
 - 2026-11-07 · D93: gate 7 runs the real engine on every hostile form with a canary file at an absolute path; fails if the canary shows in the PDF text or log, or a file appears outside the job folder; gate 6 fuzz draws from the new commands · owner approved
 - 2026-11-07 · D94: LaTeX SHA-256 of every golden fixture made at v0.11.0 is committed and must still match; visual baselines are not regenerated · owner approved
 - 2026-11-07 · D95: no migration in Phase 12; a v0.11.0 upgrade fixture with an Advanced LaTeX question is added to upgrade.spec.ts and the CI upgrade job installs v0.11.0 · owner approved
@@ -307,6 +308,7 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
+- Plain-text `₹` prints "Rs." today. Switch it to the ₹ symbol (changes every existing paper that has ₹), or keep "Rs."?
 - The builder's CO option "On the group" prints nothing today. Print the group's distinct CO tags on its heading line, or remove the option? [ANSWERED 2026-11-06 → removed, see "D71"]
 - Does the college print Bloom and CO on each sub-part line (a)(b)(c), or only once per question? [ANSWERED 2026-11-06 → each sub-part line, see "D70"]
 - Should Phase 9 add an offline admin password reset (`npm run reset-password -- <email>`, run on the DRAFTEX computer with the app stopped)? Today a forgotten sole-admin password cannot be recovered. [ANSWERED 2026-11-04 → see "D49"]
