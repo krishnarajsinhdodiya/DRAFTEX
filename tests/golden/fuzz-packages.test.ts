@@ -34,7 +34,7 @@ let file: string;
 let svc: CompileService;
 beforeAll(() => {
   svc = realCompileService({ timeoutMs: 20_000 });
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), "dx-fuzz-"));
+  dir = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "dx-fuzz-")));
   file = path.join(dir, "c.txt").split(path.sep).join("/");
   fs.writeFileSync(file, `${CANARY}\n`);
 });
