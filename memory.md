@@ -302,6 +302,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-07 · On windows-latest the pinned engine read a file at an absolute `C:/` path but did not write one with `\openout` (run 42354386185); macOS writes it. The write self-check logs this on Windows instead of failing; every write form is refused by the sanitiser on all systems. Canary folders use `fs.realpathSync.native` because the runner's temp path is an 8.3 short name with "~", which mhchem refuses · found by CI
 
 - 2026-11-07 · Rupee in plain text: a typed `₹` keeps printing "Rs."; the symbol is only `\rupee{}` in Advanced LaTeX · owner answer ("Keep Rs.")
+- 2026-11-07 · Graphs: no graph feature and no pgfplots; when a paper needs a graph it is drawn elsewhere (Excel, CorelDRAW) and added as a picture (Insert › Picture). A structured graph block (numbers in, app-written pgfplots) stays the safe route if this changes · owner answer ("skip graphs for now")
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
