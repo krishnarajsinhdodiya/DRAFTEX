@@ -60,7 +60,6 @@ no chat history must be able to continue from this file alone.
 - Making an upgrade fixture: `git worktree add /tmp/dx-vX <tag>`, `npm ci && npm run build` there, `node scripts/e2e-server.ts 3219` from that folder, then here `node scripts/make-upgrade-fixture.ts http://127.0.0.1:3219 "$(node -e 'console.log(require("os").tmpdir())')/draftex-e2e-3219" <tag>`.
 
 ## Questions for owner
-- Is TikZ/pgfplots needed at all? If graphs matter, a structured graph builder (numbers in, no user LaTeX) is the safe route, not raw pgfplots.
 - Later: should the app offer Times at all? Should the picker page through more than 50 matches?
 
 ## Phase checklist
