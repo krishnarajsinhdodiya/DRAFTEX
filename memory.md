@@ -301,6 +301,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 
 - 2026-11-07 · On windows-latest the pinned engine read a file at an absolute `C:/` path but did not write one with `\openout` (run 42354386185); macOS writes it. The write self-check logs this on Windows instead of failing; every write form is refused by the sanitiser on all systems. Canary folders use `fs.realpathSync.native` because the runner's temp path is an 8.3 short name with "~", which mhchem refuses · found by CI
 
+- 2026-11-07 · Rupee in plain text: a typed `₹` keeps printing "Rs."; the symbol is only `\rupee{}` in Advanced LaTeX · owner answer ("Keep Rs.")
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
@@ -320,7 +321,7 @@ Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Tectonic 0.17.0 (2026-07-27), SHA-256: aarch64-apple-darwin a3f1cac7c5678f01661a92212f58480ae3b0634115d880dbc59e2953ded45667 · x86_64-apple-darwin 7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80 · x86_64-pc-windows-msvc f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f · x86_64-unknown-linux-gnu 1a715688baf591e650c8aeb160ae934e181685eecbb38b317de30b269ac5d606
 
 ## Open questions for the owner
-- Plain-text `₹` prints "Rs." today. Switch it to the ₹ symbol (changes every existing paper that has ₹), or keep "Rs."?
+- Plain-text `₹` prints "Rs." today. Switch it to the ₹ symbol (changes every existing paper that has ₹), or keep "Rs."? [ANSWERED 2026-11-07 → keep "Rs.", see "Rupee in plain text"]
 - The builder's CO option "On the group" prints nothing today. Print the group's distinct CO tags on its heading line, or remove the option? [ANSWERED 2026-11-06 → removed, see "D71"]
 - Does the college print Bloom and CO on each sub-part line (a)(b)(c), or only once per question? [ANSWERED 2026-11-06 → each sub-part line, see "D70"]
 - Should Phase 9 add an offline admin password reset (`npm run reset-password -- <email>`, run on the DRAFTEX computer with the app stopped)? Today a forgotten sole-admin password cannot be recovered. [ANSWERED 2026-11-04 → see "D49"]
