@@ -176,6 +176,13 @@ Names are binding; fields may be added.
   marks (default from group), coTag?, bloomLevel? (`REMEMBER`…`CREATE`),
   answerKey (TipTap JSON)?, keyCriteria (JSON)?, `questionId?` (future bank).
 - `Question` (empty in v1: the future bank; Slot can reference it later).
+  [Amended 2026-11-07, Phase 11: the question bank. `Question` gains course
+  code/title/programme (catalogue course optional), unit, coTag, bloomLevel,
+  marks, type, content, answerKey, keyCriteria, tags, dupKey, searchText,
+  sharing (`PRIVATE`|`SHARED`), sourcePaperId, version, deletedAt; new
+  `QuestionUse` (per-user usage) and `BankCourseShare` (D72-D85 in
+  memory.md). The 2026 syllabus gives defaults and suggestions, never rules
+  (D85).]
 - `Asset` sha256 (pk), ownerId, mime, bytes, width, height, originalName.
 - `CompileJob` id, paperId, kind (`PAPER`|`KEY`), status, durationMs,
   errorSummary, createdAt (keep last 20 per paper).
