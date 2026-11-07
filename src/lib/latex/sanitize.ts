@@ -157,9 +157,8 @@ const ADVANCED_ENVIRONMENTS = new Set([
 ]);
 
 /** Commands each package adds, accepted only in Advanced LaTeX (D88). */
-const PACKAGE_COMMANDS: Record<string, AdvancedPackage> = {
+export const PACKAGE_COMMANDS: Record<string, AdvancedPackage> = {
   ce: "mhchem",
-  pu: "mhchem",
   chemfig: "chemfig",
   multirow: "multirow",
   textcolor: "xcolor",
@@ -172,7 +171,7 @@ const PACKAGE_COMMANDS: Record<string, AdvancedPackage> = {
   ),
 };
 
-const PACKAGE_ENVIRONMENTS: Record<string, AdvancedPackage> = {
+export const PACKAGE_ENVIRONMENTS: Record<string, AdvancedPackage> = {
   framed: "framed",
   dcases: "mathtools",
   "dcases*": "mathtools",

@@ -19,7 +19,6 @@ const refused = (s: string, mode: "math" | "advanced" = "advanced") => {
 describe("package commands are accepted in Advanced LaTeX and name their package", () => {
   it.each([
     ["\\ce{H2SO4 -> 2H+ + SO4^2-}", ["mhchem"]],
-    ["\\pu{5 mg/kg}", ["mhchem"]],
     ["\\chemfig{*6(=-=-=-)}", ["chemfig"]],
     ["\\chemfig{H_3C-[:30]C(=[2]O)-[::-60,1.5,1,2]OH}", ["chemfig"]],
     ["$a \\coloneqq b$ and $\\prescript{14}{6}{C}$", ["mathtools"]],

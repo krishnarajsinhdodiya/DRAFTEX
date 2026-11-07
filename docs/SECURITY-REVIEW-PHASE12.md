@@ -68,7 +68,7 @@ is in them.
 
 | Package | Attack surface found | Verdict |
 |---|---|---|
-| mhchem | `\ce{}`, `\pu{}`; argument is chemistry text; no file or code hooks known | allow (likely safe; real-engine canary test required) |
+| mhchem | `\ce{}`; argument is chemistry text; no file or code hooks known. `\pu` is not offered: the bundled v4.09 does not define it (found by the engine test) | allow (likely safe; real-engine canary test required) |
 | mathtools | extra maths commands; `\DeclarePairedDelimiter`, `\newtagform`, `\mathtoolsset` define or set globally | allow a named subset, no definers |
 | multirow | `\multirow{n}{w}{text}` | allow |
 | framed | `framed` environment; `shaded` needs a colour definition | allow `framed` only |
