@@ -41,7 +41,9 @@ no chat history must be able to continue from this file alone.
 - Ask the father to try a CSV import from his own Excel file, and to try `\ce{...}` and `\chemfig{...}` in Advanced LaTeX (an admin must allow it for him under People).
 
 ## Failing tests
-- None known. Local: lint, typecheck, format, unit 1182, golden (80 passed, visual skipped off Linux), e2e 63 green; CI run 42355063346 green.
+- `tests/e2e/network.spec.ts` "LAN mode: the admin switches, restarts…" timed out on windows-latest in the v0.12.0 merge run 42355929142 ("Saved, not yet in use" still shown after 90 s); it passed on the branch run 42355063346 and on macOS. Cause not found: the spec does not keep the restarted server's output. Next step: capture the supervisor/server output in that spec (as upgrade.spec does), then fix the cause. Repro: `npm run test:e2e` on windows-latest; not reproduced locally.
+- The same run's Trash test failure was a race in the test (a page load started before the "Move to Trash" redirect landed); fixed on `fix/trash-e2e-race`.
+- Otherwise none known. Local: lint, typecheck, format, unit 1182, golden (80 passed, visual skipped off Linux), e2e 63 green; CI run 42355063346 green.
 
 ## Blockers / risks
 - The sanitiser stays the only barrier between user text and file access (the engine allows absolute reads, and writes on macOS). Any future package must go through the same review: a name allow-list cannot see file paths given as plain strings.
