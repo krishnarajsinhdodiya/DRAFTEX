@@ -393,6 +393,8 @@ test("a deleted paper goes to Trash, comes back with Undo or Restore, and can be
   const copyUrl = page.url();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await page.getByRole("button", { name: "Move to Trash" }).click();
+  // The action redirects; going elsewhere before it lands aborts one of the two.
+  await expect(page).toHaveURL(/\/papers\?trashed=/);
   await page.goto("/papers/trash");
   await page.getByRole("button", { name: `Delete ${TITLE} (ATKT) forever` }).click();
   await page
