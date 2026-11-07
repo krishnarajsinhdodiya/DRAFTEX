@@ -44,7 +44,8 @@ export const newPaperSchema = z.object({
   courseId: z.string().max(64).nullable().default(null),
   courseCode: z.string().trim().max(40).default(""),
   courseTitle: z.string().trim().max(200).default(""),
-  semesterOrYear: z.number().int().min(1).max(10).default(1),
+  /** Left out: the syllabus course's semester, else 1. */
+  semesterOrYear: z.number().int().min(1).max(10).optional(),
   academicYear: z.string().trim().max(20).default(""),
   examDate: z.coerce.date().nullable().default(null),
 });
@@ -75,11 +76,21 @@ export const paperDetailsSchema = paperMetaSchema
   .partial();
 
 export function paperCommands(data: DataLayer, actor: Actor) {
-  /** A course from the catalogue fills its code, title and semester. */
-  async function courseFacts(courseId: string | null | undefined) {
+  /**
+   * A course from the syllabus fills its code, title and semester as
+   * defaults only (D85): whatever the user typed for them wins.
+   */
+  async function courseFacts(
+    courseId: string | null | undefined,
+    given: { courseCode?: string; courseTitle?: string; semesterOrYear?: number },
+  ) {
     if (!courseId) return {};
     const c = await data.courses.get(actor, courseId);
-    return { courseCode: c.code, courseTitle: c.title, semesterOrYear: c.semesterOrYear };
+    return {
+      courseCode: given.courseCode?.trim() || c.code,
+      courseTitle: given.courseTitle?.trim() || c.title,
+      semesterOrYear: given.semesterOrYear ?? c.semesterOrYear,
+    };
   }
 
   return {
@@ -89,7 +100,8 @@ export function paperCommands(data: DataLayer, actor: Actor) {
         const m = newPaperSchema.parse(input);
         const paper = await data.papers.create(actor, tpl.id, {
           ...m,
-          ...(await courseFacts(m.courseId)),
+          semesterOrYear: m.semesterOrYear ?? 1,
+          ...(await courseFacts(m.courseId, m)),
           program: z.enum(Program).parse(tpl.program),
           examKind: z.enum(ExamKind).parse(tpl.examKind),
         });
@@ -108,7 +120,7 @@ export function paperCommands(data: DataLayer, actor: Actor) {
           actor,
           idSchema.parse(id),
           versionSchema.parse(version),
-          { ...p, ...(await courseFacts(p.courseId)) },
+          { ...p, ...(await courseFacts(p.courseId, p)) },
         );
         return saved.version;
       });

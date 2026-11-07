@@ -2,6 +2,7 @@
 // never Prisma directly; ESLint blocks the Prisma client everywhere else.
 import { type Db, getDb } from "@/lib/db/client";
 import { assets } from "./assets";
+import { bank, purgeOldBankTrash } from "./bank";
 import { bpharmCatalogue } from "@/lib/catalogue";
 import { auditLog } from "./audit";
 import { authStore } from "./auth-store";
@@ -21,6 +22,7 @@ export function dataLayer(db: Db) {
   return {
     templates: templates(db),
     papers: papers(db),
+    bank: bank(db),
     assets: assets(db),
     users: users(db),
     auth: authStore(db),
@@ -31,8 +33,9 @@ export function dataLayer(db: Db) {
     system: {
       syncCatalogue: () => syncCatalogue(db, bpharmCatalogue()),
       syncBuiltInTemplates: () => syncBuiltInTemplates(db, BUILT_IN_TEMPLATES),
-      /** Removes papers that have been in Trash for 30 days (D51). */
-      purgeOldTrash: (now: Date) => purgeOldTrash(db, now),
+      /** Removes papers (D51) and bank questions (D82) that have been in Trash for 30 days. */
+      purgeOldTrash: async (now: Date) =>
+        (await purgeOldTrash(db, now)) + (await purgeOldBankTrash(db, now)),
       /** Applies `npm run reset-password` (D49); see users.resetPasswordOffline. */
       resetPasswordOffline: (email: string, passwordHash: string) =>
         resetPasswordOffline(db, email, passwordHash),

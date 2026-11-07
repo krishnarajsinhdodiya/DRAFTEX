@@ -29,3 +29,13 @@ export class InvalidTemplateError extends Error {
     this.issues = issues;
   }
 }
+
+/** A bank question the rules refuse (D72, D77): routes answer 422 and list the problems. */
+export class InvalidQuestionError extends Error {
+  override name = "InvalidQuestionError";
+  readonly problems: string[];
+  constructor(problems: string[]) {
+    super(problems.join(" "));
+    this.problems = problems;
+  }
+}

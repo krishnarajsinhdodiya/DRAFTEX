@@ -20,13 +20,14 @@ The pictures in this guide use made-up names and questions.
 5. [The answer key](#5-the-answer-key)
 6. [Exporting: the files you print or send](#6-exporting-the-files-you-print-or-send)
 7. [Copies for ATKT and next year; finding papers](#7-copies-for-atkt-and-next-year-finding-papers)
-8. [Templates](#8-templates)
-9. [Backups](#9-backups)
-10. [Colleagues and other computers](#10-colleagues-and-other-computers)
-11. [Updating DRAFTEX](#11-updating-draftex)
-12. [When something goes wrong](#12-when-something-goes-wrong)
-13. [For the person who installs DRAFTEX](#13-for-the-person-who-installs-draftex)
-14. [Uninstalling DRAFTEX](#14-uninstalling-draftex)
+8. [The question bank](#8-the-question-bank)
+9. [Templates](#9-templates)
+10. [Backups](#10-backups)
+11. [Colleagues and other computers](#11-colleagues-and-other-computers)
+12. [Updating DRAFTEX](#12-updating-draftex)
+13. [When something goes wrong](#13-when-something-goes-wrong)
+14. [For the person who installs DRAFTEX](#14-for-the-person-who-installs-draftex)
+15. [Uninstalling DRAFTEX](#15-uninstalling-draftex)
 
 ---
 
@@ -39,7 +40,7 @@ DRAFTEX holds **unreleased exam papers**. Four rules keep them private:
   outside the college. DRAFTEX is made for one computer, or at most the
   staff network you trust.
 - **"This network" mode is not encrypted.** When colleagues use DRAFTEX from
-  their own computers (section 10), what they type, including passwords and
+  their own computers (section 11), what they type, including passwords and
   questions, crosses the network in plain form. Use it only on the staff
   network, never on public or hostel Wi-Fi.
 - **Backups and exported papers contain the real papers.** Keep them on a
@@ -95,7 +96,7 @@ network settings.
   remember and hard to guess.
 - **Write the password down and keep it somewhere safe.** If it is
   forgotten, it can only be reset on the DRAFTEX computer itself
-  (section 12). A second administrator account (section 10) is an easier
+  (section 13). A second administrator account (section 11) is an easier
   spare key.
 
 After that you see the home page:
@@ -123,8 +124,11 @@ built-in templates follow the PCI 2026 patterns and the KSV/KBIPER headers.
 
    ![Template library](user-guide/03-templates.png)
 
-3. Click **New paper**. Give it a title, choose the **Course** (code and
-   title come from the syllabus), the **Exam date**, then **Create paper**.
+3. Click **New paper**. Give it a title, choose the **Course**, the **Exam
+   date**, then **Create paper**. A course from the 2026 syllabus fills in
+   its code, title and semester; change them if your paper differs (for
+   example a course still on an older syllabus), or leave the course as
+   "Not from the syllabus" and type them.
 
    ![New paper dialog](user-guide/04-new-paper.png)
 
@@ -153,14 +157,16 @@ While you write a question:
 - Pictures: PNG, JPG, PDF (one page) or SVG, up to 10 MB. Structures
   exported from CorelDRAW as PNG or PDF work well.
 - **CO** and **Bloom** under each question set its course outcome tag and
-  level. The CO tag prints at the right, like `[BP604T.01]`. Elective
+  level. Type the CO tag, or pick one of the syllabus COs the field
+  suggests. The CO tag prints at the right, like `[BP604T.01]`. Elective
   courses write the option after the number: `[BP607T.01 AEC1]`.
 - **Sub-parts (a)(b)(c)** (Insert, or `/sub`) each have their own **Marks**,
   **CO** and **Bloom**. Left at "As question", a sub-part follows the
   question. DRAFTEX warns when the sub-part marks do not add up to the
   question's marks; the question's marks still count for the total.
-- The small buttons move a question up or down, duplicate it or clear it.
-  **Undo** at the top brings back a cleared or moved question.
+- The small buttons move a question up or down, duplicate it, take a
+  question from the bank or add it to the bank (section 8), or clear it.
+  **Undo** at the top brings back a cleared, moved or inserted question.
 
 "**All changes saved**" at the top means everything is stored. If DRAFTEX
 finds a problem (for example a question that cannot be printed), the question
@@ -301,7 +307,90 @@ everything in DRAFTEX, it only ever shows your own papers.
 
 ---
 
-## 8. Templates
+## 8. The question bank
+
+The **Bank** keeps questions you want to use again, with their course, unit,
+CO, Bloom level, marks, type, answer and tags.
+
+![Question bank page with search and filters](user-guide/15-bank.png)
+
+**Who sees what.** A question you add is **private**: nobody else sees it,
+administrators included. To let colleagues use it, tick **Share with
+colleagues** on the question, or share a whole course at the bottom of the
+Bank page (every question of yours in that course, now and later). Shared
+questions can be seen and used by everyone with an account on this DRAFTEX;
+only you can change, delete or stop sharing yours. A colleague who wants to
+change one uses **Copy to my bank** and edits the copy.
+
+**Courses and COs.** Type the course code; for a course in the 2026 syllabus
+DRAFTEX fills in its title and offers its COs and units as suggestions. You
+can always type something else, for example for a course still on an older
+syllabus, or an M.Pharm or Pharm.D course. A CO that the syllabus does not
+list is saved with a note, never refused. Every question needs a **Bloom
+level** and a **CO**.
+
+### Adding questions
+
+- **New question** on the Bank page: write it like a question in a paper
+  (equations, tables, pictures, sub-parts), and its model answer.
+- **From a paper:** click **Add to bank** at the top of the paper to add
+  every question that has a Bloom level and a CO, or the bookmark button
+  under one question to add just that one. DRAFTEX then lists what it added
+  and what it skipped, and why (no Bloom level, no CO, already in your bank,
+  the same as an earlier question on this paper).
+
+  ![Add to bank report](user-guide/14-add-to-bank.png)
+
+A question counts as already in your bank when its text is the same in the
+same course, ignoring capitals, extra spaces and bold or italic. Writing one
+by hand that is already there only gives a note.
+
+### Using a bank question in a paper
+
+Under a question place, click the **bank** button (the books). Pick a
+question; the filters start with the paper's course and the place's marks.
+"Last used in" shows the last of **your** papers that used it; nobody else
+sees your uses.
+
+![Picking a question from the bank](user-guide/16-picker.png)
+
+**Insert** copies the question, its CO, Bloom level and answer into the
+place. The place keeps its own marks. The copy is separate: changing it in
+the paper does not change the bank, and the other way round. **Undo** takes
+an insert back.
+
+### Importing from Excel (CSV)
+
+1. On the Bank page click **Import CSV**, then download the **CSV template**.
+2. Fill it in Excel, one question per row: course code, unit, CO (the full
+   tag such as BP604T.01, or just its number), Bloom level, marks, type,
+   question, answer and tags (separate tags with `;`). For multiple-choice
+   questions fill **choice a** to **choice d** and **correct** (a, b, c or d).
+3. Save it as **CSV UTF-8** (plain **CSV** also works), up to 1,000 questions
+   and 1 MB per file.
+4. Choose the file. DRAFTEX shows how it read the file (for example
+   "Read as UTF-8") and checks every row: **Ready**, **Problem** with the
+   reason, or **Duplicate**. Nothing is saved yet.
+
+   ![Import preview](user-guide/17-import.png)
+
+5. **Save** stores the ready rows and skips the rest. **Download the problems
+   as CSV** gives you the rows that were not saved, with the reason, to fix
+   and import again.
+
+The import takes text only. Add equations, tables and pictures to a
+question in the bank afterwards. Text such as `\input` or a cell starting
+with `=` is stored as plain text, exactly as typed.
+
+### Deleting a bank question
+
+Open it and click **Move to Trash**. Bank questions share the Trash with
+papers (Papers page, **Trash**) and are deleted for good after 30 days.
+Papers that used the question keep their own copy.
+
+---
+
+## 9. Templates
 
 - **Built-in** templates cannot be changed. To change a layout, open one and
   click **Make a copy**: the copy is yours and opens in the template
@@ -320,7 +409,7 @@ everything in DRAFTEX, it only ever shows your own papers.
 
 ---
 
-## 9. Backups
+## 10. Backups
 
 *Administrator only.* Click **Backups**.
 
@@ -342,7 +431,7 @@ restarts (the screen offers **Restart now**). A restore brings back papers,
 templates, pictures and accounts; this computer's network settings stay as
 they are.
 
-To restore onto a **new computer**, install DRAFTEX there (section 13), then
+To restore onto a **new computer**, install DRAFTEX there (section 14), then
 ask the person who installed it to run, in the DRAFTEX folder:
 
 ```
@@ -351,7 +440,7 @@ npm run restore -- "D:\DRAFTEX-backup-2026-11-04_101500-manual.zip"
 
 ---
 
-## 10. Colleagues and other computers
+## 11. Colleagues and other computers
 
 ### Adding colleagues
 
@@ -394,14 +483,14 @@ colleagues use it.
 
 **Behind a secure web server** is for a college server run by IT staff with
 HTTPS. Do not choose it on a laptop: DRAFTEX then refuses direct access, even
-from the same computer. If it was chosen by mistake, see section 12.
+from the same computer. If it was chosen by mistake, see section 13.
 
 The **Activity** screen lists sign-ins, failed sign-ins, backups and
 changes made by administrators.
 
 ---
 
-## 11. Updating DRAFTEX
+## 12. Updating DRAFTEX
 
 1. Close DRAFTEX (close the black window).
 2. Open the DRAFTEX folder and double-click **update-windows.bat**
@@ -417,7 +506,7 @@ screen.
 
 ---
 
-## 12. When something goes wrong
+## 13. When something goes wrong
 
 **The black window shows a message and DRAFTEX does not open.** Read the last
 lines; they say what is wrong in plain words. The common ones:
@@ -426,7 +515,7 @@ lines; they say what is wrong in plain words. The common ones:
 |---|---|
 | "Port 3210 is already in use. Another copy of DRAFTEX may be running" | DRAFTEX is probably already open: look for another black window, or restart the computer. |
 | "DRAFTEX cannot find its data folder at …" | The data folder was moved or is on a drive that is not connected. Connect the drive, or see "Moving the data folder" below. |
-| "DRAFTEX is not set up yet" | The person who installs DRAFTEX should run the setup again (section 13). |
+| "DRAFTEX is not set up yet" | The person who installs DRAFTEX should run the setup again (section 14). |
 | "The settings file … is not valid" | Ask the person who installs DRAFTEX; the fix is in `config.json` (below). |
 
 **I chose "Behind a secure web server" and now nothing opens.**
@@ -471,7 +560,7 @@ you delete it yourself, after checking your papers in the new place.
 
 ---
 
-## 13. For the person who installs DRAFTEX
+## 14. For the person who installs DRAFTEX
 
 This part is for whoever sets DRAFTEX up (the developer). It is written for
 Windows 10 or 11; the Mac steps follow.
@@ -571,7 +660,7 @@ expect 10–15 minutes for step 4.
 
 ---
 
-## 14. Uninstalling DRAFTEX
+## 15. Uninstalling DRAFTEX
 
 Uninstalling removes the program but **keeps your papers**, backups and
 settings in the data folder (`C:\Users\<your name>\DRAFTEX-data`).
@@ -580,16 +669,16 @@ settings in the data folder (`C:\Users\<your name>\DRAFTEX-data`).
 2. Open the DRAFTEX folder (`C:\DRAFTEX`) and double-click
    **uninstall-windows.bat**. (On a Mac: `./uninstall-macos.sh`.)
 3. Answer **y** to uninstall. It removes the desktop shortcut and the
-   program files. If other computers were allowed in (section 10), it offers
+   program files. If other computers were allowed in (section 11), it offers
    to remove that Windows Firewall rule too; Windows asks for permission.
    It also asks whether to remove the saved GitHub sign-in used for updates.
 4. When it says "DRAFTEX is uninstalled", close the window and delete the
    `C:\DRAFTEX` folder.
 
-To use DRAFTEX again later, install it as in section 13: it finds the papers
+To use DRAFTEX again later, install it as in section 14: it finds the papers
 in the data folder again.
 
-**To remove the papers as well**, first make a backup (section 9) and copy it
+**To remove the papers as well**, first make a backup (section 10) and copy it
 somewhere safe if you may need the papers again, then delete the data folder
 yourself. DRAFTEX never deletes it.
 

@@ -44,9 +44,10 @@ export default async function PapersPage({
     course: f.course || undefined,
   };
   const filtered = Object.values(filter).some(Boolean);
-  const [rows, trash, options, any] = await Promise.all([
+  const [rows, trash, bankTrash, options, any] = await Promise.all([
     data.papers.list(actor, filter),
     data.papers.listTrash(actor),
+    data.bank.listTrash(actor),
     data.papers.filterOptions(actor),
     filtered ? data.papers.recent(actor, 1) : null,
   ]);
@@ -57,9 +58,9 @@ export default async function PapersPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className={pageTitleStyles}>Papers</h1>
         <span className="flex flex-wrap items-center gap-2">
-          {trash.length > 0 ? (
+          {trash.length + bankTrash.length > 0 ? (
             <Link href="/papers/trash" className={buttonStyles.quiet}>
-              <Trash2 size={15} aria-hidden /> Trash ({trash.length})
+              <Trash2 size={15} aria-hidden /> Trash ({trash.length + bankTrash.length})
             </Link>
           ) : null}
           <Link href="/templates" className={buttonStyles.primary}>

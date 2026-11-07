@@ -47,8 +47,10 @@ test("a paper for an elective course offers CO tags as BP607T.01 AEC1", async ({
 
   const q = question(page, "Q.3(1)");
   const co = q.getByLabel("CO tag for Q.3(1)", { exact: true });
-  await expect(co.locator("option", { hasText: "BP607T.01 AEC1" })).toHaveCount(1);
-  await co.selectOption("BP607T.01 AEC1");
+  // Suggestions from the syllabus (D85); the field stays free text.
+  const list = await co.getAttribute("list");
+  await expect(page.locator(`[id="${list}"] option[value="BP607T.01 AEC1"]`)).toHaveCount(1);
+  await co.fill("BP607T.01 AEC1");
   await q.getByLabel("Bloom level for Q.3(1)", { exact: true }).selectOption({ label: "Apply" });
   // A sub-part follows the question until it gets its own value (D66).
   const fields = async (part: string) => {
@@ -68,7 +70,7 @@ test("a paper for an elective course offers CO tags as BP607T.01 AEC1", async ({
   pop = await fields("a");
   await pop.getByLabel("Marks for Q.3(1) (a)").fill("6");
   await pop.getByLabel("Bloom level for Q.3(1) (a)").selectOption({ label: "Understand" });
-  await pop.getByLabel("CO tag for Q.3(1) (a)").selectOption("BP607T.02 AEC1");
+  await pop.getByLabel("CO tag for Q.3(1) (a)").fill("BP607T.02 AEC1");
   await pop.getByRole("button", { name: "Done" }).click();
   await expect(
     page.getByRole("button", {

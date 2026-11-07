@@ -38,6 +38,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <nav aria-label="Main" className="flex items-center">
             <NavLink href="/papers">Papers</NavLink>
             <NavLink href="/templates">Templates</NavLink>
+            <NavLink href="/bank">Bank</NavLink>
             {user.role === "ADMIN" ? (
               <>
                 <NavLink href="/admin/users">People</NavLink>
@@ -48,7 +49,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             ) : null}
           </nav>
           <div className="ml-auto flex items-center gap-1">
-            {/* The name gives way first, so the six admin links stay on one line on a
+            {/* The name gives way first, so the seven admin links stay on one line on a
                 laptop at 125–150 % display scaling (about 1000–1100 px wide). */}
             <span className="mr-2 hidden max-w-48 truncate text-small text-ink-2 xl:inline">
               {user.name}

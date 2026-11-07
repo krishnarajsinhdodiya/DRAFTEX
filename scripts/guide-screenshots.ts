@@ -2,6 +2,8 @@
 // DRAFTEX, using invented accounts and questions only (never real papers).
 // 1. node scripts/e2e-server.ts 3212        (fresh data folder, built app)
 // 2. node scripts/guide-screenshots.ts http://127.0.0.1:3212
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Page, chromium, expect } from "@playwright/test";
@@ -137,7 +139,7 @@ await page.keyboard.type("Describe how the example drug works.");
 await page.keyboard.press("ArrowDown");
 await page.keyboard.type("Evaluate its use in an example patient.");
 const long = page.getByRole("listitem", { name: "Q.3(1)", exact: true });
-await long.getByLabel("CO tag for Q.3(1)", { exact: true }).selectOption("BP604T.02");
+await long.getByLabel("CO tag for Q.3(1)", { exact: true }).fill("BP604T.02");
 await long.getByLabel("Bloom level for Q.3(1)", { exact: true }).selectOption({ label: "Apply" });
 for (const [part, marks, level] of [
   ["a", "6", "Understand"],
@@ -196,6 +198,46 @@ await page.getByRole("heading", { level: 1, name: /\(ATKT\)$/ }).waitFor();
 await page.goto("/papers");
 await page.getByRole("search", { name: "Find papers" }).waitFor();
 await shot(page, "11-papers");
+
+// The question bank (Phase 11): Add to bank from the ATKT copy, the Bank page,
+// the picker in the paper editor and a CSV import preview.
+await page
+  .getByRole("link", { name: /\(ATKT\)/ })
+  .first()
+  .click();
+await page.getByRole("img", { name: /page 1 of/ }).waitFor({ timeout: 90_000 });
+await page.getByRole("button", { name: "Add to bank" }).click();
+await page.getByRole("dialog", { name: /added to the bank|Nothing was added/ }).waitFor();
+await shot(page, "14-add-to-bank");
+await page.getByRole("button", { name: "OK" }).click();
+await page.getByRole("button", { name: "Write Q.3(2)" }).click();
+await page.getByRole("button", { name: "Use a bank question for Q.3(2)" }).click();
+const picker = page.getByRole("dialog", { name: "Insert Q.3(2) from the question bank" });
+await picker.getByLabel("Marks").fill("");
+await picker.getByRole("button", { name: "Insert" }).first().waitFor();
+await shot(page, "16-picker");
+await page.keyboard.press("Escape");
+await page.goto("/bank");
+await page.getByRole("search", { name: "Find questions" }).waitFor();
+await shot(page, "15-bank");
+const csvFile = path.join(os.tmpdir(), "draftex-guide-import.csv");
+fs.writeFileSync(
+  csvFile,
+  [
+    "course code,unit,co,bloom,marks,type,question,answer,tags,choice a,choice b,choice c,choice d,correct",
+    "BP604T,1,1,Remember,1,OBJECTIVE,Which of these is an invented drug class?,,example,First,Second,Third,Fourth,b",
+    "BP604T,2,2,Understand,5,SHORT,Explain an invented process in your own words.,Points to cover.,example,,,,,",
+    "BP604T,2,2,Recall,5,SHORT,Describe an invented assay.,,,,,,,",
+    "MPH101T,,MPH101T.03,Evaluate,10,LONG,Evaluate an invented delivery system.,,,,,,,",
+  ].join("\r\n"),
+);
+await page.goto("/bank/import");
+const chooser = page.waitForEvent("filechooser");
+await page.getByRole("button", { name: "Choose a CSV file" }).click();
+await (await chooser).setFiles(csvFile);
+await page.getByRole("status").filter({ hasText: "Read as" }).waitFor();
+await shot(page, "17-import");
+fs.rmSync(csvFile, { force: true });
 
 await page.goto("/admin/backups");
 await page.getByRole("button", { name: "Back up now" }).click();

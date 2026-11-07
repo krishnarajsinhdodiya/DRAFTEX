@@ -38,6 +38,25 @@ export function courses(db: Db) {
       });
     },
 
+    /**
+     * Every syllabus course with its COs and units, as suggestions for
+     * typed fields (D85): the user may always type something else.
+     */
+    async suggestions(actor: Actor) {
+      requireSignedIn(actor);
+      return db.course.findMany({
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          program: true,
+          outcomes: { select: { number: true, text: true }, orderBy: { number: "asc" } },
+          units: { select: { number: true, title: true }, orderBy: { number: "asc" } },
+        },
+        orderBy: { code: "asc" },
+      });
+    },
+
     async get(actor: Actor, id: string) {
       requireSignedIn(actor);
       const c = await db.course.findUnique({ where: { id }, include: detail });

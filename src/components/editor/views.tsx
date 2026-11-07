@@ -14,7 +14,7 @@ import { buttonStyles, inputStyles } from "@/components/styles";
 import { checkMath } from "@/lib/editor/math";
 import { sanitizeLatex } from "@/lib/latex/sanitize";
 import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "@/lib/paper/bloom";
-import { CO_TAG_HINT, CO_TAG_MAX, cleanCoTagInput } from "@/lib/paper/co-tag";
+import { CoTagInput } from "./co-tag-input";
 import { useSubPartFields } from "./sub-part-fields";
 import { MathField, MathText } from "./math";
 import { COMMON_UNITS, unitLabel } from "./units";
@@ -591,35 +591,15 @@ function SubPartView({ editor, getPos, node, updateAttributes }: NodeViewProps) 
                   {f.showCo ? (
                     <>
                       <label htmlFor={`${id}-c`}>CO</label>
-                      {f.coOptions.length ? (
-                        <select
-                          id={`${id}-c`}
-                          aria-label={`CO tag for ${name}`}
-                          value={a.coTag ?? ""}
-                          onChange={(e) => updateAttributes({ coTag: e.target.value || null })}
-                          className={inputStyles}
-                        >
-                          <option value="">{asQuestion(f.questionCo)}</option>
-                          {f.coOptions.map((o) => (
-                            <option key={o.value} value={o.value} title={o.label}>
-                              {o.value}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          id={`${id}-c`}
-                          aria-label={`CO tag for ${name}`}
-                          value={a.coTag ?? ""}
-                          placeholder={f.questionCo ?? "As question"}
-                          maxLength={CO_TAG_MAX}
-                          title={CO_TAG_HINT}
-                          onChange={(e) =>
-                            updateAttributes({ coTag: cleanCoTagInput(e.target.value) || null })
-                          }
-                          className={inputStyles}
-                        />
-                      )}
+                      <CoTagInput
+                        id={`${id}-c`}
+                        label={`CO tag for ${name}`}
+                        value={a.coTag ?? null}
+                        placeholder={f.questionCo ? `${f.questionCo} (as question)` : "As question"}
+                        options={f.coOptions}
+                        onChange={(coTag) => updateAttributes({ coTag })}
+                        className={inputStyles}
+                      />
                     </>
                   ) : null}
                   <label htmlFor={`${id}-b`}>Bloom</label>
