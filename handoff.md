@@ -63,7 +63,6 @@ no chat history must be able to continue from this file alone.
 - Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`). Phase 11 adds a migration (see Owner tasks).
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"`.
 - `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216). E2E 3211, restore 3214, server mode 3218, fixture server 3219, upgrade spec 3220.
-- A v0.10.0 worktree was made at `/tmp/draftex-v0100` for the fixture; remove it with `git worktree remove /tmp/draftex-v0100` if it is still there.
 
 ## Questions for owner
 - Later: should the app offer Times at all?
