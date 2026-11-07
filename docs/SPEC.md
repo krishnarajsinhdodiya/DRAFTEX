@@ -292,6 +292,13 @@ Built-ins can't be edited; "Save as new" is the way to change them.
   \let \csname \usepackage \documentclass \special \directlua \write18
   \loop \jobname \endinput \makeatletter`, `^^` escapes, and anything over
   4 KB per snippet. Allow-list approach for math commands.
+- Advanced LaTeX packages (Phase 12, D86-D91, amended 2026-11-07): mhchem,
+  chemfig, mathtools (subset), multirow, enumitem, xcolor (`\textcolor`),
+  framed and tfrupee, loaded only when a block uses one of their commands;
+  chemfig bond options, enumitem keys, colours and `\multirow` arguments are
+  read with fixed grammars. tikz, pgfplots, tcolorbox and listings are not
+  offered (they reach files through plain strings). Review and tests:
+  `docs/SECURITY-REVIEW-PHASE12.md`.
 - Output must reproduce the reference template's structure (single
   `questions` environment, `\dxGroupHead`, `\dxQOffset`).
 

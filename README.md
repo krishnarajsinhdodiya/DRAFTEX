@@ -6,7 +6,11 @@ compiled to PDF (paper and answer key) through LaTeX in the KSV/KBIPER house
 style. Questions and their sub-parts carry CO tags and Bloom levels, which a
 paper can print and summarise. A question bank keeps questions for reuse
 (private by default, shareable with colleagues) and imports them from CSV;
-the 2026 syllabus only suggests courses and COs. Everything runs on one
+the 2026 syllabus only suggests courses and COs. Users an administrator
+allows may type Advanced LaTeX, including chemistry (mhchem, chemfig) and a
+few other packages, checked by an allow-list before it reaches the engine
+(see [docs/SECURITY-REVIEW-PHASE12.md](docs/SECURITY-REVIEW-PHASE12.md)).
+Everything runs on one
 computer; other computers on the same network can be let in (LAN mode).
 
 - Product and build contract: [docs/SPEC.md](docs/SPEC.md)

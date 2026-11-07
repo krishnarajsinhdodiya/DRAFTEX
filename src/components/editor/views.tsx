@@ -228,7 +228,7 @@ function AdvancedView({ node, updateAttributes, deleteNode, selected }: NodeView
             ))}
           </ul>
           <p className="mt-1.5">
-            Pictures go in the Image block. TikZ, pgfplots, listings and file commands are not
+            Pictures go in Insert › Picture. TikZ, pgfplots, listings and file commands are not
             available.
           </p>
         </details>
