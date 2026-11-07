@@ -70,3 +70,19 @@ export function diffPages(actual: PNG[], expected: PNG[], threshold = 0.1): Page
 
 export const pngBytes = (png: PNG): Buffer => PNG.sync.write(png);
 export const readPng = (bytes: Buffer): PNG => PNG.sync.read(bytes);
+
+/** Every page's text, joined (gate 7 canary checks). */
+export async function pdfText(pdf: Uint8Array): Promise<string> {
+  const task = getDocument({ data: new Uint8Array(pdf), useSystemFonts: false });
+  const doc = await task.promise;
+  try {
+    const parts: string[] = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const content = await (await doc.getPage(i)).getTextContent();
+      for (const item of content.items) if ("str" in item) parts.push(item.str);
+    }
+    return parts.join(" ");
+  } finally {
+    await task.destroy();
+  }
+}
