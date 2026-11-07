@@ -273,6 +273,21 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-07 · Upgrade fixtures: `tests/fixtures/upgrade/v0.10.0-*` made by scripts/make-upgrade-fixture.ts (tag v0.10.0: Print Bloom levels, Mark as Final; the export then marks the paper Printed, D55); upgrade.spec runs for v0.8.0 and v0.10.0 · D84
 - 2026-11-07 · Performance after Phase 11 (same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 123 over the 16 ms floor); warm preview p50 434 ms, max 447 ms · targets met
 
+- 2026-11-07 · Tectonic `--untrusted` also lets `\openout` write a file at an absolute path (tested); with package code, tikz `plot file`, pgfplots `\addplot table/graphics`, `\lstinputlisting`, `\includegraphics` and chemfig bond options (`insert path`) reach files with no forbidden command name; pgfplots echoes file lines into the log · docs/SECURITY-REVIEW-PHASE12.md
+- 2026-11-07 · Performance before Phase 12 (v0.11.0 + test fix, same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 116 over the 16 ms floor); warm preview p50 433 ms, max 489 ms · roadmap measure-before rule
+- 2026-11-07 · D86: Advanced LaTeX packages in v0.12.0: mhchem, mathtools (named subset), multirow, enumitem (restricted), xcolor (`\textcolor` only), framed, tfrupee, chemfig (D89). Excluded: tikz, pgfplots, tcolorbox, listings (proven file reads), longtable, caption, float (low value on exam papers); graphicx stays out of user text (pictures only via the Image block); multicol/booktabs/tabularx/array unchanged · owner approved ("Go")
+- 2026-11-07 · D87: no "Packages" checklist: a package is loaded only when an Advanced LaTeX block on the paper (or key) uses one of its commands; papers without them produce byte-identical LaTeX · no stored state, no migration, bank inserts carry no package list; one block using enumitem may shift list spacing elsewhere on that paper; owner approved
+- 2026-11-07 · D88: package commands are accepted only in Advanced LaTeX blocks (never the Equation field), and only for users with `allowAdvancedLatex` (existing server-side save rule) · owner approved
+- 2026-11-07 · D89: chemfig only as `\chemfig{...}` with bond options limited to numbers and angles (fields 1-4); no `\chemfig[...]`, no 5th (tikz) field, no `\chemmove`, `\definesubmol`, `\setchemfig`, `!` submol calls or reaction schemes · bond field 5 reaches tikz keys (`insert path={plot file{..}}` opened a file); owner approved
+- 2026-11-07 · D90: argument grammars: `\textcolor` takes a name from a fixed list; enumitem options take listed keys only (no `before`/`after`/`first` hooks, no `\setlist`/`\newlist`); `\multirow` rows capped · owner approved
+- 2026-11-07 · D91: the named blocklist grows to the brief's list plus names found in the review; the allow-list remains the barrier · owner approved
+- 2026-11-07 · D92: `₹` in ordinary text prints as `\rupee{}` (tfrupee loaded only when used), for every user · today `₹` is an error, so no existing paper changes; owner approved
+- 2026-11-07 · D93: gate 7 runs the real engine on every hostile form with a canary file at an absolute path; fails if the canary shows in the PDF text or log, or a file appears outside the job folder; gate 6 fuzz draws from the new commands · owner approved
+- 2026-11-07 · D94: LaTeX SHA-256 of every golden fixture made at v0.11.0 is committed and must still match; visual baselines are not regenerated · owner approved
+- 2026-11-07 · D95: no migration in Phase 12; a v0.11.0 upgrade fixture with an Advanced LaTeX question is added to upgrade.spec.ts and the CI upgrade job installs v0.11.0 · owner approved
+- 2026-11-07 · D96: warm-up loads the new packages (chemfig brings pgf/tikz files into the cache, not usable from user text); install time re-measured (D48) · owner approved
+- 2026-11-07 · D97: Advanced LaTeX blocks stay ungrouped: a size command carries into later questions (tested: `\large` in Q1 printed Q2 at 14.3 pt); logged, not fixed, because a fix changes existing papers · owner approved
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
