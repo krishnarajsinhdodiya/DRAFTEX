@@ -41,6 +41,8 @@ describe("route handlers", () => {
       "src/app/api/assets/[file]/route.ts",
       // D79: the CSV template, a fixed file with invented rows; no data read.
       "src/app/api/bank/template/route.ts",
+      // D104: the generated LaTeX as text, owner-only like the preview; nothing compiled or stored.
+      "src/app/api/papers/[id]/latex/route.ts",
       "src/app/api/papers/[id]/preview/route.ts",
       // D57: compiles a stored version, writes nothing; owner-only like the preview.
       "src/app/api/papers/[id]/versions/[versionId]/route.ts",
