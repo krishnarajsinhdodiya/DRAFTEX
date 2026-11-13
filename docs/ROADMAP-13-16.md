@@ -113,7 +113,7 @@ LAN and server modes.
 ## Questions for the owner (most important first)
 
 1. **Grouping (D103):** papers that use a size command in Advanced LaTeX will
-   print differently (later questions no longer change size). Go ahead?
+   print differently (later questions no longer change size). Go ahead? **Answered 2026-11-13: yes, group them.**
 2. **Optional groups in the blueprint (D109):** a group "answer any 5 of 7":
    count each question's marks scaled by 5/7, or only the largest 5?
 3. **More than one CO on a question:** needed on real papers? It is a schema
