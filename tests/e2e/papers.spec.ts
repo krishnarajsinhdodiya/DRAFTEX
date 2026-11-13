@@ -209,6 +209,65 @@ test("Advanced LaTeX loads chemistry packages and refuses file commands (D86-D88
   await expect(row.getByText("May use Advanced LaTeX")).toHaveCount(0);
 });
 
+test("a code block is written, a closing line is refused, and View LaTeX shows it (D98-D104)", async ({
+  browser,
+}) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto(paperUrl);
+  await open(page, "Q.2(3)");
+  // Inline code by backticks, then a code block from the Insert menu.
+  await page.keyboard.type("What does `len` do here? ");
+  await expect(question(page, "Q.2(3)").locator("code", { hasText: "len" })).toBeVisible();
+  await page.getByRole("button", { name: "Insert" }).click();
+  await page.getByRole("menuitem", { name: "Code block" }).click();
+  await page.keyboard.type("for i in range(2):");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("print(len(str(i)))");
+  const check = question(page, "Q.2(3)")
+    .getByRole("status")
+    .filter({ hasText: /lines?, longest/ });
+  await expect(check).toHaveText(/^2 lines, longest 22 of \d+ characters$/);
+
+  // A line that would end the block is refused at once, and by the server.
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("x \\end{Verbatim}");
+  await expect(
+    question(page, "Q.2(3)")
+      .getByText("Line 3 contains \\end{Verbatim}, which would end the code block.")
+      .first(),
+  ).toBeVisible();
+  for (let i = 0; i < "x \\end{Verbatim}".length + 1; i++) await page.keyboard.press("Backspace");
+  await expect(check).toHaveText(/^2 lines/);
+  const preview = page.waitForResponse(
+    (r) => r.url().includes("/preview") && r.request().method() === "GET" && r.status() === 200,
+    { timeout: 60_000 },
+  );
+  await saved(page);
+  expect((await preview).headers()["content-type"]).toContain("application/pdf");
+
+  // View LaTeX: one question, then the whole paper; read-only.
+  await question(page, "Q.2(3)").getByRole("button", { name: "View the LaTeX of Q.2(3)" }).click();
+  let dialog = page.getByRole("dialog", { name: "LaTeX of Q.2(3)" });
+  const tex = dialog.getByLabel("LaTeX of Q.2(3)");
+  await expect(tex).toContainText("\\texttt{len}");
+  await expect(tex).toContainText(
+    "\\begin{Verbatim}[numbers=left, numbersep=4pt, frame=single, fontsize=\\small, samepage=true]\nfor i in range(2):\n    print(len(str(i)))\n\\end{Verbatim}",
+  );
+  await expect(dialog.locator("textarea, [contenteditable=true]")).toHaveCount(0);
+  await dialog.getByRole("radio", { name: "Answer key" }).click();
+  await expect(tex).toContainText("%% DX-SLOT g2.3");
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "LaTeX", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "LaTeX of the paper" });
+  await expect(dialog.getByLabel("LaTeX of the paper")).toContainText("\\usepackage{fancyvrb}");
+  await dialog.getByRole("button", { name: "Close" }).click();
+
+  // Leave the paper as the later tests expect it.
+  await question(page, "Q.2(3)").getByRole("button", { name: "Clear Q.2(3)" }).click();
+  await saved(page);
+});
+
 test("the answer key is written with the question and previewed", async ({ browser }) => {
   const page = await asUser(browser, FACULTY, FACULTY.own);
   await page.goto(paperUrl);
