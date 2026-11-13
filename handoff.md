@@ -5,76 +5,70 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-13
-- **Current phase:** planning Phases 13-16 (`docs/ROADMAP-13-16.md`, not approved). Nothing is built until the owner replies "Go".
-- **Branches:** `main` (v0.12.0 + docs); `chore/plan-13-16` (this plan); `fix/setup-honest-errors` and `fix/network-restart-windows` pushed, **not merged**: CI cannot run.
-- **CI:** GitHub Actions refuses to start any job ("recent account payments have failed or your spending limit needs to be increased"; runs 43379586908, 43379840241). Nothing can be merged until the owner fixes billing.
+- **Current phase:** 13 (code blocks, grouped Advanced LaTeX, View LaTeX; D98-D104). Built and green locally; **not merged**: CI cannot run.
+- **Branch:** `phase/13-code-blocks` (pushed). `main` = v0.12.0 + the 13-16 plan. `fix/setup-honest-errors` and `fix/network-restart-windows` are pushed, not merged, also waiting for CI (untouched this session).
+- **CI:** GitHub Actions refuses every job ("recent account payments have failed or your spending limit needs to be increased"). Nothing merges until the owner fixes billing.
+- **Local gates on the branch tip:** lint, typecheck, format, unit 1280 (latex coverage 99.7% lines), golden 99 passed / 28 visual skipped (Linux only), e2e 64 passed (incl. v0.11.0 upgrade export pixel-identical), commit hygiene.
 
 ## Done this session
-- Session start: baseline green locally (lint, typecheck, unit 1182).
-- `fix/setup-honest-errors`: setup checks `draftex.local.json` before `npm ci` and names a copied pointer; it retries `npm ci` only when npm's log (kept with `--logs-dir`) shows a network error. `src/lib/install/preflight.ts`, `scripts/setup-check.ts`, tests (14), a Windows CI step. Found on the end user's laptop, where a folder copied from the Mac failed inside npm and setup blamed the network.
-- `fix/network-restart-windows`: Playwright now keeps the e2e server's output, the server logs prepare/listen times, the network spec logs each restart's duration (Mac: about 1.8 s). The cause of the Windows timeout is still unknown; the next CI run will show it.
-- Engine probes for Phase 13 and `docs/SECURITY-REVIEW-PHASE13.md` (fancyvrb is in the bundle, zero warnings; overlong code lines overflow with no warning; a closing `\end{Verbatim}` line ends the block; a leading code block's line number overprints the question number; `\begingroup ... \par\endgroup` stops `\large` leaking with correct spacing; FTS5 available in SQLite 3.53.2).
-- `docs/ROADMAP-13-16.md`: D98-D116, six questions for the owner, SPEC amendments, contradictions with the brief.
+- Code blocks (D98-D102): `codeBlock` node (`attrs.lines`) and `code` mark in the content JSON; rules in `src/lib/latex/code.ts` (ASCII, conversions with notices, tabs → 4 spaces, ≤ 40 lines, width per paper); fancyvrb `Verbatim` with fixed options, loaded only when used (paper and key); number on its own line before leading code; refused in the objective key table; inline code `\texttt{}`; blocklist + warm-up; bank duplicate key includes code.
+- Grouping (D103): `\begingroup … \par\endgroup`, tail inside the group (bold style at normal size); no `\par` before display maths or in a table cell. Only `paper:kitchenSink` changed in the v0.11.0 hash file (documented exception; `packages`/`key-packages` are not in that file). kitchenSink, packages, key-packages and the v0.11.0 upgrade export are pixel-identical to before.
+- View LaTeX (D104): `GET /api/papers/[id]/latex` (owner only, reviewed CSRF list), dialog from the header (`{} LaTeX`) and each question's `{}` button, paper/key switch, copy.
+- Editor: code block node view (numbers, dashed frame-limit rule, live check), Insert + slash menu entries, toolbar inline-code button (Ctrl/Cmd+E, backticks).
+- Tests: `tests/unit/latex/code.test.ts`, `tests/unit/server/paper-latex.test.ts`, `tests/golden/code-security.test.ts` (canary, exploit proof, frame width at every nesting level/body size and in the key, 200-block fuzz, grouped-brace fuzz), fixtures `code`/`key-code`, e2e in papers.spec, `tests/break-ui/worst-code.ts`, guide section + screenshot 19.
+- **Two findings that overturned the security review** (addendum §6): fancyvrb ends a block at `\end{Verbatim}` *anywhere* in a line (canary leaked when the rule was skipped), so the rule now refuses it anywhere; the line width depends on the template's body size, not only the class size (formula now from measured label widths per Latin Modern design size).
+- SPEC §8, §10 gate 3, §13 amended; memory.md as-built notes; performance after recorded.
 
 ## In progress
-- Waiting for the owner: billing (to run CI), answers to the six questions in ROADMAP-13-16, and "Go".
-
-## Logged, not fixed
-- Advanced LaTeX blocks are not grouped: `\large` carries into later questions (D97; the guide tells users to use braces).
-- On windows-latest the engine did not write `\openout` to an absolute `C:/` path; macOS does. Refusal is enforced everywhere; cause unknown.
-- A `framed` box first in a question prints before its number.
-- Starting a DRAFTEX server sweeps every job folder in `<OS temp>/DRAFTEX` (breaks goldens running at the same time on one machine).
-- Carried: admin navigation scrolls sideways on a phone; picker shows the newest 50 only; `bloom-p1`/`key-bloom-p1` baselines predate D70; stale `draftex.lock` pid checks in restore/move-data/reset-password/update/uninstall; question text overflow on unsplittable chemical pieces; ubuntu render drift 0.02-0.19% on three old baselines; four-column choice overflow; papers list not paginated.
+- Nothing half-done in code. Waiting for CI.
 
 ## Next steps
 1. Session start per the operating rules.
-2. When CI runs again: rerun `fix/network-restart-windows` (rerun its windows job until it fails once, read the `[WebServer]` lines and `restart to` timings, fix the cause on that branch), then merge both `fix/` branches and delete them.
-3. On "Go": merge `chore/plan-13-16`, record D98-D116 in memory.md with the owner's answers, branch `phase/13-code-blocks`, measure performance first.
+2. When CI runs again: push nothing new first; run CI on `phase/13-code-blocks`. The ubuntu visual job will lack baselines for `code` and `key-code`: take them from its artifact (D4) in a commit that says why. No existing baseline may change; if one does, stop and ask the owner.
+3. Also when CI runs: `fix/network-restart-windows` (rerun its Windows job until it fails once, read the `[WebServer]` lines and restart timings, fix), then merge both `fix/` branches and delete them.
+4. Once Phase 13 CI is green: merge `--no-ff` to `main`, bump `package.json` to 0.13.0 in the merge, tag `v0.13.0`, push, delete the branch locally and on GitHub, `git ls-remote --heads origin`.
+5. Then Phase 14 (table builder, D105-D107) on `phase/14-table-builder`: measure performance first.
 
 ## Owner tasks (not code)
-- Fix GitHub billing (Settings, Billing and plans): no CI job starts until then.
-- On the end user's laptop: delete the copied `draftex.local.json` (it names the Mac data folder) or replace the copy with a `git clone`.
-- Update the Mac and the father's laptop to v0.12.0 (no migration in this phase).
-- Install on the father's Windows 11 laptop as a `git clone` into `C:\DRAFTEX` (guide §14) and time it.
-- Try the firewall helper once; try one real `update-windows.bat` with the read-only token.
-- Ask the father to try a CSV import from his own Excel file, and to try `\ce{...}` and `\chemfig{...}` in Advanced LaTeX (an admin must allow it for him under People).
+- Fix GitHub billing (Settings → Billing and plans). Blocks every merge.
+- On the end user's laptop: delete the copied `draftex.local.json` (it names the Mac folder) or replace the copy with a `git clone` into `C:\DRAFTEX`, and time the install.
+- Update the Mac and the father's laptop to v0.12.0 (v0.13.0 after merge; no migration).
+- Ask the father to try a Python code block and inline code, and check that ASCII-only is enough (roadmap question 4, default taken).
+- Still open from the roadmap: questions 2, 3, 5, 6 (blueprint optional groups, more than one CO per question, blueprint scope, other refused commands).
+- Carried: firewall helper and a real `update-windows.bat` once on Windows; a CSV from Windows Excel.
 
 ## Failing tests
-- `tests/e2e/network.spec.ts` "LAN mode: the admin switches, restarts…" timed out on windows-latest in the v0.12.0 merge run 42355929142 ("Saved, not yet in use" still shown after 90 s); it passed on the branch run 42355063346 and on macOS. Cause not found: the spec does not keep the restarted server's output. Next step: capture the supervisor/server output in that spec (as upgrade.spec does), then fix the cause. Repro: `npm run test:e2e` on windows-latest; not reproduced locally.
-- The same run's Trash test failure was a race in the test (a page load started before the "Move to Trash" redirect landed); fixed on `fix/trash-e2e-race`.
-- Otherwise none known. Local: lint, typecheck, format, unit 1182, golden (80 passed, visual skipped off Linux), e2e 63 green; CI run 42355063346 green.
+- None locally. `tests/e2e/network.spec.ts` LAN restart on windows-latest (run 42355929142) is still undiagnosed; see step 3.
+
+## Logged, not fixed
+- Long inline code cannot hyphenate (typewriter font) and overflows as a note, like an unbreakable chemical name.
+- After a code block, a tail starting with Bloom begins with a small space (from `\dxBloom`'s `\ `).
+- In the key, a top-level code block's line numbers sit in the left margin (by design of `numbers=left`).
+- Carried: `framed` first in a question prints before its number; Windows engine did not write `\openout` to `C:/`; server start sweeps all job folders in `<OS temp>/DRAFTEX`; admin navigation scrolls sideways on a phone; picker shows the newest 50; `bloom-p1`/`key-bloom-p1` baselines predate D70; stale `draftex.lock` pid checks in restore/move-data/reset-password/update/uninstall; question-text overflow on chemical pieces; ubuntu render drift on three old baselines; four-column choice overflow; papers list not paginated.
 
 ## Blockers / risks
-- The sanitiser stays the only barrier between user text and file access (the engine allows absolute reads, and writes on macOS). Any future package must go through the same review: a name allow-list cannot see file paths given as plain strings.
-- Not tried on a real Windows machine: double-click flow, Git Credential Manager with the token, real `git pull`, UAC firewall step, `reset-password-windows.bat`, a CSV saved by Windows Excel.
+- CI billing (above).
+- The sanitiser and the code-line rule are the only barriers to file access (the engine reads absolute paths). Any new package or block type needs the same engine review, and the fuzz must be run: it found what the written review missed.
 - LAN mode is plain HTTP (D40).
 
 ## Decisions made (copied to memory.md)
-- D86-D91, D93-D97; D92 withdrawn; as-built notes (`\pu`, chemfig encoding, framed placement, temp sweep, Windows write, install time, performance, break-ui).
+- D98-D104 as built; fancyvrb end-match anywhere; width formula with body size; Verbatim line marker; inline-code quotes; D103 tail/strut details; View LaTeX route; performance after; break-ui findings; baselines pending CI.
 
 ## Machine setup (owner's Mac)
 - Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`).
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"`.
-- `.claude/launch.json` (git-ignored): `draftex-e2e` (3212), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216). E2E 3211, restore 3214, server mode 3218, fixture server 3219, upgrade spec 3220.
-- Making an upgrade fixture: `git worktree add /tmp/dx-vX <tag>`, `npm ci && npm run build` there, `node scripts/e2e-server.ts 3219` from that folder, then here `node scripts/make-upgrade-fixture.ts http://127.0.0.1:3219 "$(node -e 'console.log(require("os").tmpdir())')/draftex-e2e-3219" <tag>`.
+- `.claude/launch.json` (git-ignored): `draftex-e2e` (3212, built app, fresh folder each start), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216, dev). E2E 3211, restore 3214, server mode 3218, fixture server 3219, upgrade spec 3220. Stop the dev server before `npm run build` (shared `.next`).
+- Scripts against a fresh `draftex-e2e`: `node scripts/measure-performance.ts http://127.0.0.1:3212`, `node scripts/guide-screenshots.ts …`, `node tests/break-ui/worst-code.ts …` (each needs its own fresh start).
 
 ## Questions for owner
 - Later: should the app offer Times at all? Should the picker page through more than 50 matches?
 
 ## Phase checklist
-- [x] 0 Bootstrap
-- [x] 1 LaTeX core
-- [x] 2 Data + auth
-- [x] 3 Rules + course catalogue
-- [x] 4 Template library + builder
-- [x] 5 Paper editor
-- [x] 6 Answer keys + exports + files
-- [x] 7 Network modes + hardening
-- [x] 8 Installers + docs
-- [x] 9 Polish + paper retrieval (docs/ROADMAP-9-12.md)
-- [x] 10 Bloom and CO on the printed paper
-- [x] 11 Question bank + CSV import
-- [x] 12 Advanced LaTeX packages
+- [x] 0-12 (see git tags v0.0.0 … v0.12.0)
+- [ ] 13 Code blocks, grouped Advanced LaTeX, View LaTeX: built, gates green locally; CI, baselines, merge and tag pending
+- [ ] 14 Table builder
+- [ ] 15 CO blueprint check
+- [ ] 16 Bank search, pages, near-duplicates
 
 ## Template for future handoffs
 Status (date, phase, branch, last green commit, CI) · Done this session ·
