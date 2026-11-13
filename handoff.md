@@ -4,24 +4,20 @@ Replace this whole file at the end of every session. A fresh session with
 no chat history must be able to continue from this file alone.
 
 ## Status
-- **Date:** 2026-11-07
-- **Current phase:** 12 Advanced LaTeX packages: done. All phases in docs/ROADMAP-9-12.md are complete; no next phase is planned.
-- **Branch:** `main` only (Phase 12 merged with `--no-ff` from `phase/12-advanced-latex`, tagged `v0.12.0`; branch deleted locally and on GitHub)
-- **Last green commit:** phase branch tip `f2a4aa6` green in CI run 42355063346 (all five jobs); the merge on `main` runs the same jobs
-- **CI:** `commit-hygiene`, `checks (ubuntu-24.04)`, `checks (windows-latest)`, `install (windows-latest)` (gate 10), `upgrade (windows-latest)` (installs v0.11.0, then updates).
+- **Date:** 2026-11-13
+- **Current phase:** planning Phases 13-16 (`docs/ROADMAP-13-16.md`, not approved). Nothing is built until the owner replies "Go".
+- **Branches:** `main` (v0.12.0 + docs); `chore/plan-13-16` (this plan); `fix/setup-honest-errors` and `fix/network-restart-windows` pushed, **not merged**: CI cannot run.
+- **CI:** GitHub Actions refuses to start any job ("recent account payments have failed or your spending limit needs to be increased"; runs 43379586908, 43379840241). Nothing can be merged until the owner fixes billing.
 
 ## Done this session
-- **Baseline fix first:** `tests/unit/server/template-commands.test.ts` picked "the first built-in" from a list with no fixed order and failed ~1 run in 5 since D50; it now picks the blank built-in by key (merged to main via `fix/builtin-test-order` before the phase).
-- **Security review gate:** `docs/SECURITY-REVIEW-PHASE12.md` (tested with the pinned engine: `--untrusted` allows absolute reads AND `\openout` writes on macOS; tikz `plot file`, pgfplots `\addplot table/graphics`, `\lstinputlisting`, `\includegraphics` and chemfig bond options reach files with no forbidden name). Owner approved D86-D97 with "Go".
-- **Packages (D86-D91):** mhchem (`\ce`; `\pu` not offered, the bundle lacks it), chemfig (bond options: numbers/angles only), mathtools subset, multirow, enumitem (key allow-list, no hooks), xcolor (`\textcolor` with named colours), framed, tfrupee (`\rupee`). Excluded: tikz, pgfplots, tcolorbox, listings, longtable, caption, float. Allow-list in `src/lib/latex/sanitize.ts`, preamble lines in `src/lib/latex/packages.ts` (loaded only when used, D87; chemfig under Latin-1 input to avoid nine engine warnings).
-- **D92 withdrawn:** plain `₹` already printed "Rs."; unchanged. Open question below.
-- **Editor:** the Advanced LaTeX box names the packages a block loads and lists the commands; long names in check messages wrap (break-ui finding).
-- **Tests:** byte identity of every fixture's LaTeX vs v0.11.0 (D94, `tests/fixtures/latex/v0.11.0-hashes.json`); gate 7 unit (`sanitize-packages.test.ts`) and real engine with a canary (`tests/golden/packages-security.test.ts`); gate 6 package fuzz (`fuzz-packages.test.ts`); new fixtures `packages` / `key-packages` with new ubuntu baselines (no existing baseline changed); e2e for the Advanced LaTeX flow in `papers.spec.ts`; v0.11.0 upgrade fixture with an Advanced LaTeX block, pixel-identical after update (D95).
-- **Docs:** USER_GUIDE §4 Advanced LaTeX + screenshot 18; SPEC §8 amended; README; memory.md.
-- **Measured:** performance after (targets met; see memory.md); fresh `setup:tectonic` 279 s on the Mac (D96).
+- Session start: baseline green locally (lint, typecheck, unit 1182).
+- `fix/setup-honest-errors`: setup checks `draftex.local.json` before `npm ci` and names a copied pointer; it retries `npm ci` only when npm's log (kept with `--logs-dir`) shows a network error. `src/lib/install/preflight.ts`, `scripts/setup-check.ts`, tests (14), a Windows CI step. Found on the end user's laptop, where a folder copied from the Mac failed inside npm and setup blamed the network.
+- `fix/network-restart-windows`: Playwright now keeps the e2e server's output, the server logs prepare/listen times, the network spec logs each restart's duration (Mac: about 1.8 s). The cause of the Windows timeout is still unknown; the next CI run will show it.
+- Engine probes for Phase 13 and `docs/SECURITY-REVIEW-PHASE13.md` (fancyvrb is in the bundle, zero warnings; overlong code lines overflow with no warning; a closing `\end{Verbatim}` line ends the block; a leading code block's line number overprints the question number; `\begingroup ... \par\endgroup` stops `\large` leaking with correct spacing; FTS5 available in SQLite 3.53.2).
+- `docs/ROADMAP-13-16.md`: D98-D116, six questions for the owner, SPEC amendments, contradictions with the brief.
 
 ## In progress
-- Nothing half-done.
+- Waiting for the owner: billing (to run CI), answers to the six questions in ROADMAP-13-16, and "Go".
 
 ## Logged, not fixed
 - Advanced LaTeX blocks are not grouped: `\large` carries into later questions (D97; the guide tells users to use braces).
@@ -31,10 +27,13 @@ no chat history must be able to continue from this file alone.
 - Carried: admin navigation scrolls sideways on a phone; picker shows the newest 50 only; `bloom-p1`/`key-bloom-p1` baselines predate D70; stale `draftex.lock` pid checks in restore/move-data/reset-password/update/uninstall; question text overflow on unsplittable chemical pieces; ubuntu render drift 0.02-0.19% on three old baselines; four-column choice overflow; papers list not paginated.
 
 ## Next steps
-1. Session start per the operating rules (no phase is planned after 12).
-2. Ask the owner the open questions below; any new work needs its own plan and D-numbers from D98.
+1. Session start per the operating rules.
+2. When CI runs again: rerun `fix/network-restart-windows` (rerun its windows job until it fails once, read the `[WebServer]` lines and `restart to` timings, fix the cause on that branch), then merge both `fix/` branches and delete them.
+3. On "Go": merge `chore/plan-13-16`, record D98-D116 in memory.md with the owner's answers, branch `phase/13-code-blocks`, measure performance first.
 
 ## Owner tasks (not code)
+- Fix GitHub billing (Settings, Billing and plans): no CI job starts until then.
+- On the end user's laptop: delete the copied `draftex.local.json` (it names the Mac data folder) or replace the copy with a `git clone`.
 - Update the Mac and the father's laptop to v0.12.0 (no migration in this phase).
 - Install on the father's Windows 11 laptop as a `git clone` into `C:\DRAFTEX` (guide §14) and time it.
 - Try the firewall helper once; try one real `update-windows.bat` with the read-only token.

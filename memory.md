@@ -303,6 +303,11 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 
 - 2026-11-07 · Rupee in plain text: a typed `₹` keeps printing "Rs."; the symbol is only `\rupee{}` in Advanced LaTeX · owner answer ("Keep Rs.")
 - 2026-11-07 · Graphs: no graph feature and no pgfplots; when a paper needs a graph it is drawn elsewhere (Excel, CorelDRAW) and added as a picture (Insert › Picture). A structured graph block (numbers in, app-written pgfplots) stays the safe route if this changes · owner answer ("skip graphs for now")
+- 2026-11-13 · D98-D116 approved ("Go"): the plan in docs/ROADMAP-13-16.md (Phase 13 code blocks + grouped Advanced LaTeX + read-only View LaTeX; 14 table builder extending the Table block; 15 CO blueprint keyed by course code; 16 FTS5 search, keyset pages, own-bank near-duplicates; F reuse the existing icon). Owner changes accepted in chat: no editing of generated LaTeX, existing tables keep tabularx, no admin-wide duplicate view · owner approved
+- 2026-11-13 · D103 confirmed: Advanced LaTeX blocks are written as `\begingroup ... \par\endgroup`, so papers whose blocks use size commands print differently (later questions no longer change size) · owner answer ("Yes, group them")
+- 2026-11-13 · D100 code characters: ASCII only, with curly quotes, dashes and non-breaking spaces converted and tabs as 4 spaces · default taken; the owner did not object when asked
+- 2026-11-13 · GitHub Actions refused every job from 2026-11-13 ("recent account payments have failed or your spending limit needs to be increased"); work is tested locally and merged only after CI runs again · seen on runs 43379586908 onward
+
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
