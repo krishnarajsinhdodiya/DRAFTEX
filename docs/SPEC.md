@@ -282,6 +282,14 @@ Built-ins can't be edited; "Save as new" is the way to change them.
   English ("Equation in Q.2(3) has an unmatched brace") with the raw log
   behind a disclosure.
 - MCQ answer: a radio on the choices sets the key automatically.
+- Code (Phase 13, D98-D104, amended 2026-11-13): a **Code block** (lines of
+  ASCII text, at most 40, each no longer than the frame allows on that paper
+  and nesting level; checked live in the editor and by the server) and
+  **inline code** (a mark), for every user. A question that starts with code
+  prints its number on its own line. Not in choices, table cells or the
+  objective key table. **View LaTeX** shows the generated LaTeX of the saved
+  paper, its key or one question, read-only with a copy button, to the
+  paper's owner only; generated LaTeX is never edited.
 
 ### TipTap → LaTeX serialiser (most error-prone component)
 - Pure, deterministic, unit-tested per node type; escapes `\ { } $ & # ^ _ % ~`
@@ -299,6 +307,16 @@ Built-ins can't be edited; "Save as new" is the way to change them.
   read with fixed grammars. tikz, pgfplots, tcolorbox and listings are not
   offered (they reach files through plain strings). Review and tests:
   `docs/SECURITY-REVIEW-PHASE12.md`.
+- Code blocks (Phase 13, D99): fancyvrb's `Verbatim` with fixed options
+  (`numbers=left, numbersep=4pt, frame=single, fontsize=\small,
+  samepage=true`), loaded only when used; nothing about the block comes from
+  the user but its lines, and a line holding `\end{Verbatim}` anywhere is
+  refused. Inline code is `\texttt{}` around escaped text. Review and tests:
+  `docs/SECURITY-REVIEW-PHASE13.md`.
+- Each Advanced LaTeX block is a group (D103): `\begingroup ... \par\endgroup`,
+  with the question's tail inside the group when the block ends the
+  question; before display maths and in a table cell the group closes
+  without `\par`.
 - Output must reproduce the reference template's structure (single
   `questions` environment, `\dxGroupHead`, `\dxQOffset`).
 
@@ -330,7 +348,11 @@ A phase is **done** only when every gate below that applies is green locally
    `src/lib/auth/**`; 100% branch coverage for the PCI checker.
 3. **Golden compile tests**: every seed template + fixture papers compile with
    Tectonic with **zero LaTeX errors and zero warnings** (overfull boxes
-   > 1 pt count as failures).
+   > 1 pt count as failures). Code lines are the exception that no warning
+   can catch: fancyvrb lets a long line run past its frame silently, so the
+   generator enforces the line width (from class size, text width, body size
+   and nesting) and a golden test measures the longest allowed line against
+   its frame in the engine (amended 2026-11-13, D100).
 4. **Visual regression**: render generated PDFs to PNG (pdf.js or pdftoppm),
    compare to committed baselines with pixelmatch; >0.5% changed pixels =
    fail. A baseline only changes in a commit whose message says why.
@@ -425,6 +447,10 @@ GitHub → **stop and report to the owner**.
 | 10 | **Bloom and CO on the printed paper** (D53): WP-C in `docs/ROADMAP-9-12.md` | WP-C done; tag v0.10.0 |
 | 11 | **Question bank + CSV import** (D53): WP-D and WP-E in `docs/ROADMAP-9-12.md` | WP-D and WP-E done; tag v0.11.0 |
 | 12 | **Advanced LaTeX packages** (D53): WP-F in `docs/ROADMAP-9-12.md`, security review approved first | WP-F done; tag v0.12.0 |
+| 13 | **Code blocks, grouped Advanced LaTeX, View LaTeX** (amended 2026-11-13, D98-D104): `docs/ROADMAP-13-16.md`, security review `docs/SECURITY-REVIEW-PHASE13.md` first | A, B and D104 done; tag v0.13.0 |
+| 14 | **Table builder** (D105-D107): `docs/ROADMAP-13-16.md` | C done; tag v0.14.0 |
+| 15 | **CO blueprint check** (D108-D111): `docs/ROADMAP-13-16.md` | D done; tag v0.15.0 |
+| 16 | **Bank search, pages, near-duplicates** (D112-D115): `docs/ROADMAP-13-16.md` | E done; tag v0.16.0 |
 
 Installer requirements (Node and its install route superseded by D43 in
 `memory.md`: portable Node 24 archive, no winget or Homebrew): check/install Node 22 LTS (winget on Windows,

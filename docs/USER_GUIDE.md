@@ -189,9 +189,44 @@ says why. It also offers these, and loads them for the paper by itself:
   prints "Rs.").
 
 Pictures, including structures drawn in CorelDRAW, go in the **Picture**
-block. TikZ drawings, pgfplots graphs and program listings are not available.
-A size command such as `\large` in Advanced LaTeX also changes the questions
-after it, so wrap it in braces: `{\large text}`.
+block. TikZ drawings, pgfplots graphs and program listings are not available;
+for program code use a **Code block** (below). A size command such as
+`\large` changes only its own Advanced LaTeX block; the question's marks and
+the questions after it print at their normal size.
+
+**Code block** (Insert, or `/code`) holds program code, such as Python for
+a programming paper. Anyone can use it; it needs no permission.
+
+![A code block with its line numbers, and the check under it](user-guide/19-code-block.png)
+
+- Type or paste the code. Each line keeps its spaces, and the paper prints
+  the lines numbered inside a frame, in a typewriter font. **Tab** indents
+  by four spaces. To leave the block, press **Ctrl+Enter** (Mac: Cmd+Enter),
+  press **Enter** three times at the end, or press the down arrow on its
+  last line.
+- The line under the block says how many characters fit on one line of this
+  paper, for example "longest 22 of 73 characters"; the dashed line in the
+  block shows where the frame ends. A longer line, or more than 40 lines,
+  is marked in red until you shorten it, because LaTeX would let it run past
+  the frame without any warning. Inside a sub-part a line fits a few
+  characters fewer.
+- Code is plain English keyboard characters (ASCII). Curly quotes, long
+  dashes and non-breaking spaces copied from Word turn into straight quotes,
+  hyphens and spaces by themselves, and the line under the block says so.
+  Other characters, such as é or ₹, are refused.
+- A line holding `\end{Verbatim}` is refused: it would end the code block.
+- If a question starts with a code block, its number prints on a line of its
+  own above the code.
+- **Inline code** (the `<>` button, **Ctrl+E** (Mac: Cmd+E), or text between backticks
+  such as `` `len` ``) prints a word or two of code inside a sentence in the
+  same typewriter font.
+- A model answer may hold a code block too, except for multiple-choice
+  groups, whose key is one table.
+
+**LaTeX** at the top of the paper, and the `{}` button under each question,
+show the LaTeX DRAFTEX writes for the saved paper or question, with a
+**Copy** button and a switch to the answer key. It is for reading and
+copying only: change the question in the editor and the LaTeX follows.
 
 "**All changes saved**" at the top means everything is stored. If DRAFTEX
 finds a problem (for example a question that cannot be printed), the question
