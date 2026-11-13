@@ -2,7 +2,7 @@
 // (src/lib/paper/schema.ts) node for node, so whatever the editor holds can
 // be stored and printed. No React here: the views are added in
 // src/components/editor so this file also runs in unit tests.
-import { type Extensions, Node, mergeAttributes } from "@tiptap/core";
+import { type Extensions, Mark, Node, markInputRule, mergeAttributes } from "@tiptap/core";
 import Bold from "@tiptap/extension-bold";
 import Document from "@tiptap/extension-document";
 import HardBreak from "@tiptap/extension-hard-break";
@@ -147,6 +147,86 @@ export const SubParts = Node.create({
   ],
 });
 
+/** Spaces a Tab key inserts in a code block (the printed rule turns tabs into 4 too). */
+export const CODE_INDENT = "    ";
+
+/**
+ * A code block (D98): plain text lines, no marks. Enter adds a line; Tab
+ * indents; Ctrl/Cmd+Enter, three Enters at the end, or ArrowDown on the last
+ * line leave it.
+ */
+export const CodeBlock = Node.create({
+  name: "codeBlock",
+  group: LEAF,
+  content: "text*",
+  marks: "",
+  code: true,
+  defining: true,
+  parseHTML: () => [{ tag: 'pre[data-type="codeBlock"]', preserveWhitespace: "full" }],
+  renderHTML: ({ HTMLAttributes }) => [
+    "pre",
+    mergeAttributes(HTMLAttributes, { "data-type": "codeBlock" }),
+    ["code", 0],
+  ],
+  addKeyboardShortcuts() {
+    const inCode = () => this.editor.state.selection.$from.parent.type.name === this.name;
+    const leave = (): boolean => {
+      const { $from } = this.editor.state.selection;
+      const after = $from.after();
+      return this.editor
+        .chain()
+        .insertContentAt(after, { type: "paragraph" })
+        .setTextSelection(after + 1)
+        .run();
+    };
+    return {
+      Tab: () => (inCode() ? this.editor.commands.insertContent(CODE_INDENT) : false),
+      "Mod-Enter": () => (inCode() ? leave() : false),
+      Enter: () => {
+        const { $from, empty } = this.editor.state.selection;
+        if (!empty || !inCode()) return false;
+        // Three Enters at the end: drop the two empty lines and leave.
+        const atEnd = $from.parentOffset === $from.parent.nodeSize - 2;
+        if (!atEnd || !$from.parent.textContent.endsWith("\n\n")) return false;
+        return this.editor
+          .chain()
+          .command(({ tr }) => {
+            tr.delete($from.pos - 2, $from.pos);
+            return true;
+          })
+          .command(() => leave())
+          .run();
+      },
+      ArrowDown: () => {
+        const { $from, empty } = this.editor.state.selection;
+        if (!empty || !inCode()) return false;
+        const lastLine = !$from.parent.textContent.slice($from.parentOffset).includes("\n");
+        const lastNode = $from.after() === this.editor.state.doc.content.size;
+        return lastLine && lastNode ? leave() : false;
+      },
+    };
+  },
+});
+
+/** Inline code (D98): `text` in the typewriter font; no other mark with it. */
+export const InlineCode = Mark.create({
+  name: "code",
+  excludes: "_",
+  code: true,
+  parseHTML: () => [{ tag: "code" }],
+  renderHTML: ({ HTMLAttributes }) => [
+    "code",
+    mergeAttributes(HTMLAttributes, { class: "dx-code" }),
+    0,
+  ],
+  addKeyboardShortcuts() {
+    return { "Mod-e": () => this.editor.commands.toggleMark(this.name) };
+  },
+  addInputRules() {
+    return [markInputRule({ find: /(?:^|\s)(`(?!\s+`)([^`]+)`(?!\s+`))$/, type: this.type })];
+  },
+});
+
 /** The table's width on the page; the header row follows its first row's cells. */
 export const QuestionTable = Table.extend({
   group: LEAF,
@@ -166,6 +246,7 @@ export function questionSchemaExtensions(): Extensions {
     Underline,
     Subscript,
     Superscript,
+    InlineCode,
     HardBreak,
     BulletList.extend({ group: LEAF }),
     OrderedList.extend({ group: LEAF }),
@@ -184,5 +265,6 @@ export function questionSchemaExtensions(): Extensions {
     Choice,
     SubParts,
     SubPart,
+    CodeBlock,
   ];
 }

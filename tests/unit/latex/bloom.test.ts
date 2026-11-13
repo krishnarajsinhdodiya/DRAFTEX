@@ -4,7 +4,7 @@ import { serializeKey } from "@/lib/latex/key";
 import { type SerializeResult, serializePaper } from "@/lib/latex/serialize";
 import type { BlockNode, PaperInput, SubPartAttrs, TemplateInput } from "@/lib/paper/schema";
 import { bloomKey } from "../../fixtures/papers/keys";
-import { FIXTURES, bloomPaper, choices, p } from "../../fixtures/papers/papers";
+import { FIXTURES, bloomPaper, choices, codePaper, p } from "../../fixtures/papers/papers";
 import { pciEndSem4CreditKsv } from "../../fixtures/papers/templates";
 
 function ok(r: SerializeResult) {
@@ -45,7 +45,8 @@ const parts = (...ps: [string, SubPartAttrs?][]): BlockNode => ({
 describe("Bloom on the printed paper", () => {
   it("prints nothing new while the option is off, even with levels stored", () => {
     for (const make of Object.values(FIXTURES)) {
-      if (make === bloomPaper) continue;
+      // These two print Bloom levels on purpose.
+      if (make === bloomPaper || make === codePaper) continue;
       const tex = ok(serializePaper(make())).tex;
       expect(tex).not.toContain("dxBloom");
     }

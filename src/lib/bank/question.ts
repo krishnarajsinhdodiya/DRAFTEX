@@ -3,6 +3,7 @@
 // search and the normalised form behind the duplicate key (D76).
 // Pure and client-safe; the data layer hashes `dupSource`.
 import { z } from "zod";
+import { unprintableCode } from "../latex/code.ts";
 import { escapeText, describeChar } from "../latex/escape.ts";
 import { coTag } from "../paper/co-tag.ts";
 import { keyCriteriaSchema } from "../paper/key.ts";
@@ -152,6 +153,10 @@ export function plainText(doc: Doc): string {
       case "advancedLatex":
         lines.push(String(n.attrs?.latex ?? ""));
         return;
+      case "codeBlock":
+        // D102: code text counts for search and the duplicate key.
+        lines.push(...((n.attrs?.lines as string[] | undefined) ?? []));
+        return;
       case "image":
         return;
       default:
@@ -188,6 +193,10 @@ export function isEmptyDoc(doc: Doc): boolean {
 export function unprintableChars(doc: Doc): string[] {
   const bad = new Set<string>();
   walk(doc.content as AnyNode[], (n) => {
+    if (n.type === "codeBlock") {
+      for (const c of unprintableCode((n.attrs?.lines as string[] | undefined) ?? [])) bad.add(c);
+      return;
+    }
     const texts =
       n.type === "text" ? [n.text ?? ""] : n.type === "units" ? [String(n.attrs?.unit ?? "")] : [];
     for (const t of texts) {

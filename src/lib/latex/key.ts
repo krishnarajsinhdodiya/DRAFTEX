@@ -17,8 +17,8 @@ import {
 } from "../paper/schema.ts";
 import { BLOOM_LABEL, type Bloom, bloomPrinted } from "../paper/bloom.ts";
 import type { SlotRange } from "./compile.ts";
-import { packageLines, packagesUsed } from "./packages.ts";
-import type { AdvancedPackage } from "./sanitize.ts";
+import { KEY_CODE_LIMITS, VERBATIM_END } from "./code.ts";
+import { type LoadedPackage, packageLines, packagesUsed } from "./packages.ts";
 import {
   type BlockContext,
   Issues,
@@ -69,7 +69,7 @@ function correctChoices(content: Doc, issues: Issues): string {
   return picked.filter((x): x is string => x !== null).join("; ");
 }
 
-function preamble(w: Writer, left: string, right: string, packages: AdvancedPackage[]): void {
+function preamble(w: Writer, left: string, right: string, packages: LoadedPackage[]): void {
   w.line("\\RequirePackage{fix-cm}");
   w.line("\\documentclass[12pt, a4paper]{article}");
   w.line("\\usepackage[left=0.8in, right=0.8in, top=1in, bottom=1in, headheight=15pt]{geometry}");
@@ -124,6 +124,9 @@ function keyLabel(label: string, slot: Slot, group: Group, paper: Paper): string
     : tags({ bloom: slot.bloomLevel ?? undefined, co: slot.coTag ?? undefined });
   return tail ? `${label} ${tail}` : label;
 }
+
+/** \end{Verbatim} must end its line, so a closing \par goes on the next. */
+const endPar = (s: string) => (s.endsWith(VERBATIM_END) ? `${s}\n\\par` : `${s}\\par`);
 
 function criteriaTable(criteria: KeyCriterion[], issues: Issues): string[] {
   return [
@@ -220,6 +223,7 @@ function serializeParsed(paper: Paper, keys: z.output<typeof keySlotSchema>[]): 
         defaultColumns: 1,
         beforeChoices: 0,
         keyMode: true,
+        codeLimits: KEY_CODE_LIMITS,
       };
       if (group.type === "OBJECTIVE" && !ownNumbers) {
         // D68: with Bloom shown, objective answers get a Level column.
@@ -237,7 +241,10 @@ function serializeParsed(paper: Paper, keys: z.output<typeof keySlotSchema>[]): 
           ctx.partsSoFar = 0;
           const start = w.next;
           const choice = correctChoices(slot.content, issues);
-          const note = key?.answerKey?.content.length ? blocks(key.answerKey.content, ctx) : "";
+          // D101: a table cell cannot hold a code block.
+          const note = key?.answerKey?.content.length
+            ? blocks(key.answerKey.content, { ...ctx, inCell: true })
+            : "";
           const answer =
             [choice, note].filter(Boolean).join(choice && note ? "\\par " : "") ||
             "\\textit{No answer written.}";
@@ -265,7 +272,7 @@ function serializeParsed(paper: Paper, keys: z.output<typeof keySlotSchema>[]): 
         );
         const choice = correctChoices(slot.content, issues);
         if (choice) w.line(`Answer: ${choice}\\par`);
-        if (key?.answerKey?.content.length) w.line(`${blocks(key.answerKey.content, ctx)}\\par`);
+        if (key?.answerKey?.content.length) w.line(endPar(blocks(key.answerKey.content, ctx)));
         else if (!choice) w.line("\\textit{No model answer written.}\\par");
         if (key?.keyCriteria.length)
           criteriaTable(key.keyCriteria, issues).forEach((l) => w.line(l));

@@ -22,9 +22,16 @@ import {
 import { type Bloom, bloomPrinted } from "../paper/bloom.ts";
 import type { SlotRange } from "./compile.ts";
 import { type GroupNumbers, questionNumbers } from "../paper/numbering.ts";
+import {
+  type CodeLimits,
+  VERBATIM_LINE,
+  checkCode,
+  paperCodeLimits,
+  verbatimLatex,
+} from "./code.ts";
 import { describeChar, escapeText, mapMathUnicode, type QuoteState } from "./escape.ts";
-import { packageLines, packagesUsed } from "./packages.ts";
-import { sanitizeLatex, type AdvancedPackage, type SanitizeMode } from "./sanitize.ts";
+import { type LoadedPackage, packageLines, packagesUsed } from "./packages.ts";
+import { sanitizeLatex, type SanitizeMode } from "./sanitize.ts";
 
 export interface SerializeIssue {
   message: string;
@@ -74,7 +81,9 @@ export class Writer {
     return this.lines.length + 1;
   }
   toString(): string {
-    return `${this.lines.join("\n")}\n`;
+    // Verbatim lines reach the engine as written: no indentation in front (D99).
+    const strip = new RegExp(`^[ \\t]*${VERBATIM_LINE}`);
+    return `${this.lines.map((l) => l.replace(strip, "")).join("\n")}\n`;
   }
 }
 
@@ -141,9 +150,11 @@ export function inline(
   for (const n of usefulBreaks(nodes ?? [])) {
     switch (n.type) {
       case "text": {
-        let t = text(n.text, issues, quotes, opts.breakable);
+        const code = n.marks?.some((m) => m.type === "code");
+        let t = code ? codeText(n.text, issues) : text(n.text, issues, quotes, opts.breakable);
         for (const m of n.marks ?? []) {
           t = {
+            code: `\\texttt{${t}}`,
             bold: `\\textbf{${t}}`,
             italic: `\\textit{${t}}`,
             underline: `\\underline{${t}}`,
@@ -173,6 +184,17 @@ export function inline(
   return out;
 }
 
+/**
+ * Inline code (D98): escaped like all text, in the typewriter font. A straight
+ * double quote stays straight: `` and '' are not ligatures in that font.
+ */
+function codeText(s: string, issues: Issues): string {
+  return s
+    .split('"')
+    .map((x) => text(x, issues))
+    .join("\\textquotedbl{}");
+}
+
 const paragraph = (p: ParagraphNode, issues: Issues) => inline(p.content, issues);
 
 // ---------- blocks ----------
@@ -187,8 +209,26 @@ export interface BlockContext {
   /** Answer keys are `article` documents: choices and sub-parts become enumerate lists. */
   keyMode?: boolean;
   /** Right-aligned tail of each sub-part (its Bloom, CO and marks; D67). */
-  partTail?: (attrs: SubPartAttrs | undefined) => string;
+  partTail?: (attrs: SubPartAttrs | undefined) => Tail;
+  /** Longest code line at question level and in a sub-part (D100). */
+  codeLimits: CodeLimits;
+  /** Inside a sub-part: code blocks get the sub-part's width. */
+  inSubPart?: boolean;
+  /** Inside a table cell (the objective key table): no code blocks (D101). */
+  inCell?: boolean;
 }
+
+/**
+ * What a question or sub-part prints at its end. `inGroup` is the same tail
+ * written inside a grouped Advanced LaTeX block (D103), where a size command
+ * of the block must not reach it.
+ */
+export interface Tail {
+  plain: string;
+  inGroup: string;
+}
+
+export const NO_TAIL: Tail = { plain: "", inGroup: "" };
 
 function table(t: TableNode, ctx: BlockContext): string {
   const headerRow = t.attrs?.headerRow ?? true;
@@ -261,7 +301,19 @@ function leaf(b: LeafBlockNode, ctx: BlockContext): string {
     case "choices":
       return choices(b, ctx);
     case "advancedLatex":
-      return snippet(b.attrs.latex, "advanced", ctx.issues, "advanced LaTeX");
+      return grouped(snippet(b.attrs.latex, "advanced", ctx.issues, "advanced LaTeX"), "", true);
+    case "codeBlock": {
+      if (ctx.inCell) {
+        ctx.issues.add(
+          "A code block cannot go in the answer table of an objective group; write the answer as text, or use inline code.",
+        );
+        return "";
+      }
+      const limit = ctx.inSubPart ? ctx.codeLimits.subPart : ctx.codeLimits.top;
+      const r = checkCode(b.attrs.lines, limit);
+      for (const p of r.problems) ctx.issues.add(`Code block: ${p}`);
+      return r.problems.length ? "" : verbatimLatex(r.lines);
+    }
     case "orderedList":
     case "bulletList": {
       const env = b.type === "orderedList" ? "enumerate" : "itemize";
@@ -277,6 +329,27 @@ function leaf(b: LeafBlockNode, ctx: BlockContext): string {
 const guardBracket = (s: string) => (s.startsWith("[") ? `{}${s}` : s);
 
 /**
+ * D103: an Advanced LaTeX block is a group, so a size or font command inside
+ * it stops at its end. The \par sits inside, so the block's own lines keep
+ * their spacing; a question's tail, when the block ends the question, goes
+ * before it. Before display maths the paragraph stays open (no \par), as it
+ * did, so the equation keeps its place in the paragraph; so does a table
+ * cell, which ends its paragraph itself (with the strut that sets the row's
+ * depth: a \par there moved the key table by 1.7% of the page).
+ */
+function grouped(latex: string, tail: string, par: boolean): string {
+  if (latex === "") return "";
+  return `\\begingroup ${latex}${tail}${par ? "\\par" : ""}\\endgroup`;
+}
+
+/**
+ * D101: a block that starts with code puts its number (or letter) on a line
+ * of its own; otherwise the code's first line number prints on top of it.
+ */
+const ownLine = (content: readonly BlockNode[]) =>
+  content[0]?.type === "codeBlock" ? "\\mbox{}\\par\n" : "";
+
+/**
  * Joins blocks the way the hand-written papers do: display maths stays inside
  * its paragraph (no \par around \[ \]), other blocks start a new paragraph.
  */
@@ -286,7 +359,9 @@ function subParts(b: Extract<BlockNode, { type: "subParts" }>, ctx: BlockContext
   if (ctx.keyMode) {
     return [
       `\\begin{enumerate}[label=(\\alph*), start=${before + 1}]`,
-      ...b.content.map((p) => `  \\item ${blocks(p.content, ctx)}`),
+      ...b.content.map(
+        (p) => `  \\item ${ownLine(p.content)}${inPart(ctx, () => blocks(p.content, ctx))}`,
+      ),
       "\\end{enumerate}",
     ].join("\n");
   }
@@ -295,20 +370,48 @@ function subParts(b: Extract<BlockNode, { type: "subParts" }>, ctx: BlockContext
     // exam.cls restarts lettering (and its labels) in every parts list.
     ...(before > 0 ? [`\\setcounter{partno}{${before}}`] : []),
     ...b.content.map(
-      (p) => `  \\part ${guardBracket(withTail(p.content, ctx, ctx.partTail?.(p.attrs) ?? ""))}`,
+      (p) =>
+        `  \\part ${ownLine(p.content)}${guardBracket(inPart(ctx, () => withTail(p.content, ctx, ctx.partTail?.(p.attrs) ?? NO_TAIL)))}`,
     ),
     "\\end{parts}",
   ].join("\n");
 }
 
-export function blocks(nodes: BlockNode[], ctx: BlockContext): string {
+function inPart(ctx: BlockContext, f: () => string): string {
+  const was = ctx.inSubPart;
+  ctx.inSubPart = true;
+  try {
+    return f();
+  } finally {
+    ctx.inSubPart = was;
+  }
+}
+
+/**
+ * `tail` is what ends these blocks (a question's Bloom, CO and marks); it
+ * goes inside a closing Advanced LaTeX group (D103), else after the blocks.
+ */
+export function blocks(nodes: BlockNode[], ctx: BlockContext, tail: Tail = NO_TAIL): string {
   const out: string[] = [];
   let prev: BlockNode["type"] | undefined;
-  for (const b of nodes) {
-    const s = b.type === "subParts" ? subParts(b, ctx) : leaf(b, ctx);
-    if (b.type === "paragraph" && s === "") continue;
+  let tailDone = false;
+  nodes.forEach((b, i) => {
+    let s: string;
+    if (b.type === "subParts") s = subParts(b, ctx);
+    else if (b.type === "advancedLatex") {
+      const last = i === nodes.length - 1;
+      const latex = snippet(b.attrs.latex, "advanced", ctx.issues, "advanced LaTeX");
+      // A table cell ends its own paragraph (with the strut that sets the row's depth).
+      const par = !ctx.inCell && nodes[i + 1]?.type !== "mathDisplay";
+      s = grouped(latex, last ? tail.inGroup : "", par);
+      if (last && latex !== "") tailDone = true;
+    } else s = leaf(b, ctx);
+    if (b.type === "paragraph" && s === "") return;
+    // Verbatim must close on a line of its own and starts its own paragraph.
+    const code = b.type === "codeBlock" || prev === "codeBlock";
     const joinTight =
       prev === undefined ||
+      code ||
       b.type === "mathDisplay" ||
       prev === "mathDisplay" ||
       b.type === "choices" ||
@@ -317,7 +420,8 @@ export function blocks(nodes: BlockNode[], ctx: BlockContext): string {
     if (prev !== undefined) out.push(joinTight ? "\n" : "\\par\n");
     out.push(s);
     prev = b.type;
-  }
+  });
+  if (!tailDone && tail.plain) out.push(prev === "codeBlock" ? `\n${tail.plain}` : tail.plain);
   return out.join("");
 }
 
@@ -356,7 +460,7 @@ function preamble(
   w: Writer,
   style: Style,
   header: Header,
-  packages: AdvancedPackage[],
+  packages: LoadedPackage[],
   widestOwnLabel?: string,
 ): void {
   const numberEach = widestOwnLabel !== undefined;
@@ -526,9 +630,21 @@ interface TailParts {
 /** A CO tag never splits at its suffix space (`BP607T.01~AEC1`, D63). */
 const coPrint = (tag: string) => tag.replace(/ /g, "~");
 
-function bloomBit(t: TailParts, style: Style, issues: Issues): string {
-  return style.showBloom && t.bloom ? `\\dxBloom{${text(bloomPrinted(t.bloom), issues)}}` : "";
+/**
+ * Inside a grouped Advanced LaTeX block (D103) the tail is set at normal size
+ * whatever size the block chose. A footnote-size tag is sized already; the
+ * bold style takes the current size, so it gets \normalsize inside its own
+ * group, leaving the block's line spacing alone.
+ */
+const normal = (s: string, reset: boolean) => (reset ? `{\\normalsize ${s}}` : s);
+
+function bloomBit(t: TailParts, style: Style, issues: Issues, reset = false): string {
+  if (!style.showBloom || !t.bloom) return "";
+  const b = text(bloomPrinted(t.bloom), issues);
+  return `\\dxBloom{${normal(b, reset && style.coTagStyle === "BOLD")}}`;
 }
+
+const both = (f: (reset: boolean) => string): Tail => ({ plain: f(false), inGroup: f(true) });
 
 function tail(
   t: TailParts,
@@ -536,6 +652,17 @@ function tail(
   structure: Structure,
   style: Style,
   issues: Issues,
+): Tail {
+  return both((reset) => tailText(t, group, structure, style, issues, reset));
+}
+
+function tailText(
+  t: TailParts,
+  group: Group,
+  structure: Structure,
+  style: Style,
+  issues: Issues,
+  reset: boolean,
 ): string {
   const bits: string[] = [];
   if (group.showCoTag === "SLOT" && t.co) bits.push(`[${coPrint(t.co)}]`);
@@ -547,7 +674,8 @@ function tail(
       ),
     );
   }
-  return bloomBit(t, style, issues) + (bits.length ? `\\dxTail{${bits.join("\\quad ")}}` : "");
+  const tag = normal(bits.join("\\quad "), reset && style.coTagStyle === "BOLD");
+  return bloomBit(t, style, issues, reset) + (bits.length ? `\\dxTail{${tag}}` : "");
 }
 
 /** Tail of a question that carries its own number: Bloom, CO tag, then its marks in bold. */
@@ -557,6 +685,17 @@ function ownTail(
   structure: Structure,
   style: Style,
   issues: Issues,
+): Tail {
+  return both((reset) => ownTailText(t, group, structure, style, issues, reset));
+}
+
+function ownTailText(
+  t: TailParts,
+  group: Group,
+  structure: Structure,
+  style: Style,
+  issues: Issues,
+  reset: boolean,
 ): string {
   const bits: string[] = [];
   if (group.showCoTag === "SLOT" && t.co) {
@@ -568,7 +707,8 @@ function ownTail(
   }
   const style2 = structure.marksStyle === "MARKS_COLON" ? "BRACKETS" : structure.marksStyle;
   bits.push(`\\textbf{${marksLabel(style2, t.marks ?? group.marksEach)}}`);
-  return `${bloomBit(t, style, issues)}\\dxTailRaw{${bits.join("\\quad ")}}`;
+  // \dxTailRaw does not group its argument: the size change needs its own braces.
+  return `${bloomBit(t, style, issues, reset && style.coTagStyle === "BOLD")}\\dxTailRaw{${normal(bits.join("\\quad "), reset)}}`;
 }
 
 /** Every sub-part of a question, in order. */
@@ -610,7 +750,7 @@ function tailsFor(
   style: Style,
   issues: Issues,
   ownNumbers: boolean,
-): { stem: string; part?: (attrs: SubPartAttrs | undefined) => string } {
+): { stem: Tail; part?: (attrs: SubPartAttrs | undefined) => Tail } {
   const own = (a: SubPartAttrs | undefined) => ({
     bloom: a?.bloom ?? slot.bloomLevel,
     co: a?.coTag ?? slot.coTag,
@@ -653,17 +793,12 @@ function tailsFor(
  * also comes before the first sub-parts list, right after the question's own
  * text (with Bloom off, sub-part questions keep their old layout).
  */
-function withTail(
-  content: BlockNode[],
-  ctx: BlockContext,
-  end: string,
-  beforeParts = false,
-): string {
+function withTail(content: BlockNode[], ctx: BlockContext, end: Tail, beforeParts = false): string {
   const first = content.findIndex(
     (b) => b.type === "choices" || (beforeParts && b.type === "subParts"),
   );
-  if (!end || first <= 0) return `${blocks(content, ctx)}${end}`;
-  return `${blocks(content.slice(0, first), ctx)}${end}\n${blocks(content.slice(first), ctx)}`;
+  if (!end.plain || first <= 0) return blocks(content, ctx, end);
+  return `${blocks(content.slice(0, first), ctx, end)}\n${blocks(content.slice(first), ctx)}`;
 }
 
 export function serializePaper(input: unknown): SerializeResult {
@@ -712,6 +847,7 @@ function serializeParsed(paper: Paper): SerializeResult {
   if (issues.list.length) return { ok: false, issues: issues.list };
 
   const numbers = new Map(questionNumbers(structure).map((n) => [n.key, n]));
+  const codeLimits = paperCodeLimits(style.classSize, style.geometry.width);
   const ownLabels = [...numbers.values()]
     .filter((n) => n.numbering === "QUESTION")
     .flatMap((n) => n.printed);
@@ -772,6 +908,7 @@ function serializeParsed(paper: Paper): SerializeResult {
               ? 4
               : 2,
         beforeChoices: style.spacing.beforeChoices,
+        codeLimits,
       };
       for (let pos = 1; pos <= group.slots; pos++) {
         const slotId = `${group.key}.${pos}`;
@@ -786,6 +923,7 @@ function serializeParsed(paper: Paper): SerializeResult {
         if (!slot || !hasContent) {
           const placeholder = ownNumbers
             ? ownTail({ co: slot?.coTag, marks: slot?.marks }, group, structure, style, issues)
+                .plain
             : "";
           w.line(`  \\question \\textit{(Question not written yet)}${placeholder}`);
         } else {
@@ -795,7 +933,7 @@ function serializeParsed(paper: Paper): SerializeResult {
           // bracket, which \question would read as its points argument.
           const raw = withTail(slot.content.content, ctx, tails.stem, style.showBloom);
           ctx.partTail = undefined;
-          const body = guardBracket(raw);
+          const body = ownLine(slot.content.content) + guardBracket(raw);
           w.line(`  \\question ${body.split("\n").join("\n  ")}`);
         }
         slotRanges.push({ slotId, startLine: start, endLine: w.next - 1 });
@@ -827,6 +965,12 @@ export function validateSlotContent(content: unknown): SerializeIssue[] {
   const parsed = docSchema.safeParse(content);
   if (!parsed.success) return parsed.error.issues.map((i) => ({ message: i.message }));
   const issues = new Issues();
-  blocks(parsed.data.content, { issues, assets: new Set(), defaultColumns: 2, beforeChoices: 0 });
+  blocks(parsed.data.content, {
+    issues,
+    assets: new Set(),
+    defaultColumns: 2,
+    beforeChoices: 0,
+    codeLimits: { top: Infinity, subPart: Infinity },
+  });
   return issues.list;
 }
