@@ -847,7 +847,7 @@ function serializeParsed(paper: Paper): SerializeResult {
   if (issues.list.length) return { ok: false, issues: issues.list };
 
   const numbers = new Map(questionNumbers(structure).map((n) => [n.key, n]));
-  const codeLimits = paperCodeLimits(style.classSize, style.geometry.width);
+  const codeLimits = paperCodeLimits(style);
   const ownLabels = [...numbers.values()]
     .filter((n) => n.numbering === "QUESTION")
     .flatMap((n) => n.printed);

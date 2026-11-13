@@ -601,7 +601,7 @@ export const longLine = (n: number): string => {
 export function codePaper(): PaperInput {
   const base = referencePaper();
   const style = { ...base.template.style, showBloom: true, showMarksPerQuestion: true };
-  const limits = paperCodeLimits(style.classSize, style.geometry.width);
+  const limits = paperCodeLimits(style);
   return {
     ...base,
     template: { ...base.template, style },

@@ -111,7 +111,7 @@ export async function paperEditorView(
     duration: durationText(s.durationMinutes),
     marksStyle: s.structure.marksStyle,
     showBloom: s.style.showBloom,
-    codeLimits: paperCodeLimits(s.style.classSize, s.style.geometry.width),
+    codeLimits: paperCodeLimits(s.style),
     parts: s.structure.parts.map((x) => ({ key: x.key, ...(x.title ? { title: x.title } : {}) })),
     groups: s.structure.parts.flatMap((part) =>
       part.groups.map((g) => {

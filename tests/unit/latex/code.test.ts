@@ -8,6 +8,7 @@ import {
   VERBATIM_BEGIN,
   VERBATIM_END_RE,
   checkCode,
+  indentPt,
   keyCodeLimit,
   paperCodeLimit,
   paperCodeLimits,
@@ -42,18 +43,66 @@ function issues(content: BlockNode[], style: Record<string, unknown> = {}): stri
   return r.ok ? [] : r.issues.map((i) => i.message);
 }
 
+/**
+ * \\linewidth at question level and in a sub-part, measured with the pinned
+ * engine (exam class, 5.5 in text width = 397.48499 pt), per class size and
+ * body size (2026-11-13). The formula must give these within 0.01 pt.
+ */
+const MEASURED: [10 | 11 | 12, number, number, number][] = [
+  [10, 8, 381.62898, 362.94098],
+  [10, 9, 380.65898, 360.75497],
+  [10, 9.5, 380.34398, 360.03947],
+  [10, 10, 379.70499, 358.59499],
+  [10, 10.5, 379.06598, 357.15048],
+  [10, 10.95, 378.49089, 355.85045],
+  [10, 11, 378.71298, 356.35498],
+  [10, 11.7, 377.8366, 354.374],
+  [10, 12, 377.46098, 353.52498],
+  [10, 14, 374.95699, 347.86499],
+  [11, 8, 381.15399, 361.991],
+  [11, 10, 379.23, 357.645],
+  [11, 10.95, 378.0159, 354.90047],
+  [11, 11.5, 377.612, 353.99],
+  [11, 13, 375.734, 349.745],
+  [12, 8, 380.62898, 360.94098],
+  [12, 9, 379.65898, 358.75497],
+  [12, 10.95, 377.49089, 353.85045],
+  [12, 11, 377.71298, 354.35498],
+  [12, 11.7, 376.8366, 352.374],
+  [12, 11.9, 376.5862, 351.808],
+  [12, 12, 376.46098, 351.52498],
+  [12, 13, 375.20898, 348.69498],
+  [12, 14, 373.95699, 345.86499],
+];
+
 describe("line width (D100)", () => {
+  it.each(MEASURED)(
+    "class %i pt, body %f pt: the indents the engine measured",
+    (cls, body, q, part) => {
+      expect(397.48499 - indentPt(cls, 0, body)).toBeCloseTo(q, 2);
+      expect(397.48499 - indentPt(cls, 1, body)).toBeCloseTo(part, 2);
+    },
+  );
+
   it("matches the engine's measurements on the narrowest built-in template", () => {
     // docs/SECURITY-REVIEW-PHASE13.md: 5.5 in, 12 pt → 64 and 59 characters.
     expect(paperCodeLimit(12, 5.5, 0)).toBe(64);
     expect(paperCodeLimit(12, 5.5, 1)).toBe(59);
   });
 
-  it("grows with the text width and a smaller class size", () => {
-    expect(paperCodeLimits(12, 6.2)).toEqual({ top: 73, subPart: 68 });
-    expect(paperCodeLimits(12, 6.6)).toEqual({ top: 78, subPart: 73 });
-    expect(paperCodeLimits(11, 5.5)).toEqual({ top: 70, subPart: 66 });
-    expect(paperCodeLimits(10, 5.5)).toEqual({ top: 78, subPart: 74 });
+  it("follows the text width, the class size and the body size", () => {
+    const at = (classSize: 10 | 11 | 12, width: number, body?: number) =>
+      paperCodeLimits({
+        classSize,
+        geometry: { width },
+        ...(body ? { body: { size: body } } : {}),
+      });
+    expect(at(12, 6.2)).toEqual({ top: 73, subPart: 68 });
+    expect(at(12, 6.2, 11.7)).toEqual({ top: 73, subPart: 68 });
+    expect(at(12, 6.6)).toEqual({ top: 78, subPart: 73 });
+    expect(at(11, 5.5)).toEqual({ top: 70, subPart: 66 });
+    expect(at(10, 5.5)).toEqual({ top: 78, subPart: 74 });
+    expect(at(10, 5.5, 14)).toEqual({ top: 77, subPart: 72 });
   });
 
   it("never goes below zero on the narrowest width a template may set", () => {
@@ -104,14 +153,20 @@ describe("checkCode", () => {
     "\t\\end\t{Verbatim}",
   ])("refuses a line that could close the block: %j", (line) => {
     const r = checkCode(["x", line], 64);
-    expect(r.problems[0]).toBe(
-      "Line 2 starts with \\end{Verbatim}, which would end the code block.",
-    );
+    expect(r.problems[0]).toBe("Line 2 contains \\end{Verbatim}, which would end the code block.");
   });
 
-  it("allows \\end{Verbatim} later in a line, where fancyvrb prints it", () => {
-    expect(VERBATIM_END_RE.test("x \\end{Verbatim}")).toBe(false);
-    expect(checkCode(["x \\end{Verbatim}"], 64).problems).toEqual([]);
+  it("refuses \\end{Verbatim} anywhere in a line: fancyvrb ends the block there too", () => {
+    // Found by the engine fuzz: fancyvrb drops the text before it and reads the
+    // following lines as LaTeX (tests/golden/code-security.test.ts proves it).
+    for (const line of ["x \\end{Verbatim}", "&\\end{Verbatim}^^5c", "print('\\end{verbatim}')"]) {
+      expect(VERBATIM_END_RE.test(line), line).toBe(true);
+      expect(checkCode([line], 64).problems).toEqual([
+        "Line 1 contains \\end{Verbatim}, which would end the code block.",
+      ]);
+    }
+    // Other environments' ends and a broken \\end print as text.
+    expect(checkCode(["\\end{itemize} \\end x{Verbatim}"], 64).problems).toEqual([]);
   });
 
   it("refuses an empty block and more than 40 lines", () => {
@@ -168,7 +223,7 @@ describe("serializer: code blocks (D99, D101)", () => {
   });
 
   it("applies the sub-part width inside a sub-part", () => {
-    const limits = paperCodeLimits(12, 6.2);
+    const limits = paperCodeLimits(referencePaper().template.style as never);
     const inPart = (line: string): BlockNode => ({
       type: "subParts",
       content: [{ type: "subPart", content: [p("a"), code(line)] }],
@@ -181,7 +236,7 @@ describe("serializer: code blocks (D99, D101)", () => {
 
   it("reports the rules as the slot's problems", () => {
     expect(issues([code("\\end{Verbatim}\\input{/etc/passwd}")])).toEqual([
-      "Code block: Line 1 starts with \\end{Verbatim}, which would end the code block.",
+      "Code block: Line 1 contains \\end{Verbatim}, which would end the code block.",
     ]);
   });
 

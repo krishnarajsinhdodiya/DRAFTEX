@@ -13,7 +13,7 @@ export interface CodeSettings {
 }
 
 /** The narrowest built-in template (5.5 in, 12 pt): a bank question fits any paper. */
-export const NARROWEST_CODE_LIMITS = paperCodeLimits(12, 5.5);
+export const NARROWEST_CODE_LIMITS = paperCodeLimits({ classSize: 12, geometry: { width: 5.5 } });
 
 export const CodeSettingsContext = createContext<CodeSettings>({
   limits: NARROWEST_CODE_LIMITS,
