@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useState, useTransition } from "react";
 import { CoTagInput } from "@/components/editor/co-tag-input";
 import { type EditorHandle, QuestionEditor, Toolbar } from "@/components/editor/question-editor";
+import { CodeSettingsContext } from "@/components/editor/code-block";
 import { SubPartFieldsContext } from "@/components/editor/sub-part-fields";
+import { KEY_CODE_LIMITS } from "@/lib/latex/code";
 import { upload } from "@/components/editor/upload";
 import { FormAlert } from "@/components/form";
 import { buttonStyles, eyebrowStyles, inputStyles, sheetStyles } from "@/components/styles";
@@ -352,16 +354,19 @@ export function QuestionForm({
           </div>
           <h2 className={eyebrowStyles}>Model answer (optional)</h2>
           <div className="rounded-md border border-rule bg-surface">
-            <QuestionEditor
-              initial={initial.answerKey ?? EMPTY_DOC}
-              label="Model answer"
-              placeholder="Type the model answer: the points, working or diagram you expect."
-              allowAdvanced={allowAdvanced}
-              upload={upload}
-              onProblem={setProblem}
-              onChange={(doc) => set({ answerKey: isEmptyDoc(doc) ? null : doc })}
-              onFocus={setFocused}
-            />
+            {/* A bank question fits any paper (the default, narrowest limits); its answer prints in the key. */}
+            <CodeSettingsContext.Provider value={{ limits: KEY_CODE_LIMITS, allowed: true }}>
+              <QuestionEditor
+                initial={initial.answerKey ?? EMPTY_DOC}
+                label="Model answer"
+                placeholder="Type the model answer: the points, working or diagram you expect."
+                allowAdvanced={allowAdvanced}
+                upload={upload}
+                onProblem={setProblem}
+                onChange={(doc) => set({ answerKey: isEmptyDoc(doc) ? null : doc })}
+                onFocus={setFocused}
+              />
+            </CodeSettingsContext.Provider>
           </div>
           {problem ? (
             <p role="alert" className="text-caption text-danger">

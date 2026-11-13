@@ -2,7 +2,7 @@
 // One question on the paper: its number, the text (read-only until clicked,
 // then a live editor), and in the marks margin its marks. Below: CO tag,
 // Bloom level and the question's actions.
-import { ArrowDown, ArrowUp, BookmarkPlus, Copy, Eraser, Library } from "lucide-react";
+import { ArrowDown, ArrowUp, BookmarkPlus, Braces, Copy, Eraser, Library } from "lucide-react";
 import { memo, useId, useState } from "react";
 import {
   type EditorHandle,
@@ -20,6 +20,8 @@ import type { Problem } from "@/lib/paper/problems";
 import { subPartMarksNote } from "@/lib/paper/tags";
 import { marksText } from "@/lib/templates/labels";
 import type { EditorGroup } from "@/server/paper-view";
+import { CodeSettingsContext } from "@/components/editor/code-block";
+import type { CodeLimits } from "@/lib/latex/code";
 import { KeyPanel } from "./key-panel";
 import type { SlotState, SlotValue } from "./use-paper";
 
@@ -41,6 +43,7 @@ export const SlotCard = memo(function SlotCard({
   problems,
   keyProblems,
   coOptions,
+  codeLimits,
   allowAdvanced,
   upload,
   active,
@@ -52,6 +55,7 @@ export const SlotCard = memo(function SlotCard({
   onMove,
   onDuplicate,
   onBank,
+  onLatex,
   onEditorFocus,
 }: {
   slotKey: string;
@@ -61,6 +65,7 @@ export const SlotCard = memo(function SlotCard({
   problems: Problem[];
   keyProblems: Problem[];
   coOptions: { value: string; label: string }[];
+  codeLimits: CodeLimits;
   allowAdvanced: boolean;
   upload: Uploader;
   active: boolean;
@@ -73,6 +78,8 @@ export const SlotCard = memo(function SlotCard({
   onDuplicate: (key: string) => void;
   /** "Insert from bank" opens the picker; "Add to bank" adds this question (D77, D78). */
   onBank: (key: string, action: "insert" | "add") => void;
+  /** D104: show this question's LaTeX (read-only). */
+  onLatex: (key: string) => void;
   onEditorFocus: (handle: EditorHandle) => void;
 }) {
   const name = group.slotLabels[position - 1] ?? slotKey;
@@ -116,15 +123,17 @@ export const SlotCard = memo(function SlotCard({
                 questionBloom: state.bloomLevel,
               }}
             >
-              <QuestionEditor
-                initial={state.doc}
-                label={`Text of ${name}`}
-                allowAdvanced={allowAdvanced}
-                upload={upload}
-                onProblem={setEditorProblem}
-                onChange={(doc) => onChange(slotKey, { doc })}
-                onFocus={onEditorFocus}
-              />
+              <CodeSettingsContext.Provider value={{ limits: codeLimits, allowed: true }}>
+                <QuestionEditor
+                  initial={state.doc}
+                  label={`Text of ${name}`}
+                  allowAdvanced={allowAdvanced}
+                  upload={upload}
+                  onProblem={setEditorProblem}
+                  onChange={(doc) => onChange(slotKey, { doc })}
+                  onFocus={onEditorFocus}
+                />
+              </CodeSettingsContext.Provider>
             </SubPartFieldsContext.Provider>
           ) : (
             <button
@@ -266,6 +275,16 @@ export const SlotCard = memo(function SlotCard({
               onClick={() => onBank(slotKey, "add")}
             >
               <BookmarkPlus size={15} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={iconButton}
+              aria-label={`View the LaTeX of ${name}`}
+              title="View LaTeX (read-only)"
+              disabled={empty}
+              onClick={() => onLatex(slotKey)}
+            >
+              <Braces size={15} aria-hidden />
             </button>
             <button
               type="button"

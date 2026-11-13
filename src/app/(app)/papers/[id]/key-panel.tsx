@@ -9,7 +9,9 @@ import {
   QuestionEditor,
   type Uploader,
 } from "@/components/editor/question-editor";
+import { CodeSettingsContext } from "@/components/editor/code-block";
 import { inputStyles } from "@/components/styles";
+import { KEY_CODE_LIMITS } from "@/lib/latex/code";
 import {
   type KeyCriterion,
   choiceAnswers,
@@ -110,16 +112,18 @@ export function KeyPanel({
           ) : null}
 
           <div className="rounded-md border border-rule bg-surface">
-            <QuestionEditor
-              initial={state.answerKey ?? EMPTY_DOC}
-              label={`Model answer for ${name}`}
-              placeholder="Type the model answer: the points, working or diagram you expect."
-              allowAdvanced={allowAdvanced}
-              upload={upload}
-              onProblem={setEditorProblem}
-              onChange={(doc) => onChange({ answerKey: hasContent(doc) ? doc : null })}
-              onFocus={onEditorFocus}
-            />
+            <CodeSettingsContext.Provider value={{ limits: KEY_CODE_LIMITS, allowed: splitUp }}>
+              <QuestionEditor
+                initial={state.answerKey ?? EMPTY_DOC}
+                label={`Model answer for ${name}`}
+                placeholder="Type the model answer: the points, working or diagram you expect."
+                allowAdvanced={allowAdvanced}
+                upload={upload}
+                onProblem={setEditorProblem}
+                onChange={(doc) => onChange({ answerKey: hasContent(doc) ? doc : null })}
+                onFocus={onEditorFocus}
+              />
+            </CodeSettingsContext.Provider>
           </div>
           {editorProblem ? (
             <p role="alert" className="text-caption text-danger">

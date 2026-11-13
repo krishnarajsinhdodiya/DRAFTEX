@@ -9,6 +9,7 @@ import { EditorContent, ReactNodeViewRenderer, useEditor, useEditorState } from 
 import Suggestion, { type SuggestionProps } from "@tiptap/suggestion";
 import {
   Bold,
+  Code as CodeIcon,
   Italic,
   Plus,
   Redo2,
@@ -229,6 +230,7 @@ export function Toolbar({
       underline: e.isActive("underline"),
       sub: e.isActive("subscript"),
       sup: e.isActive("superscript"),
+      code: e.isActive("code"),
       undo: e.can().undo(),
       redo: e.can().redo(),
     }),
@@ -263,6 +265,13 @@ export function Toolbar({
       </ToolButton>
       <ToolButton label="Superscript" active={s.sup} onClick={() => c().toggleSuperscript().run()}>
         <SupIcon size={16} aria-hidden />
+      </ToolButton>
+      <ToolButton
+        label="Inline code (Ctrl+E)"
+        active={s.code}
+        onClick={() => c().toggleMark("code").run()}
+      >
+        <CodeIcon size={16} aria-hidden />
       </ToolButton>
       <span className="mx-1 h-5 w-px bg-rule" aria-hidden />
       <div className="relative">

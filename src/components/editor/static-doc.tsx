@@ -26,6 +26,8 @@ function Inline({ nodes }: { nodes: InlineNode[] | undefined }) {
                   <u>{el}</u>
                 ) : m.type === "subscript" ? (
                   <sub>{el}</sub>
+                ) : m.type === "code" ? (
+                  <code className="rounded bg-sunk px-1 font-mono text-[0.92em]">{el}</code>
                 ) : (
                   <sup>{el}</sup>
                 );
@@ -150,6 +152,8 @@ function Leaf({ b, defaultColumns }: { b: LeafBlockNode; defaultColumns: number 
           {b.attrs.latex}
         </pre>
       );
+    case "codeBlock":
+      return <CodeLines lines={b.attrs.lines} />;
     case "orderedList":
     case "bulletList": {
       const Tag = b.type === "orderedList" ? "ol" : "ul";
@@ -166,6 +170,25 @@ function Leaf({ b, defaultColumns }: { b: LeafBlockNode; defaultColumns: number 
       );
     }
   }
+}
+
+/** A code block as it prints: numbered lines in a frame (D99). */
+export function CodeLines({ lines }: { lines: readonly string[] }) {
+  return (
+    <pre
+      aria-label="Code"
+      className="my-1 overflow-x-auto rounded border border-rule-strong bg-surface py-1 font-mono text-small leading-5 text-ink"
+    >
+      {lines.map((l, i) => (
+        <span key={i} className="flex">
+          <span aria-hidden className="w-8 shrink-0 select-none pr-2 text-right text-ink-3">
+            {i + 1}
+          </span>
+          <span className="whitespace-pre pr-2">{l || " "}</span>
+        </span>
+      ))}
+    </pre>
+  );
 }
 
 /** A sub-part's own marks, CO tag and Bloom level (D65), when it has any. */

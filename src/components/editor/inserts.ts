@@ -124,6 +124,26 @@ export const INSERTS: Insert[] = [
     run: (e) => e.chain().focus().toggleBulletList().run(),
   },
   {
+    id: "code-block",
+    label: "Code block",
+    keywords: "program python c java listing verbatim monospace lines",
+    run: (e) => {
+      e.chain().focus().insertContent({ type: "codeBlock" }).run();
+      // The cursor goes inside the new block, ready to type.
+      const { $from } = e.state.selection;
+      if ($from.parent.type.name !== "codeBlock") {
+        const before = $from.nodeBefore;
+        if (before?.type.name === "codeBlock") e.commands.setTextSelection($from.pos - 1);
+      }
+    },
+  },
+  {
+    id: "inline-code",
+    label: "Inline code",
+    keywords: "code monospace typewriter function name backtick",
+    run: (e) => e.chain().focus().toggleMark("code").run(),
+  },
+  {
     id: "advanced",
     label: "Advanced LaTeX",
     keywords: "latex code raw",

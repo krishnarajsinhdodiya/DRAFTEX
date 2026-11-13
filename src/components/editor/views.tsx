@@ -14,6 +14,7 @@ import { buttonStyles, inputStyles } from "@/components/styles";
 import { checkMath } from "@/lib/editor/math";
 import { sanitizeLatex } from "@/lib/latex/sanitize";
 import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "@/lib/paper/bloom";
+import { CodeBlockView } from "./code-block";
 import { CoTagInput } from "./co-tag-input";
 import { useSubPartFields } from "./sub-part-fields";
 import { MathField, MathText } from "./math";
@@ -666,6 +667,7 @@ function SubPartView({ editor, getPos, node, updateAttributes }: NodeViewProps) 
 }
 
 export const VIEWS = {
+  codeBlock: CodeBlockView,
   subPart: SubPartView,
   mathInline: MathView,
   mathDisplay: MathView,

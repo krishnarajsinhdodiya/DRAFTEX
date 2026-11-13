@@ -3,6 +3,7 @@
 // print order in the centre, the PDF on the right (resizable, collapsible).
 import {
   BookmarkPlus,
+  Braces,
   Download,
   PanelRightClose,
   PanelRightOpen,
@@ -31,6 +32,7 @@ import { LockedBanner, MarkFinalButton, VersionsButton } from "./status";
 import { slotKey, usePaper } from "./use-paper";
 import { TagSummaryPanel } from "./tag-summary";
 import { BankPicker, BankReport } from "./bank-dialogs";
+import { type LatexTarget, LatexDialog } from "./view-latex";
 import type { AddReport } from "@/lib/data/bank";
 
 function bySlot(problems: Problem[]): Map<string, Problem[]> {
@@ -114,6 +116,17 @@ export function PaperEditor({
   const [bankReport, setBankReport] = useState<AddReport | null>(null);
   const [marksNote, setMarksNote] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // D104: whose LaTeX the read-only dialog shows (a question, or the whole paper).
+  const [latexOf, setLatexOf] = useState<LatexTarget | null>(null);
+  const onLatex = useCallback(
+    (key: string) => {
+      const dot = key.lastIndexOf(".");
+      const g = view.groups.find((x) => x.key === key.slice(0, dot));
+      const name = g?.slotLabels[Number(key.slice(dot + 1)) - 1] ?? key;
+      void paper.flushAll().then(() => setLatexOf({ slotId: key, name }));
+    },
+    [paper, view.groups],
+  );
   const addToBank = useCallback(
     async (key?: string) => {
       setAdding(true);
@@ -250,6 +263,14 @@ export function PaperEditor({
         <button
           type="button"
           className={buttonStyles.quiet}
+          title="The LaTeX DRAFTEX writes for this paper (read-only)"
+          onClick={() => void paper.flushAll().then(() => setLatexOf({ name: "the paper" }))}
+        >
+          <Braces size={15} aria-hidden /> <span className="max-sm:sr-only">LaTeX</span>
+        </button>
+        <button
+          type="button"
+          className={buttonStyles.quiet}
           disabled={adding}
           onClick={() => void addToBank()}
           title="Add every question with a Bloom level and a CO to your question bank"
@@ -344,6 +365,7 @@ export function PaperEditor({
         </div>
       ) : null}
       <BankReport report={bankReport} onClose={() => setBankReport(null)} />
+      <LatexDialog paperId={view.id} target={latexOf} onClose={() => setLatexOf(null)} />
       {picking
         ? (() => {
             const dot = picking.lastIndexOf(".");
@@ -542,6 +564,7 @@ export function PaperEditor({
                                 problems={problemsBySlot.get(k) ?? []}
                                 keyProblems={keyProblemsBySlot.get(k) ?? []}
                                 coOptions={view.coOptions}
+                                codeLimits={view.codeLimits}
                                 allowAdvanced={allowAdvanced}
                                 upload={upload}
                                 active={!locked && active.has(k)}
@@ -553,6 +576,7 @@ export function PaperEditor({
                                 onMove={moveBy}
                                 onEditorFocus={setFocused}
                                 onBank={onBank}
+                                onLatex={onLatex}
                                 onDuplicate={(key) =>
                                   void paper.duplicate(key).then((to) => to && activate(to))
                                 }
