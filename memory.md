@@ -308,6 +308,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-13 · D100 code characters: ASCII only, with curly quotes, dashes and non-breaking spaces converted and tabs as 4 spaces · default taken; the owner did not object when asked
 - 2026-11-13 · GitHub Actions refused every job from 2026-11-13 ("recent account payments have failed or your spending limit needs to be increased"); work is tested locally and merged only after CI runs again · seen on runs 43379586908 onward
 
+- 2026-11-13 · Performance before Phase 13 (v0.12.0 + docs, same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (618 events, 120 over the 16 ms floor); warm preview p50 501 ms, max 564 ms · roadmap measure-before rule
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
