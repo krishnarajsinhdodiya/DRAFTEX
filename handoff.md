@@ -5,7 +5,7 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-13
-- **Current phase:** 13 (code blocks, grouped Advanced LaTeX, View LaTeX; D98-D104). Built and green locally; **not merged**: CI cannot run.
+- **Current phase:** 13 merged to `main` and tagged v0.13.0 on local gates only (D117); CI still blocked. Next: Phase 14.
 - **Branch:** `phase/13-code-blocks` (pushed). `main` = v0.12.0 + the 13-16 plan. `fix/setup-honest-errors` and `fix/network-restart-windows` are pushed, not merged, also waiting for CI (untouched this session).
 - **CI:** GitHub Actions refuses every job ("recent account payments have failed or your spending limit needs to be increased"). Nothing merges until the owner fixes billing.
 - **Local gates on the branch tip:** lint, typecheck, format, unit 1280 (latex coverage 99.7% lines), golden 99 passed / 28 visual skipped (Linux only), e2e 64 passed (incl. v0.11.0 upgrade export pixel-identical), commit hygiene.
@@ -24,9 +24,9 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps
 1. Session start per the operating rules.
-2. When CI runs again: push nothing new first; run CI on `phase/13-code-blocks`. The ubuntu visual job will lack baselines for `code` and `key-code`: take them from its artifact (D4) in a commit that says why. No existing baseline may change; if one does, stop and ask the owner.
+2. When CI runs again: run CI on `main` (v0.13.0). The ubuntu visual job will lack baselines for `code` and `key-code`: take them from its artifact (D4) in a commit that says why. No existing baseline may change; if one does, stop and ask the owner.
 3. Also when CI runs: `fix/network-restart-windows` (rerun its Windows job until it fails once, read the `[WebServer]` lines and restart timings, fix), then merge both `fix/` branches and delete them.
-4. Once Phase 13 CI is green: merge `--no-ff` to `main`, bump `package.json` to 0.13.0 in the merge, tag `v0.13.0`, push, delete the branch locally and on GitHub, `git ls-remote --heads origin`.
+4. Owner: update the father's laptop to v0.13.0 and open a paper with a code block (the Windows check D117 relies on).
 5. Then Phase 14 (table builder, D105-D107) on `phase/14-table-builder`: measure performance first.
 
 ## Owner tasks (not code)
@@ -65,7 +65,7 @@ no chat history must be able to continue from this file alone.
 
 ## Phase checklist
 - [x] 0-12 (see git tags v0.0.0 … v0.12.0)
-- [ ] 13 Code blocks, grouped Advanced LaTeX, View LaTeX: built, gates green locally; CI, baselines, merge and tag pending
+- [x] 13 Code blocks, grouped Advanced LaTeX, View LaTeX (v0.13.0, local gates only, D117; CI run and ubuntu baselines `code`/`key-code` owed)
 - [ ] 14 Table builder
 - [ ] 15 CO blueprint check
 - [ ] 16 Bank search, pages, near-duplicates
