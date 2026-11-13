@@ -2,8 +2,8 @@
 // class size, font and content type the generator can emit, so the Tectonic
 // cache holds every file and later compiles work offline.
 import type { PaperInput, TemplateInput } from "../paper/schema.ts";
-import { packageLines } from "./packages.ts";
-import { ADVANCED_PACKAGES } from "./sanitize.ts";
+import { VERBATIM_BEGIN, VERBATIM_END } from "./code.ts";
+import { LOADED_PACKAGES, packageLines } from "./packages.ts";
 
 /**
  * Loads every package SPEC §9 lists, including ones only Advanced users reach,
@@ -26,7 +26,7 @@ export const PACKAGES_DOCUMENT = String.raw`\RequirePackage{fix-cm}
 \usepackage{xcolor}
 \usepackage{tikz}
 \usepackage{tcolorbox}
-${packageLines(ADVANCED_PACKAGES).join("\n")}
+${packageLines(LOADED_PACKAGES).join("\n")}
 \begin{document}
 \uline{Warm-up} \textcolor{gray}{text}
 \begin{tcolorbox}Box\end{tcolorbox}
@@ -37,6 +37,9 @@ ${packageLines(ADVANCED_PACKAGES).join("\n")}
 $\prescript{14}{6}{C} \coloneqq \xrightleftharpoons[b]{a}$ \rupee{}\,5
 \begin{tabular}{cc}\multirow{2}{*}{a} & b\\ & c\end{tabular}
 \begin{framed}Framed\end{framed}
+${VERBATIM_BEGIN}
+print("code") \texttt{tt}
+${VERBATIM_END}
 \end{document}
 `;
 

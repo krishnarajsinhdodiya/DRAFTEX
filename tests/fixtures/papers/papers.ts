@@ -14,6 +14,7 @@ import type {
   PaperInput,
   SubPartAttrs,
 } from "@/lib/paper/schema";
+import { paperCodeLimits } from "@/lib/latex/code";
 import { previewPaper } from "@/lib/templates/preview";
 import { BUILT_IN_TEMPLATES } from "@/lib/templates/seeds";
 import {
@@ -51,7 +52,7 @@ export const ASSETS = {
 // ---------- tiny builders ----------
 export const t = (
   text: string,
-  ...marks: Array<"bold" | "italic" | "underline" | "subscript" | "superscript">
+  ...marks: Array<"bold" | "italic" | "underline" | "subscript" | "superscript" | "code">
 ): InlineNode =>
   marks.length
     ? { type: "text", text, marks: marks.map((type) => ({ type })) }
@@ -579,6 +580,109 @@ export function packagesPaper(): PaperInput {
   };
 }
 
+export const code = (...lines: string[]): LeafBlockNode => ({
+  type: "codeBlock",
+  attrs: { lines },
+});
+
+/** A line of exactly `n` characters that reads like code. */
+export const longLine = (n: number): string => {
+  const head = 'print("';
+  const tail = '")';
+  return `${head}${"x".repeat(Math.max(0, n - head.length - tail.length))}${tail}`;
+};
+
+/**
+ * Phase 13 (D98-D103): code blocks at question level and in sub-parts, a
+ * question that starts with code, the longest line each place allows (6.2 in,
+ * 12 pt), inline code, the tail after code, and a grouped Advanced LaTeX
+ * block whose size command must not reach the tail or the next question.
+ */
+export function codePaper(): PaperInput {
+  const base = referencePaper();
+  const style = { ...base.template.style, showBloom: true, showMarksPerQuestion: true };
+  const limits = paperCodeLimits(style);
+  return {
+    ...base,
+    template: { ...base.template, style },
+    meta: { ...base.meta, courseTitle: "Invented Course: Programming", courseCode: "BP000T" },
+    slots: [
+      slot(
+        "g1",
+        1,
+        [
+          p("What does ", t('print(len("abc"))', "code"), " print?"),
+          choices(["2", "3", "abc", "an error"]),
+        ],
+        { bloomLevel: "APPLY", coTag: "BP000T.01" },
+      ),
+      slot(
+        "g1",
+        2,
+        [p("The keyword ", t("def", "code"), " starts a function in Python. True/False")],
+        { bloomLevel: "REMEMBER" },
+      ),
+      slot(
+        "g2",
+        1,
+        [
+          code("doses = [250, 500, 1000]", "for d in doses:", '    print(d / 1000, "g")'),
+          p("What does the program above print? Explain each line."),
+        ],
+        { bloomLevel: "UNDERSTAND", coTag: "BP000T.02" },
+      ),
+      slot(
+        "g2",
+        2,
+        [
+          p("Find the mistake in this function and correct it:"),
+          code(
+            "def mean(values):",
+            "\ttotal = 0",
+            "\tfor v in values:",
+            "\t\ttotal += v",
+            "\treturn total / len(value)  # 100% wrong name",
+          ),
+        ],
+        { bloomLevel: "ANALYZE", coTag: "BP000T.03" },
+      ),
+      slot(
+        "g2",
+        3,
+        [
+          p("Each line below is as long as this paper allows:"),
+          code(longLine(limits.top), "x = {'a': 1, \"b\": [2, 3]}  # ~ ^ _ $ & \\ { }", ""),
+        ],
+        { bloomLevel: "REMEMBER" },
+      ),
+      slot(
+        "g3",
+        1,
+        [
+          p("Answer both parts."),
+          subParts(
+            [[code("x = 7", "y = x // 2", "print(x % 2, y)"), p("What is printed?")], { marks: 4 }],
+            [
+              [p("Rewrite with a loop:"), code(longLine(limits.subPart), "print(sum(range(10)))")],
+              { marks: 6, bloom: "CREATE" },
+            ],
+          ),
+        ],
+        { bloomLevel: "APPLY", coTag: "BP000T.04" },
+      ),
+      slot(
+        "g3",
+        2,
+        [p("Read the note, then answer."), adv("{\\large Large note:} \\large the rest is large")],
+        { bloomLevel: "EVALUATE", coTag: "BP000T.05" },
+      ),
+      slot("g3", 3, [p("This question follows a large block and prints at normal size.")], {
+        bloomLevel: "UNDERSTAND",
+      }),
+    ],
+  };
+}
+
 export const FIXTURES = {
   reference: referencePaper,
   legacy: legacyPaper,
@@ -588,6 +692,7 @@ export const FIXTURES = {
   kitchenSink: kitchenSinkPaper,
   bloom: bloomPaper,
   packages: packagesPaper,
+  code: codePaper,
 } as const;
 
 export const ALL_ASSETS = Object.values(ASSETS);

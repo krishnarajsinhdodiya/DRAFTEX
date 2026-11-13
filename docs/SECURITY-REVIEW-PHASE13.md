@@ -25,7 +25,7 @@ Nothing here is built yet; this review is the gate before any code (D98+).
 | a code line `\input{/abs/canary.txt}` | printed as text; the canary is not read |
 | a code line `%#&_^~$\{}` | printed exactly; no error |
 | a code line `\end {Verbatim}\input{...}` (space after `\end`) | printed as text |
-| a code line `\end{Verbatim}\input{...}`, with or without leading spaces | **ends the block**: fancyvrb stops with "Extraneous input"; the canary was not read, but the line must never reach the engine |
+| a code line `\end{Verbatim}\input{...}`, with or without leading spaces (and, found later, anywhere in a line: section 6) | **ends the block**: fancyvrb stops with "Extraneous input"; the canary was not read, but the line must never reach the engine |
 | a tab character | printed as spaces |
 | a trailing backslash | printed; no error |
 | `é` | prints in Latin Modern Mono, no warning |
@@ -93,3 +93,33 @@ if it does not, the build stops and asks.
 - Fuzz: 200 seeded code blocks mixing `\end{Verbatim}` variants, `\input`,
   `%`, `#`, tabs, Unicode, 200-character lines, empty lines, a trailing
   backslash; and Advanced LaTeX blocks with stray braces, under grouping.
+
+## 6. Addendum during the build (2026-11-13)
+
+Two findings from the engine tests of the build overturn parts of sections 2
+and 3. Both are fixed and tested in `tests/golden/code-security.test.ts`.
+
+1. **A closing `\end{Verbatim}` anywhere in a line ends the block (tested).**
+   fancyvrb's end check is `#1\end{#2}#3`: it looks for the first `\end{` in
+   the line, wherever it is, silently drops the text before it, and reads the
+   following lines as LaTeX. The block `x \end{Verbatim}` then
+   `\input{/abs/canary.txt}` printed the canary. Section 2 tested only lines
+   that start with `\end`, and section 3's rule (`^\s*\\end\s*\{\s*Verbatim`)
+   was therefore narrower than fancyvrb, not broader. The seeded fuzz found
+   it (`&\end{Verbatim}^^5c`). The rule is now
+   `\\end\s*\{\s*Verbatim`, case-insensitive, **anywhere** in a line; a test
+   compiles the attack without the rule to prove the canary would leak.
+2. **The line width depends on the body size, not only the class size
+   (measured).** exam.cls indents a question by the width of `10.` and a
+   sub-part by `(m)` more, each plus `\labelsep`, in the body font at
+   `\begin{questions}`. A template that sets its own body size (the KSV
+   built-ins use 11.7 pt) moves the indent; at 10 pt class with a 14 pt body
+   the longest line computed from class size alone overflowed by 1.1 pt. The
+   limit now uses the label widths per Latin Modern design size (8, 9, 10,
+   12; `tulmr.fd` ranges), body sizes 8-14 pt were measured at every class
+   size (24 points, matched within 0.01 pt), and the frame test runs with
+   and without a body size.
+
+Also seen: inline code cannot hyphenate (the typewriter font has no hyphen
+character), so a long token such as an absolute path overflows the line and
+shows as a note on the question, like an unbreakable chemical name.

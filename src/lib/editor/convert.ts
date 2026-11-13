@@ -23,7 +23,7 @@ const KEEP_ATTRS: Record<string, string[]> = {
   subPart: ["marks", "coTag", "bloom"],
 };
 
-const MARKS = new Set(["bold", "italic", "underline", "subscript", "superscript"]);
+const MARKS = new Set(["bold", "italic", "underline", "subscript", "superscript", "code"]);
 
 function isEmptyParagraph(n: EditorNode): boolean {
   return n.type === "paragraph" && !(n.content ?? []).length;
@@ -35,11 +35,17 @@ function unfinished(n: EditorNode): boolean {
     return !String(n.attrs?.latex ?? "").trim();
   }
   if (n.type === "units") return !String(n.attrs?.unit ?? "").trim();
+  if (n.type === "codeBlock") return codeText(n).trim() === "";
   return false;
 }
 
+/** A code block's text in the editor: one text node, lines split by "\n". */
+const codeText = (n: EditorNode): string => (n.content ?? []).map((c) => c.text ?? "").join("");
+
 function clean(n: EditorNode): EditorNode {
   const type = n.type === "tableHeader" ? "tableCell" : n.type;
+  // D98: stored as its lines; the editor holds one text node.
+  if (type === "codeBlock") return { type, attrs: { lines: codeText(n).split("\n") } };
   const out: EditorNode = { type };
   if (type === "text") {
     out.text = n.text ?? "";
@@ -112,6 +118,10 @@ export function fromStored(doc: Doc): EditorNode {
           content: cell.content?.length ? cell.content : [{ type: "paragraph" }],
         })),
       };
+    }
+    if (n.type === "codeBlock") {
+      const text = ((n.attrs?.lines as string[] | undefined) ?? []).join("\n");
+      return { type: "codeBlock", ...(text ? { content: [{ type: "text", text }] } : {}) };
     }
     return n.content ? { ...n, content: n.content.map((c) => toEditor(c, false, 0)) } : n;
   };

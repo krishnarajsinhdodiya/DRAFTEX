@@ -116,3 +116,62 @@ describe("unfinished boxes", () => {
     });
   });
 });
+
+describe("code (D98)", () => {
+  it("stores a code block as its lines and leaves out an empty one", () => {
+    const r = toStored({
+      type: "doc",
+      content: [
+        { type: "codeBlock", content: [{ type: "text", text: "a = 1\n  b\n" }] },
+        { type: "codeBlock" },
+        { type: "codeBlock", content: [{ type: "text", text: " \n " }] },
+      ],
+    });
+    expect(r).toEqual({
+      ok: true,
+      doc: {
+        type: "doc",
+        content: [{ type: "codeBlock", attrs: { lines: ["a = 1", "  b", ""] } }],
+      },
+    });
+  });
+
+  it("keeps the inline code mark and nothing the editor adds to it", () => {
+    const r = toStored({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "x()", marks: [{ type: "code", attrs: { class: "x" } }] },
+          ],
+        },
+      ],
+    });
+    expect(r.ok && r.doc.content[0]).toEqual({
+      type: "paragraph",
+      content: [{ type: "text", text: "x()", marks: [{ type: "code" }] }],
+    });
+  });
+
+  it("lets a code block sit in a sub-part but not in a choice or a table cell", () => {
+    const inPart = PMNode.fromJSON(schema, {
+      type: "doc",
+      content: [
+        {
+          type: "subParts",
+          content: [
+            {
+              type: "subPart",
+              content: [{ type: "codeBlock", content: [{ type: "text", text: "x" }] }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(() => inPart.check()).not.toThrow();
+    expect(schema.nodes.choice?.contentMatch.matchType(schema.nodes.codeBlock!)).toBeFalsy();
+    expect(schema.nodes.tableCell?.contentMatch.matchType(schema.nodes.codeBlock!)).toBeFalsy();
+    expect(schema.nodes.codeBlock?.spec.marks).toBe("");
+  });
+});

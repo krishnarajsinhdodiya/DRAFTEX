@@ -265,12 +265,13 @@ describe("serializePaper: content nodes", () => {
     );
     expect(out).toContain("\\begin{enumerate}\n    \\item one\\par two\n  \\end{enumerate}");
     expect(out).toContain("\\begin{itemize}");
-    expect(out).toContain("\\part {}[x] \\textbf{y}");
+    // D103: the block is a group; \begingroup comes first, so \part never reads "[x]" as points.
+    expect(out).toContain("\\part \\begingroup [x] \\textbf{y}\\par\\endgroup");
   });
 
-  it("guards a question that starts with an advanced-LaTeX bracket", () => {
+  it("keeps an advanced-LaTeX bracket away from \\question's points argument", () => {
     expect(tex([{ type: "advancedLatex", attrs: { latex: "[2] x" } }])).toContain(
-      "\\question {}[2] x",
+      "\\question \\begingroup [2] x\\par\\endgroup",
     );
   });
 

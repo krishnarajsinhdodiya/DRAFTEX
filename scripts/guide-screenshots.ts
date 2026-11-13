@@ -278,4 +278,31 @@ await page.getByText("Chemistry, colour and list commands").click();
 await shot(page, "18-advanced-latex");
 await page.getByRole("button", { name: "Done" }).click();
 
+// Phase 13: a code block with its line numbers, the check under it and the preview.
+await write("Q.2(5)", "What does this program print? Explain the ");
+await page.keyboard.type("`range`");
+await page.keyboard.type(" call.");
+await page.getByRole("button", { name: "Insert" }).click();
+await page.getByRole("menuitem", { name: "Code block" }).click();
+for (const [i, line] of [
+  "doses = [250, 500, 1000]",
+  "for d in doses:",
+  '\tprint(d / 1000, "g")',
+].entries()) {
+  if (i > 0) await page.keyboard.press("Enter");
+  if (line.startsWith("\t")) await page.keyboard.press("Tab");
+  await page.keyboard.type(line.replace(/^\t/, ""));
+}
+await page
+  .getByRole("status")
+  .filter({ hasText: "All changes saved" })
+  .waitFor({ timeout: 15_000 });
+await page.waitForTimeout(4_000);
+await page
+  .getByRole("img", { name: /page \d of/ })
+  .first()
+  .waitFor({ timeout: 90_000 });
+await page.getByRole("listitem", { name: "Q.2(5)", exact: true }).scrollIntoViewIfNeeded();
+await shot(page, "19-code-block");
+
 await browser.close();

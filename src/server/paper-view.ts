@@ -1,6 +1,7 @@
 // Plain, serialisable view of a paper for the editor screen.
 import type { BloomLevel, ExamKind, PaperStatus, Program } from "@/generated/prisma/enums";
 import type { Actor, DataLayer } from "@/lib/data";
+import { type CodeLimits, paperCodeLimits } from "@/lib/latex/code";
 import { questionNumbers } from "@/lib/paper/numbering";
 import { type KeyCriterion, keyCriteriaSchema } from "@/lib/paper/key";
 import { type Doc, type Group, docSchema } from "@/lib/paper/schema";
@@ -64,6 +65,8 @@ export interface PaperEditorView {
   marksStyle: "MARKS_COLON" | "PARENS" | "BRACKETS";
   /** D64: this paper prints Bloom levels (its own switch, from the template at creation). */
   showBloom: boolean;
+  /** D100: the longest code line this paper's page allows. */
+  codeLimits: CodeLimits;
   parts: { key: string; title?: string }[];
   groups: EditorGroup[];
   slots: EditorSlot[];
@@ -108,6 +111,7 @@ export async function paperEditorView(
     duration: durationText(s.durationMinutes),
     marksStyle: s.structure.marksStyle,
     showBloom: s.style.showBloom,
+    codeLimits: paperCodeLimits(s.style),
     parts: s.structure.parts.map((x) => ({ key: x.key, ...(x.title ? { title: x.title } : {}) })),
     groups: s.structure.parts.flatMap((part) =>
       part.groups.map((g) => {

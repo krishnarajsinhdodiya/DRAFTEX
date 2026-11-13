@@ -12,7 +12,8 @@ const gap = z.number().min(-1).max(2);
 // ---------- slot content (TipTap-shaped) ----------
 
 export const markSchema = z.object({
-  type: z.enum(["bold", "italic", "underline", "subscript", "superscript"]),
+  /** `code` (D98): inline code, printed in the typewriter font. */
+  type: z.enum(["bold", "italic", "underline", "subscript", "superscript", "code"]),
 });
 
 export const textNode = z.object({
@@ -116,6 +117,17 @@ export const advancedNode = z.object({
   attrs: z.object({ latex: z.string() }),
 });
 
+/**
+ * A code block (D98): its lines as typed. The rules (ASCII, 40 lines, the
+ * width of the frame) are checked by src/lib/latex/code.ts with a message;
+ * these caps only bound what the server will store.
+ */
+export const codeBlockNode = z.object({
+  type: z.literal("codeBlock"),
+  attrs: z.object({ lines: z.array(z.string().max(1000)).min(1).max(200) }),
+});
+export type CodeBlockNode = z.infer<typeof codeBlockNode>;
+
 export const listNode = z.object({
   type: z.enum(["orderedList", "bulletList"]),
   content: z
@@ -131,6 +143,7 @@ const leafBlocks = [
   choicesNode,
   advancedNode,
   listNode,
+  codeBlockNode,
 ] as const;
 
 export const leafBlockNode = z.discriminatedUnion("type", [...leafBlocks]);

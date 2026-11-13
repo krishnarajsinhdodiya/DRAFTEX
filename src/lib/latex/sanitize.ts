@@ -96,6 +96,12 @@ export const FORBIDDEN_PRIMITIVES = [
   "definecolor",
   "DeclarePairedDelimiter",
   "mathtoolsset",
+  // Phase 13: fancyvrb is loaded for code blocks; its file and setup commands
+  // must never come from user text (docs/SECURITY-REVIEW-PHASE13.md).
+  "VerbatimInput",
+  "fvset",
+  "DefineVerbatimEnvironment",
+  "RecustomVerbatimCommand",
 ] as const;
 
 const words = (s: string) => s.trim().split(/\s+/);

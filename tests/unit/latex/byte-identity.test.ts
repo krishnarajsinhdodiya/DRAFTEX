@@ -1,6 +1,13 @@
 // D94: papers that use no Advanced LaTeX package produce the same LaTeX as
 // v0.11.0, byte for byte. The hashes were written at v0.11.0 with
 // DX_WRITE_LATEX_HASHES=1 and are never regenerated to make a change pass.
+//
+// Documented exceptions (each changed on purpose, by hand, in the file):
+// - paper:kitchenSink, Phase 13 (D103): its Advanced LaTeX block is now
+//   written as \begingroup ... \par\endgroup. Its pages were compared with
+//   the v0.11.0 output on the pinned engine: pixel-identical.
+//   (The packages and key-packages fixtures, which also changed, were added in
+//   Phase 12 and are not in this file.)
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -28,6 +35,11 @@ function current(): Record<string, string> {
   return out;
 }
 
+/** The v0.11.0 hash of each documented exception, so an exception cannot spread unnoticed. */
+const CHANGED_ON_PURPOSE: Record<string, string> = {
+  "paper:kitchenSink": "2cd88992177e3280337dda88f9a8c628b42d0be5d9557f9388fcb0e9072d22bf",
+};
+
 describe("LaTeX unchanged since v0.11.0 (D94)", () => {
   if (process.env.DX_WRITE_LATEX_HASHES === "1") {
     it("writes the hashes", () => {
@@ -40,5 +52,10 @@ describe("LaTeX unchanged since v0.11.0 (D94)", () => {
     const got = current();
     for (const [k, v] of Object.entries(want)) expect({ [k]: got[k] }).toEqual({ [k]: v });
     expect(Object.values(want)).not.toContain("not-ok");
+  });
+  it("only the documented exceptions differ from v0.11.0", () => {
+    const got = current();
+    for (const [k, old] of Object.entries(CHANGED_ON_PURPOSE)) expect(got[k]).not.toBe(old);
+    expect(Object.keys(CHANGED_ON_PURPOSE)).toEqual(["paper:kitchenSink"]);
   });
 });

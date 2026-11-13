@@ -1,10 +1,15 @@
 // Answer-key fixtures for golden and visual tests (D33). Invented answers
 // for the invented fixture papers; nothing comes from reference_papers/.
+import { KEY_CODE_LIMITS } from "@/lib/latex/code";
 import type { KeySlot } from "@/lib/latex/key";
 import type { BlockNode, Doc, PaperInput } from "@/lib/paper/schema";
 import {
   ASSETS,
   bloomPaper,
+  code,
+  codePaper,
+  longLine,
+  t,
   img,
   legacyPaper,
   m,
@@ -241,10 +246,60 @@ export function packagesKey(): KeyFixture {
   };
 }
 
+/** Phase 13 (D102): model answers with code blocks, inline code in the objective table. */
+export function codeKey(): KeyFixture {
+  const paper = withCorrect(codePaper(), "g1", () => 1);
+  return {
+    paper,
+    keys: [
+      {
+        groupKey: "g1",
+        position: 2,
+        answerKey: doc(p("True: ", t("def name(args):", "code"), " begins a function.")),
+        keyCriteria: [],
+      },
+      {
+        groupKey: "g2",
+        position: 1,
+        answerKey: doc(code("0.25 g", "0.5 g", "1.0 g"), p("Each dose is divided by 1000.")),
+        keyCriteria: [
+          { text: "Output", marks: 3 },
+          { text: "Explanation", marks: 2 },
+        ],
+      },
+      {
+        groupKey: "g2",
+        position: 2,
+        answerKey: doc(
+          p("The last line names ", t("value", "code"), " instead of ", t("values", "code"), ":"),
+          code("def mean(values):", "    return sum(values) / len(values)"),
+        ),
+        keyCriteria: [],
+      },
+      {
+        groupKey: "g3",
+        position: 1,
+        answerKey: doc({
+          type: "subParts",
+          content: [
+            { type: "subPart", content: [code("1 3")] },
+            {
+              type: "subPart",
+              content: [p("One way:"), code(longLine(KEY_CODE_LIMITS.subPart), "total = 0")],
+            },
+          ],
+        }),
+        keyCriteria: [],
+      },
+    ],
+  };
+}
+
 export const KEY_FIXTURES = {
   "key-reference": referenceKey,
   "key-legacy": legacyKey,
   "key-own-numbers": ownNumbersKey,
   "key-bloom": bloomKey,
   "key-packages": packagesKey,
+  "key-code": codeKey,
 } as const;
