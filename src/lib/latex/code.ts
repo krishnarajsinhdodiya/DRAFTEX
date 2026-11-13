@@ -206,7 +206,8 @@ export function checkCode(input: readonly string[], maxChars: number): CodeCheck
   });
   const bad = unprintableCode(input);
   if (bad.length) {
-    problems.push(`Code may use plain ASCII characters only; this block has ${bad.join(", ")}.`);
+    const shown = bad.length > 6 ? [...bad.slice(0, 6), `and ${bad.length - 6} more`] : bad;
+    problems.push(`Code may use plain ASCII characters only; this block has ${shown.join(", ")}.`);
   }
   if (lines.every((l) => l.trim() === "")) problems.push("The code block is empty.");
   if (lines.length > MAX_CODE_LINES) {

@@ -56,7 +56,7 @@ export function CodeBlockView({ node, editor, getPos, selected }: NodeViewProps)
         <div
           aria-hidden
           contentEditable={false}
-          className="sticky left-0 shrink-0 select-none bg-sunk py-1.5 pr-2 pl-2 text-right text-ink-3"
+          className="sticky left-0 z-10 shrink-0 select-none bg-sunk py-1.5 pr-2 pl-2 text-right text-ink-3"
         >
           {lines.map((_, i) => (
             <div key={i}>{i + 1}</div>
@@ -73,6 +73,9 @@ export function CodeBlockView({ node, editor, getPos, selected }: NodeViewProps)
             as="pre"
             aria-label="Code"
             spellCheck={false}
+            // TipTap sets white-space: pre-wrap inline; code lines must never
+            // wrap, or a wrapped line no longer meets its number (found by /break-ui).
+            style={{ whiteSpace: "pre" }}
             className="dx-codeblock m-0 py-1.5 pr-3 pl-2 whitespace-pre text-ink"
           />
         </div>

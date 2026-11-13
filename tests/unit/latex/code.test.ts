@@ -142,6 +142,7 @@ describe("checkCode", () => {
       "Code may use plain ASCII characters only; this block has ₹ (U+20B9), é (U+00E9), a control character (U+0007).",
     ]);
     expect(unprintableCode(["😀"])).toEqual(["😀 (U+1F600)"]);
+    expect(checkCode(["é ü ç ñ ß ø å ğ"], 64).problems[0]).toMatch(/ø \(U\+00F8\), and 2 more\.$/);
   });
 
   it.each([
