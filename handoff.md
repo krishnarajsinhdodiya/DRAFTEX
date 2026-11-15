@@ -5,8 +5,8 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-15
-- **Current phase:** 14 (table builder, D105-D107) built on `phase/14-table-builder`, pushed, **not merged**. Merging without CI needs the owner to say "merge on local gates" (D117 covered Phase 13 only).
-- **Branch:** `phase/14-table-builder` (from `main` = v0.13.0). `fix/setup-honest-errors` and `fix/network-restart-windows` untouched, still waiting for CI.
+- **Current phase:** 14 merged to `main` and tagged v0.14.0 on local gates only (D118; owner: "Merge on local gates"). Next: Phase 15.
+- **Branch:** `main` (v0.14.0). `phase/14-table-builder` deleted locally and on GitHub. `fix/setup-honest-errors` and `fix/network-restart-windows` untouched, still waiting for CI.
 - **CI:** GitHub Actions still refuses every job (billing).
 - **Local gates on the branch tip:** lint, typecheck, format, unit 1328, golden 114 passed / 30 visual skipped (Linux only), e2e 65 passed (v0.8.0, v0.10.0, v0.11.0 upgrades included), commit hygiene.
 
@@ -24,7 +24,7 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps
 1. Session start per the operating rules.
-2. Owner decides: merge Phase 14 on local gates (bump 0.14.0, tag v0.14.0, delete branch) or wait for CI.
+2. Owner: update the Mac and the father's laptop to v0.14.0 (no migration).
 3. When CI runs again: run CI on main; take ubuntu baselines for `code`, `key-code`, `tables`, `key-tables` from the visual job artifact (D4) in a commit that says why; no existing baseline may change. Then `fix/network-restart-windows`, merge both `fix/` branches.
 4. Owner: try a merged-header table on the father's laptop (Windows check, as D117).
 5. Then Phase 15 (CO blueprint, D108+) on `phase/15-co-blueprint`: measure performance first.
@@ -58,13 +58,12 @@ no chat history must be able to continue from this file alone.
 - Scripts against a fresh `draftex-e2e`: `node scripts/measure-performance.ts http://127.0.0.1:3212`, `node scripts/guide-screenshots.ts …` (rewrites every guide PNG; keep only the new one), `node tests/break-ui/worst-tables.ts …` (each needs its own fresh start).
 
 ## Questions for owner
-- Merge Phase 14 on local gates?
 - Grid header row prints bold, Lines header does not (as before). Keep?
 - Later: should the app offer Times at all? Should the picker page through more than 50 matches?
 
 ## Phase checklist
 - [x] 0-13 (see git tags v0.0.0 … v0.13.0)
-- [ ] 14 Table builder (built, local gates; merge waits for CI or the owner's OK; baselines `tables`/`key-tables` owed)
+- [x] 14 Table builder (v0.14.0, local gates only, D118; CI run and ubuntu baselines `tables`/`key-tables` owed)
 - [ ] 15 CO blueprint check
 - [ ] 16 Bank search, pages, near-duplicates
 
