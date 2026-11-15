@@ -68,12 +68,28 @@ export const imageNode = z.object({
   }),
 });
 
+/**
+ * D105: per-column alignment and width (whole percent of the table, adding up
+ * to 100), borders and merged cells. A table with none of them is written as
+ * before (D106); the 10 × 30 limit and the merge rules are checked with a
+ * message by src/lib/latex/table.ts. These caps only bound what is stored.
+ */
+export const tableColumn = z.object({
+  align: z.enum(["LEFT", "CENTER", "RIGHT"]).optional(),
+  width: z.number().int().min(1).max(100).optional(),
+});
+export type TableColumn = z.infer<typeof tableColumn>;
+
+const span = z.number().int().min(1).max(60).optional();
+
 export const tableNode = z.object({
   type: z.literal("table"),
   attrs: z
     .object({
       headerRow: z.boolean().default(true),
       widthPercent: z.number().min(20).max(100).default(80),
+      columns: z.array(tableColumn).max(12).optional(),
+      borders: z.enum(["BOOKTABS", "GRID"]).optional(),
     })
     .optional(),
   content: z
@@ -84,6 +100,7 @@ export const tableNode = z.object({
           .array(
             z.object({
               type: z.literal("tableCell"),
+              attrs: z.object({ colspan: span, rowspan: span }).optional(),
               content: z.array(paragraphNode).optional(),
             }),
           )

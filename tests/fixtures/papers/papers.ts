@@ -683,6 +683,120 @@ export function codePaper(): PaperInput {
   };
 }
 
+/** A cell for `xtable`: text, or text with a merge. */
+export type XCell =
+  string | InlineNode[] | { text: string | InlineNode[]; colspan?: number; rowspan?: number };
+
+/** A table with the Phase 14 options (D105): columns, borders and merged cells. */
+export const xtable = (
+  rows: XCell[][],
+  attrs: {
+    headerRow?: boolean;
+    widthPercent?: number;
+    columns?: { align?: "LEFT" | "CENTER" | "RIGHT"; width?: number }[];
+    borders?: "BOOKTABS" | "GRID";
+  } = {},
+): LeafBlockNode => ({
+  type: "table",
+  attrs: { headerRow: true, widthPercent: 80, ...attrs },
+  content: rows.map((r) => ({
+    type: "tableRow",
+    content: r.map((c) => {
+      const cell = typeof c === "string" || Array.isArray(c) ? { text: c } : c;
+      const content = typeof cell.text === "string" ? (cell.text ? [t(cell.text)] : []) : cell.text;
+      const span = {
+        ...(cell.colspan ? { colspan: cell.colspan } : {}),
+        ...(cell.rowspan ? { rowspan: cell.rowspan } : {}),
+      };
+      return {
+        type: "tableCell" as const,
+        ...(Object.keys(span).length ? { attrs: span } : {}),
+        content: [
+          content.length ? { type: "paragraph" as const, content } : { type: "paragraph" as const },
+        ],
+      };
+    }),
+  })),
+});
+
+/**
+ * Phase 14 (D105-D107): a merged header over two columns, alignments and
+ * widths, a full grid with a cell over two rows (and one merged both ways),
+ * maths and units in cells, a one-column table with widths, and an old-style
+ * table that must keep its tabularx writing (D106).
+ */
+export function tablesPaper(): PaperInput {
+  const base = referencePaper();
+  return {
+    ...base,
+    meta: { ...base.meta, courseTitle: "Invented Course: Dosage Forms", courseCode: "BP000T" },
+    slots: [
+      slot("g1", 1, [
+        p("Which tablet below dissolves fastest?"),
+        xtable(
+          [
+            ["Tablet", "Time (min)"],
+            ["A", "12"],
+            ["B", "4"],
+          ],
+          { widthPercent: 50, columns: [{}, { align: "RIGHT" }] },
+        ),
+        choices(["A", "B", "Both the same", "Cannot tell"]),
+      ]),
+      slot("g2", 1, [
+        p("Complete the table of doses for the three products."),
+        xtable(
+          [
+            ["Product", { text: "Dose", colspan: 2 }, "Route"],
+            ["", "Adult", "Child", ""],
+            ["Product X", [qty("500", "\\milli\\gram")], [qty("250", "\\milli\\gram")], "Oral"],
+            ["Product Y (sustained-release, film-coated)", "1 tablet", "Half a tablet", "Oral"],
+            ["Product Z", [m("2 \\times 10^{3}"), t(" units")], "Not advised", "Injection"],
+          ],
+          {
+            widthPercent: 100,
+            columns: [
+              { width: 40 },
+              { align: "CENTER", width: 20 },
+              { align: "CENTER", width: 20 },
+              { width: 20 },
+            ],
+          },
+        ),
+      ]),
+      slot("g2", 2, [
+        p("Read the grid and name each class."),
+        xtable(
+          [
+            ["Class", "Drug", "Use"],
+            [{ text: "Analgesics, which relieve pain", rowspan: 2 }, "Paracetamol", "Fever"],
+            ["Ibuprofen", "Inflammation"],
+            [{ text: "Not used in children (merged both ways)", colspan: 2, rowspan: 2 }, "Note 1"],
+            ["Note 2"],
+          ],
+          {
+            borders: "GRID",
+            widthPercent: 90,
+            columns: [{ width: 34 }, { width: 33 }, { width: 33 }],
+          },
+        ),
+      ]),
+      slot("g2", 3, [
+        p("A one-column table and an old table (no new options):"),
+        xtable([["Step 1: weigh"], ["Step 2: mix & sieve, 100% of it"]], {
+          headerRow: false,
+          widthPercent: 60,
+          columns: [{ align: "CENTER" }],
+        }),
+        table([
+          ["Old", "Table"],
+          ["kept", "as is"],
+        ]),
+      ]),
+    ],
+  };
+}
+
 export const FIXTURES = {
   reference: referencePaper,
   legacy: legacyPaper,
@@ -693,6 +807,7 @@ export const FIXTURES = {
   bloom: bloomPaper,
   packages: packagesPaper,
   code: codePaper,
+  tables: tablesPaper,
 } as const;
 
 export const ALL_ASSETS = Object.values(ASSETS);

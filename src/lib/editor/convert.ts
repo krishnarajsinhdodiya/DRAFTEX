@@ -18,7 +18,8 @@ const KEEP_ATTRS: Record<string, string[]> = {
   blank: ["widthCm"],
   units: ["value", "unit"],
   image: ["sha256", "ext", "widthPercent"],
-  table: ["headerRow", "widthPercent"],
+  table: ["headerRow", "widthPercent", "columns", "borders"],
+  tableCell: ["colspan", "rowspan"],
   choices: ["columns", "correct"],
   subPart: ["marks", "coTag", "bloom"],
 };
@@ -68,12 +69,68 @@ function clean(n: EditorNode): EditorNode {
     // The header row is whatever the editor shows: a first row of header cells.
     const first = n.content?.[0]?.content ?? [];
     const headerRow = first.length > 0 && first.every((c) => c.type === "tableHeader");
-    out.attrs = { ...out.attrs, headerRow };
+    const { columns, borders, ...rest } = out.attrs ?? {};
+    out.attrs = { ...rest, headerRow, ...tableOptions(columns, borders) };
+  }
+  if (type === "tableCell" && out.attrs) {
+    // TipTap writes colspan 1 and rowspan 1 on every cell; only a merge is stored.
+    const attrs = Object.fromEntries(
+      Object.entries(out.attrs).filter(([, v]) => typeof v === "number" && v > 1),
+    );
+    if (Object.keys(attrs).length) out.attrs = attrs;
+    else delete out.attrs;
   }
   if (n.content?.length) {
     const kids = n.content.filter((c) => !unfinished(c)).map(clean);
     if (kids.length) out.content = kids;
   }
+  if (type === "table" && out.content) out.content = dropCoveredRows(out.content);
+  return out;
+}
+
+/**
+ * Merging every cell of a row into the row above leaves an empty row in the
+ * editor (HTML allows it). The stored table has no empty rows: the row is
+ * dropped and the merges that crossed it get one row shorter.
+ */
+function dropCoveredRows(rows: EditorNode[]): EditorNode[] {
+  const out: EditorNode[] = [];
+  rows.forEach((row) => {
+    if (row.content?.length) {
+      out.push(row);
+      return;
+    }
+    const k = out.length;
+    out.forEach((above, r) => {
+      for (const cell of above.content ?? []) {
+        const span = Number(cell.attrs?.rowspan ?? 1);
+        if (r + span > k) {
+          const attrs: Record<string, unknown> = { ...cell.attrs, rowspan: span - 1 };
+          if (span - 1 === 1) delete attrs.rowspan;
+          if (Object.keys(attrs).length) cell.attrs = attrs;
+          else delete cell.attrs;
+        }
+      }
+    });
+  });
+  return out;
+}
+
+/**
+ * D105: only settings that change the print are stored, so a table left at
+ * left-aligned, equal columns and booktabs rules keeps today's stored form
+ * (and LaTeX, D106).
+ */
+function tableOptions(columns: unknown, borders: unknown): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (Array.isArray(columns)) {
+    const cols = columns.map((c: { align?: unknown; width?: unknown } | null) => ({
+      ...(c?.align && c.align !== "LEFT" ? { align: c.align } : {}),
+      ...(typeof c?.width === "number" ? { width: c.width } : {}),
+    }));
+    if (cols.some((c) => Object.keys(c).length)) out.columns = cols;
+  }
+  if (borders === "GRID") out.borders = "GRID";
   return out;
 }
 
