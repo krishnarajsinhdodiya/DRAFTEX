@@ -2,6 +2,7 @@
 // commands, so a paper without them keeps the v0.11.0 preamble byte for byte.
 // fancyvrb follows the same rule for code blocks (D99).
 import { ADVANCED_PACKAGES, type AdvancedPackage, sanitizeLatex } from "./sanitize.ts";
+import { mergedCellsUsed } from "./table.ts";
 
 /** Every optional package, in preamble order: Advanced LaTeX's, then fancyvrb. */
 export const LOADED_PACKAGES = [...ADVANCED_PACKAGES, "fancyvrb"] as const;
@@ -26,6 +27,8 @@ export function packagesUsed(value: unknown): LoadedPackage[] {
       if (r.ok) for (const p of r.packages) used.add(p);
     }
     if (o.type === "codeBlock") used.add("fancyvrb");
+    // D106: a table cell over several rows.
+    if (o.type === "table" && mergedCellsUsed(o)) used.add("multirow");
     for (const x of Object.values(v)) walk(x);
   };
   walk(value);

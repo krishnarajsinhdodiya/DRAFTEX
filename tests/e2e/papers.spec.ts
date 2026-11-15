@@ -268,6 +268,87 @@ test("a code block is written, a closing line is refused, and View LaTeX shows i
   await saved(page);
 });
 
+test("a table gets a merged header, alignment, widths and a grid; View LaTeX shows it (D105-D107)", async ({
+  browser,
+}) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto(paperUrl);
+  await open(page, "Q.2(4)");
+  const q = question(page, "Q.2(4)");
+  await page.keyboard.type("Complete the table of doses.");
+  await page.getByRole("button", { name: "Insert" }).click();
+  await page.getByRole("menuitem", { name: "Table" }).click();
+  for (const [i, cell] of [
+    "Product",
+    "Dose",
+    "",
+    "",
+    "Adult",
+    "Child",
+    "Product X",
+    "500 mg",
+    "250 mg",
+  ].entries()) {
+    if (i > 0) await page.keyboard.press("Tab");
+    if (cell) await page.keyboard.type(cell);
+  }
+  const bar = page.getByRole("toolbar", { name: "Table" });
+  await expect(bar).toBeVisible();
+
+  // Merge "Dose" with the empty header cell beside it.
+  await q.locator("th").nth(1).click();
+  await q
+    .locator("th")
+    .nth(2)
+    .click({ modifiers: ["Shift"] });
+  await bar.getByRole("button", { name: /^Merge the selected cells/ }).click();
+  await expect(q.locator('th[colspan="2"]')).toHaveText("Dose");
+
+  // Widths that do not add up are named at once; then fixed.
+  await bar.getByRole("button", { name: "Columns" }).click();
+  const columns = page.getByRole("dialog", { name: "Columns" });
+  await columns.getByLabel("Column 1 width").fill("50");
+  await columns.getByLabel("Column 2 width").fill("25");
+  await columns.getByLabel("Column 3 width").fill("20");
+  await expect(
+    page.getByText("The column widths add up to 95%; they must add up to 100%."),
+  ).toBeVisible();
+  await columns.getByLabel("Column 3 width").fill("25");
+  await expect(page.getByText(/they must add up to 100%/)).toHaveCount(0);
+  await columns
+    .getByRole("radiogroup", { name: "Column 2 alignment" })
+    .getByRole("radio", { name: "Centre" })
+    .click();
+  await page.keyboard.press("Escape");
+  await expect(q.locator("td", { hasText: "500 mg" })).toHaveCSS("text-align", "center");
+  await bar.getByRole("radio", { name: "Grid" }).click();
+  await expect(q.locator("table")).toHaveAttribute("data-borders", "GRID");
+
+  const preview = page.waitForResponse(
+    (r) => r.url().includes("/preview") && r.request().method() === "GET" && r.status() === 200,
+    { timeout: 60_000 },
+  );
+  await saved(page);
+  expect((await preview).headers()["content-type"]).toContain("application/pdf");
+  await expect(q.getByText(/could not be typeset|cannot/)).toHaveCount(0);
+
+  await q.getByRole("button", { name: "View the LaTeX of Q.2(4)" }).click();
+  const dialog = page.getByRole("dialog", { name: "LaTeX of Q.2(4)" });
+  const tex = dialog.getByLabel("LaTeX of Q.2(4)");
+  await expect(tex).toContainText(
+    "\\begin{tabular}{|>{\\raggedright\\arraybackslash}p{0.5\\dimexpr 0.8\\linewidth-6\\tabcolsep-4\\arrayrulewidth\\relax}|",
+  );
+  await expect(tex).toContainText(
+    "\\multicolumn{2}{>{\\centering\\arraybackslash}p{\\dimexpr 0.5\\dimexpr",
+  );
+  await expect(tex).toContainText("Product X & 500 mg & 250 mg\\\\");
+  await dialog.getByRole("button", { name: "Close" }).click();
+
+  // Leave the paper as the later tests expect it.
+  await q.getByRole("button", { name: "Clear Q.2(4)" }).click();
+  await saved(page);
+});
+
 test("the answer key is written with the question and previewed", async ({ browser }) => {
   const page = await asUser(browser, FACULTY, FACULTY.own);
   await page.goto(paperUrl);

@@ -16,6 +16,17 @@ export interface Problem {
 }
 
 const EXPLAIN: [RegExp, string, string][] = [
+  // D106: raised by \dxMerged (src/lib/latex/table.ts).
+  [
+    /DXMERGEDCELL/,
+    "merged-cell",
+    "has a merged table cell whose text needs more lines than the rows it spans; shorten the text, widen its column or merge more rows",
+  ],
+  [
+    /DXNARROWTABLE/,
+    "narrow-table",
+    "has a table column too narrow for this page; widen the table or use fewer columns",
+  ],
   [/Undefined control sequence/i, "unknown-command", "uses a command LaTeX does not know"],
   [/Missing \$ inserted/i, "maths-outside", "has maths outside an equation"],
   [

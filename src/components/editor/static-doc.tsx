@@ -3,7 +3,15 @@
 // not being edited, so a paper with 40 questions opens at once.
 import type { ReactNode } from "react";
 import { BLOOM_LABEL } from "@/lib/paper/bloom";
-import type { BlockNode, Doc, InlineNode, LeafBlockNode, SubPartAttrs } from "@/lib/paper/schema";
+import { tableGrid } from "@/lib/latex/table";
+import type {
+  BlockNode,
+  Doc,
+  InlineNode,
+  LeafBlockNode,
+  SubPartAttrs,
+  TableNode,
+} from "@/lib/paper/schema";
 import { MathText } from "./math";
 import { unitLabel } from "./units";
 
@@ -62,6 +70,16 @@ function Inline({ nodes }: { nodes: InlineNode[] | undefined }) {
   );
 }
 
+/** The grid column where the `c`-th cell of row `r` starts (merged cells push later ones along). */
+function cellColumn(t: TableNode, r: number, c: number): number {
+  const g = tableGrid(t);
+  if ("problem" in g) return c;
+  const starts = (g.grid.at[r] ?? []).filter((a) => a.row === r && a.cell !== null);
+  const seen = new Set<number>();
+  const cols = starts.filter((a) => !seen.has(a.col) && seen.add(a.col)).map((a) => a.col);
+  return cols[c] ?? c;
+}
+
 function Leaf({ b, defaultColumns }: { b: LeafBlockNode; defaultColumns: number }) {
   switch (b.type) {
     case "paragraph":
@@ -110,13 +128,28 @@ function Leaf({ b, defaultColumns }: { b: LeafBlockNode; defaultColumns: number 
                     : "border-b border-rule"
                 }
               >
-                {row.content.map((cell, c) => (
-                  <td key={c} className="px-1.5 py-1 align-top">
-                    {(cell.content ?? []).map((p, k) => (
-                      <Inline key={k} nodes={p.content} />
-                    ))}
-                  </td>
-                ))}
+                {row.content.map((cell, c) => {
+                  // D105: the column a cell starts in sets its alignment.
+                  const col = cellColumn(b, r, c);
+                  const align = b.attrs?.columns?.[col]?.align;
+                  return (
+                    <td
+                      key={c}
+                      colSpan={cell.attrs?.colspan}
+                      rowSpan={cell.attrs?.rowspan}
+                      className={`px-1.5 py-1 align-top ${b.attrs?.borders === "GRID" ? "border border-ink" : ""} ${align === "CENTER" ? "text-center" : align === "RIGHT" ? "text-right" : ""}`}
+                      style={
+                        b.attrs?.columns?.[col]?.width
+                          ? { width: `${b.attrs.columns[col].width}%` }
+                          : undefined
+                      }
+                    >
+                      {(cell.content ?? []).map((p, k) => (
+                        <Inline key={k} nodes={p.content} />
+                      ))}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

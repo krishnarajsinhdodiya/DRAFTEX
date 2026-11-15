@@ -19,6 +19,8 @@ import {
   qty,
   referencePaper,
   table,
+  tablesPaper,
+  xtable,
 } from "./papers";
 
 export interface KeyFixture {
@@ -295,6 +297,56 @@ export function codeKey(): KeyFixture {
   };
 }
 
+/**
+ * Phase 14: the same table options in model answers (D105); the objective
+ * group keeps its answer table, where a plain answer is written.
+ */
+export function tablesKey(): KeyFixture {
+  const paper = withCorrect(tablesPaper(), "g1", () => 1);
+  return {
+    paper,
+    keys: [
+      { groupKey: "g1", position: 1, answerKey: doc(p("B takes 4 minutes.")), keyCriteria: [] },
+      {
+        groupKey: "g2",
+        position: 1,
+        answerKey: doc(
+          p("Doses:"),
+          xtable(
+            [
+              ["Product", { text: "Dose", colspan: 2 }],
+              ["", "Adult", "Child"],
+              ["X", "500 mg", "250 mg"],
+            ],
+            {
+              columns: [
+                { width: 50 },
+                { align: "CENTER", width: 25 },
+                { align: "CENTER", width: 25 },
+              ],
+            },
+          ),
+        ),
+        keyCriteria: [
+          { text: "Adult doses", marks: 2 },
+          { text: "Child doses", marks: 2 },
+        ],
+      },
+      {
+        groupKey: "g2",
+        position: 2,
+        answerKey: doc(
+          xtable(
+            [["Class", "Drug"], [{ text: "Analgesic", rowspan: 2 }, "Paracetamol"], ["Ibuprofen"]],
+            { borders: "GRID", widthPercent: 70 },
+          ),
+        ),
+        keyCriteria: [],
+      },
+    ],
+  };
+}
+
 export const KEY_FIXTURES = {
   "key-reference": referenceKey,
   "key-legacy": legacyKey,
@@ -302,4 +354,5 @@ export const KEY_FIXTURES = {
   "key-bloom": bloomKey,
   "key-packages": packagesKey,
   "key-code": codeKey,
+  "key-tables": tablesKey,
 } as const;

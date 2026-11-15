@@ -251,6 +251,29 @@ has **Print Bloom levels**:
 marks for each Bloom level and each CO. It counts every written question,
 optional ones too, so the marks can add up to more than the paper's total.
 
+**Tables.** Insert › **Table** adds a 3 × 3 table with a header row. While
+the cursor is in a table, a **Table** bar appears under the toolbar.
+
+![A table with a merged header, the Table bar and the Columns box](user-guide/20-table.png)
+
+- Add or delete rows and columns with the first buttons. **Tab** moves to
+  the next cell; in the last cell it adds a row.
+- To merge cells, drag across them (or click one, then Shift+click
+  another) and choose **Merge**. **Split** undoes it.
+- **Lines** prints a rule above and below the table and under the header
+  row, as on printed papers; **Grid** draws a line around every cell (the
+  header row then prints in bold).
+- **Columns** sets the table's width, each column's alignment (left,
+  centre, right) and, if you want, each column's width in percent of the
+  table. Widths must add up to 100%; **Set equal widths** does that for you.
+- A table with any of these settings can have at most 10 columns and 30
+  rows. A cell merged over several rows may hold as many lines as the rows
+  it covers; if its text needs more, the question shows a note: shorten the
+  text, widen the column or merge more rows. An equation in a cell cannot
+  use `&` or `\\` outside a matrix.
+- Tables made before this version print exactly as before until you change
+  one of these settings. A table never breaks across two pages.
+
 ### Final and Printed papers
 
 When a paper is finished, click **Mark as Final**. A Final paper is

@@ -32,6 +32,13 @@ import {
 import { describeChar, escapeText, mapMathUnicode, type QuoteState } from "./escape.ts";
 import { type LoadedPackage, packageLines, packagesUsed } from "./packages.ts";
 import { sanitizeLatex, type SanitizeMode } from "./sanitize.ts";
+import {
+  MERGED_CELL_LINES,
+  checkTable,
+  hasTableOptions,
+  mergedCellsUsed,
+  tableLatex,
+} from "./table.ts";
 
 export interface SerializeIssue {
   message: string;
@@ -143,7 +150,7 @@ function usefulBreaks(nodes: InlineNode[]): InlineNode[] {
 export function inline(
   nodes: InlineNode[] | undefined,
   issues: Issues,
-  opts: { breakable?: boolean } = {},
+  opts: { breakable?: boolean; inCell?: boolean } = {},
 ): string {
   const quotes: QuoteState = { doubleOpen: false };
   let out = "";
@@ -168,9 +175,17 @@ export function inline(
       case "hardBreak":
         out += "\\newline{}";
         break;
-      case "mathInline":
-        out += `$${snippet(n.attrs.latex, "math", issues, "equation")}$`;
+      case "mathInline": {
+        const latex = snippet(n.attrs.latex, "math", issues, "equation");
+        if (opts.inCell && cellBreaker(latex)) {
+          issues.add(
+            "An equation in a table cell cannot use &, \\\\ or \\hline outside a matrix; it would split the table's cells.",
+          );
+          break;
+        }
+        out += `$${latex}$`;
         break;
+      }
       case "blank":
         out += n.attrs ? `\\dxBlank[${formatMarks(n.attrs.widthCm)}cm]{}` : "\\dxBlank{}";
         break;
@@ -196,6 +211,31 @@ function codeText(s: string, issues: Issues): string {
 }
 
 const paragraph = (p: ParagraphNode, issues: Issues) => inline(p.content, issues);
+
+/**
+ * True when sanitised maths would end a table cell or row: `&`, `\\` or
+ * `\hline` outside an environment (a matrix keeps its own). These were
+ * engine errors before (docs/SECURITY-REVIEW-PHASE14.md); now a message.
+ */
+export function cellBreaker(latex: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < latex.length; i++) {
+    const ch = latex[i];
+    if (ch === "&" && depth === 0) return true;
+    if (ch !== "\\") continue;
+    const name = /^[A-Za-z]+/.exec(latex.slice(i + 1))?.[0];
+    if (name === undefined) {
+      if (latex[i + 1] === "\\" && depth === 0) return true;
+      i++;
+      continue;
+    }
+    if (name === "begin") depth++;
+    else if (name === "end") depth = Math.max(0, depth - 1);
+    else if (name === "hline" && depth === 0) return true;
+    i += name.length;
+  }
+  return false;
+}
 
 // ---------- blocks ----------
 
@@ -230,16 +270,31 @@ export interface Tail {
 
 export const NO_TAIL: Tail = { plain: "", inGroup: "" };
 
+type TableCellNode = TableNode["content"][number]["content"][number];
+
 function table(t: TableNode, ctx: BlockContext): string {
+  const cell = (c: TableCellNode, sep: string) =>
+    (c.content ?? []).map((p) => inline(p.content, ctx.issues, { inCell: true })).join(sep);
+  if (hasTableOptions(t)) {
+    if (ctx.inCell) {
+      ctx.issues.add(
+        "A table with column settings, borders or merged cells cannot go in the answer table of an objective group.",
+      );
+      return "";
+    }
+    const problems = checkTable(t);
+    for (const p of problems) ctx.issues.add(`Table: ${p}`);
+    // D105: in a fixed-width column a cell's own paragraphs keep their lines.
+    return problems.length ? "" : tableLatex(t, (c) => cell(c, "\\par "));
+  }
+  // D106: a table without new options is written exactly as before.
   const headerRow = t.attrs?.headerRow ?? true;
   const width = (t.attrs?.widthPercent ?? 80) / 100;
   const cols = Math.max(...t.content.map((r) => r.content.length));
   // A one-column table still fills its width, so it needs a stretchable column.
   const spec = cols === 1 ? "@{}X@{}" : `@{}l${"X".repeat(cols - 1)}@{}`;
   const rows = t.content.map((row) => {
-    const cells = row.content.map((c) =>
-      (c.content ?? []).map((p) => paragraph(p, ctx.issues)).join(" "),
-    );
+    const cells = row.content.map((c) => cell(c, " "));
     while (cells.length < cols) cells.push("");
     return `${cells.join(" & ")}\\\\`;
   });
@@ -462,6 +517,7 @@ function preamble(
   header: Header,
   packages: LoadedPackage[],
   widestOwnLabel?: string,
+  mergedCells = false,
 ): void {
   const numberEach = widestOwnLabel !== undefined;
   const g = style.geometry;
@@ -484,6 +540,7 @@ function preamble(
   }
   // D87: only what the paper's own Advanced LaTeX (or a rupee sign) uses.
   for (const line of packageLines(packages)) w.line(line);
+  if (mergedCells) for (const line of MERGED_CELL_LINES) w.line(line);
   if (header.pageNumbers === "X_OF_Y") w.line("\\usepackage{lastpage}");
   if (header.dateRow.style === "ULINE") {
     w.line("\\usepackage[normalem]{ulem}");
@@ -864,6 +921,7 @@ function serializeParsed(paper: Paper): SerializeResult {
     header,
     packagesUsed(paper),
     widest === undefined ? undefined : text(widest, issues),
+    mergedCellsUsed(paper),
   );
   w.line();
   w.line("\\begin{document}");
