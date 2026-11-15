@@ -290,6 +290,18 @@ Built-ins can't be edited; "Save as new" is the way to change them.
   objective key table. **View LaTeX** shows the generated LaTeX of the saved
   paper, its key or one question, read-only with a copy button, to the
   paper's owner only; generated LaTeX is never edited.
+- Table options (Phase 14, D105-D107; amended 2026-11-15): a table's own bar
+  sets per-column alignment (left, centre, right), per-column width (whole
+  percent of the table, adding up to 100), header row, borders (booktabs
+  "Lines" or a full "Grid") and merged cells (colspan/rowspan). A table with
+  none of these prints with `tabularx` exactly as before; one with any of
+  them is written as `tabular` with `p{}` columns whose widths add up to the
+  table's width, `\multicolumn`, and `\multirow` (loaded only when used).
+  Such a table has at most 10 columns and 30 rows, each column at least 5% of
+  the table and 4% of the line; a cell merged over n rows holds at most n
+  lines (checked by the engine, `\dxMerged`); maths in any table cell may
+  not use `&`, `\\` or `\hline` outside an environment. Not in the
+  objective key table. See docs/SECURITY-REVIEW-PHASE14.md.
 
 ### TipTap → LaTeX serialiser (most error-prone component)
 - Pure, deterministic, unit-tested per node type; escapes `\ { } $ & # ^ _ % ~`

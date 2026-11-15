@@ -305,4 +305,44 @@ await page
 await page.getByRole("listitem", { name: "Q.2(5)", exact: true }).scrollIntoViewIfNeeded();
 await shot(page, "19-code-block");
 
+// Phase 14: a table with a merged header, the Table bar and the Columns box.
+await write("Q.2(6)", "Complete the table of doses.");
+await page.getByRole("button", { name: "Insert" }).click();
+await page.getByRole("menuitem", { name: "Table" }).click();
+for (const [i, cell] of [
+  "Product",
+  "Dose",
+  "",
+  "",
+  "Adult",
+  "Child",
+  "Product X",
+  "500 mg",
+  "250 mg",
+].entries()) {
+  if (i > 0) await page.keyboard.press("Tab");
+  if (cell) await page.keyboard.type(cell);
+}
+const tq = page.getByRole("listitem", { name: "Q.2(6)", exact: true });
+const tbar = page.getByRole("toolbar", { name: "Table" });
+await tq.locator("th").nth(1).click();
+await tq
+  .locator("th")
+  .nth(2)
+  .click({ modifiers: ["Shift"] });
+await tbar.getByRole("button", { name: /^Merge the selected cells/ }).click();
+await tbar.getByRole("radio", { name: "Grid" }).click();
+await tbar.getByRole("button", { name: "Columns" }).click();
+const colBox = page.getByRole("dialog", { name: "Columns" });
+await colBox.getByRole("button", { name: "Set equal widths" }).click();
+await colBox
+  .getByRole("radiogroup", { name: "Column 2 alignment" })
+  .getByRole("radio", { name: "Centre" })
+  .click();
+await page
+  .getByRole("status")
+  .filter({ hasText: "All changes saved" })
+  .waitFor({ timeout: 15_000 });
+await shot(page, "20-table");
+
 await browser.close();
