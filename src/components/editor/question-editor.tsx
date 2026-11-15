@@ -31,6 +31,7 @@ import { type EditorNode, fromStored, toStored } from "@/lib/editor/convert";
 import { questionSchemaExtensions } from "@/lib/editor/nodes";
 import type { Doc } from "@/lib/paper/schema";
 import { type Insert, defaultWidthPercent, matchInserts } from "./inserts";
+import { TableBar } from "./table-bar";
 import { VIEWS } from "./views";
 
 export interface UploadedImage {
@@ -231,6 +232,7 @@ export function Toolbar({
       sub: e.isActive("subscript"),
       sup: e.isActive("superscript"),
       code: e.isActive("code"),
+      table: e.isActive("table"),
       undo: e.can().undo(),
       redo: e.can().redo(),
     }),
@@ -316,6 +318,7 @@ export function Toolbar({
       <ToolButton label="Redo (Ctrl+Shift+Z)" disabled={!s.redo} onClick={() => c().redo().run()}>
         <Redo2 size={16} aria-hidden />
       </ToolButton>
+      {s.table ? <TableBar editor={editor} /> : null}
     </div>
   );
 }

@@ -13,6 +13,9 @@ import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import Text from "@tiptap/extension-text";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { TableMap } from "@tiptap/pm/tables";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import Underline from "@tiptap/extension-underline";
 
 /** Blocks a sub-part may hold (docSchema leafBlockNode). */
@@ -227,11 +230,84 @@ export const InlineCode = Mark.create({
   },
 });
 
+const ALIGN_CSS: Record<string, string> = { CENTER: "center", RIGHT: "right" };
+
+/** Each cell takes its column's alignment (the column it starts in, as the paper does). */
+const columnAlignPlugin = new Plugin({
+  key: new PluginKey("dxColumnAlign"),
+  props: {
+    decorations(state) {
+      const decos: Decoration[] = [];
+      state.doc.descendants((node, pos) => {
+        if (node.type.name !== "table") return true;
+        const cols = node.attrs.columns as { align?: string }[] | null;
+        if (!cols?.some((c) => c?.align && ALIGN_CSS[c.align])) return false;
+        const map = TableMap.get(node);
+        for (const cellPos of new Set(map.map)) {
+          const align = ALIGN_CSS[cols[map.colCount(cellPos)]?.align ?? ""];
+          const cell = node.nodeAt(cellPos);
+          if (!align || !cell) continue;
+          const from = pos + 1 + cellPos;
+          decos.push(
+            Decoration.node(from, from + cell.nodeSize, { style: `text-align: ${align}` }),
+          );
+        }
+        return false;
+      });
+      return DecorationSet.create(state.doc, decos);
+    },
+  },
+});
+
 /** The table's width on the page; the header row follows its first row's cells. */
 export const QuestionTable = Table.extend({
   group: LEAF,
+  // D105: the editor shows the table as it will print: its width, column
+  // widths (when set), borders, and each column's alignment (a decoration).
+  renderHTML({ node, HTMLAttributes }) {
+    const n = TableMap.get(node).width;
+    const cols = (node.attrs.columns ?? null) as { align?: string; width?: number }[] | null;
+    const widths =
+      cols?.length === n && cols.every((c) => c?.width) ? cols.map((c) => c.width) : null;
+    return [
+      "table",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        "data-borders": node.attrs.borders ?? "BOOKTABS",
+        style: `width: ${Number(node.attrs.widthPercent ?? 80)}%; min-width: ${n * 4}rem`,
+      }),
+      [
+        "colgroup",
+        ...Array.from({ length: n }, (_, i) => [
+          "col",
+          widths ? { style: `width: ${widths[i]}%` } : {},
+        ]),
+      ],
+      ["tbody", 0],
+    ];
+  },
+  addProseMirrorPlugins() {
+    return [...(this.parent?.() ?? []), columnAlignPlugin];
+  },
   addAttributes() {
-    return { ...this.parent?.(), widthPercent: attr("widthPercent", 80) };
+    return {
+      ...this.parent?.(),
+      widthPercent: attr("widthPercent", 80),
+      // D105: per-column alignment and width, and the borders; JSON in the HTML for copy and paste.
+      columns: {
+        default: null,
+        parseHTML: (el: HTMLElement) => {
+          try {
+            const v: unknown = JSON.parse(el.getAttribute("data-columns") ?? "null");
+            return Array.isArray(v) ? v : null;
+          } catch {
+            return null;
+          }
+        },
+        renderHTML: (attrs: Record<string, unknown>) =>
+          Array.isArray(attrs.columns) ? { "data-columns": JSON.stringify(attrs.columns) } : {},
+      },
+      borders: attr("borders", null),
+    };
   },
 });
 
@@ -251,7 +327,8 @@ export function questionSchemaExtensions(): Extensions {
     BulletList.extend({ group: LEAF }),
     OrderedList.extend({ group: LEAF }),
     ListItem.extend({ content: "paragraph+" }),
-    QuestionTable.configure({ resizable: false }),
+    // No node view: renderHTML draws the table as it prints (widths, borders).
+    QuestionTable.configure({ resizable: false, View: null }),
     TableRow,
     TableHeader.extend({ content: "paragraph+" }),
     TableCell.extend({ content: "paragraph+" }),

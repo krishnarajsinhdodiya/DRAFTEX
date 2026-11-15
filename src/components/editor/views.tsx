@@ -20,7 +20,7 @@ import { useSubPartFields } from "./sub-part-fields";
 import { MathField, MathText } from "./math";
 import { COMMON_UNITS, unitLabel } from "./units";
 
-const popoverStyles =
+export const popoverStyles =
   "dx-popover z-50 flex w-[min(28rem,calc(100vw-2rem))] flex-col gap-3 rounded-lg bg-surface p-3 shadow-sheet " +
   "origin-[var(--radix-popover-content-transform-origin)]";
 

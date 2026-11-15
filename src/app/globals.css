@@ -187,3 +187,47 @@
   font-family: var(--font-mono);
   tab-size: 4;
 }
+
+/* Tables in the editor (D105) look as they will print: booktabs rules ("Lines")
+   or a full grid, faint guides between cells, the header row under its rule. */
+.dx-question table {
+  margin-block: 0.5rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.dx-question table td,
+.dx-question table th {
+  position: relative;
+  padding: 0.25rem 0.4rem;
+  border: 1px dashed var(--dx-rule);
+  min-width: 3rem;
+  vertical-align: top;
+  font-weight: inherit;
+  text-align: start;
+  overflow-wrap: break-word;
+}
+/* A wide table scrolls inside its question on a phone instead of
+   squeezing every cell to one letter per line (break-ui, Phase 14). */
+.dx-question:has(table) {
+  overflow-x: auto;
+}
+.dx-question table[data-borders="BOOKTABS"] {
+  border-block: 1.5px solid var(--dx-ink);
+}
+.dx-question table[data-borders="BOOKTABS"] tr:first-child th {
+  border-block-end: 1px solid var(--dx-ink);
+}
+.dx-question table[data-borders="GRID"] td,
+.dx-question table[data-borders="GRID"] th {
+  border: 1px solid var(--dx-ink);
+}
+.dx-question table[data-borders="GRID"] th {
+  font-weight: 600;
+}
+.dx-question table .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--dx-accent) 16%, transparent);
+  content: "";
+  pointer-events: none;
+}
