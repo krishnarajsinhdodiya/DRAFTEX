@@ -334,6 +334,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-15 · Worst-case data for tables: tests/break-ui/worst-tables.ts (10 × 30 filled, a 400-character cell with a 60-letter word, header and row merges, widths that do not add up) at 1366/900/375 px. Found and fixed: one letter per line at 375 px, Columns popover 163 px below a phone screen, opaque selection hiding merged-cell text. Admin navigation still scrolls sideways on a phone (carried) · /break-ui
 - 2026-11-15 · New visual baselines `tables` and `key-tables` come from the CI ubuntu job (D4), blocked by billing like `code`/`key-code`; both compile with zero warnings on the Mac and were checked by eye · CI blocked
 - 2026-11-15 · Performance after Phase 14 (same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (196 over the 16 ms floor); warm preview p50 429 ms, max 469 ms · targets met
+- 2026-11-15 · D118: Phase 14 merges to main on local gates only (lint, typecheck, format, unit 1328, golden 114, e2e 65, hygiene green on the Mac), as D117 did for Phase 13: GitHub Actions is still blocked by billing. Windows is checked on the end user's laptop; ubuntu baselines for `tables`/`key-tables` follow once Actions runs. Applies to Phase 14 only · owner: "Merge on local gates"
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
