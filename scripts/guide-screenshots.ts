@@ -102,6 +102,8 @@ await expect(field).toBeFocused();
 await page.keyboard.type("x^2");
 await page.keyboard.press("ArrowRight");
 await page.keyboard.type("+2x+1");
+// Enter only once MathLive holds every typed key (see make-upgrade-fixture.ts).
+await expect.poll(() => field.evaluate((el) => (el as HTMLInputElement).value)).toBe("x^2+2x+1");
 await page.keyboard.press("Enter");
 await expect(field).toBeHidden();
 await page.keyboard.type(" and explain each step.");

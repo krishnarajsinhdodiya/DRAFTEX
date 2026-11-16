@@ -24,6 +24,7 @@ const out = path.join(root, "tests", "fixtures", "upgrade");
 // Invented account; the password is written in tests/fixtures/upgrade/README.md.
 const ADMIN = { name: "Upgrade Admin", email: "upgrade@example.test", password: "upgrade fixture" };
 const PAPER = "Upgrade Example Paper";
+const PRACTICAL = "Upgrade Practical Paper";
 const TEMPLATE = "Upgrade Example Template";
 
 const browser = await chromium.launch();
@@ -38,6 +39,8 @@ await page.getByLabel("Type the password again").fill(ADMIN.password);
 await page.getByRole("button", { name: "Create administrator" }).click();
 await page.getByRole("heading", { name: `Welcome, ${ADMIN.name}` }).waitFor();
 const advanced = tag !== "v0.8.0" && tag !== "v0.10.0";
+// Blueprints arrived in v0.15.0 (Phase 15).
+const blueprints = !["v0.8.0", "v0.10.0", "v0.11.0", "v0.14.0"].includes(tag);
 
 if (advanced) {
   // v0.11.0: a block of Advanced LaTeX written before Phase 12 must compile the same after it.
@@ -110,6 +113,9 @@ await expect(field).toBeFocused();
 await page.keyboard.type("x^2");
 await page.keyboard.press("ArrowRight");
 await page.keyboard.type("+2x+1");
+// Enter only once MathLive holds every typed key: pressed straight after typing,
+// it was sometimes lost and the field stayed open (likely cause of the flake).
+await expect.poll(() => field.evaluate((el) => (el as HTMLInputElement).value)).toBe("x^2+2x+1");
 await page.keyboard.press("Enter");
 await expect(field).toBeHidden();
 await page.keyboard.type(" and explain each step.");
@@ -182,6 +188,50 @@ const pdfOf = (name: string) => {
   return entry[1];
 };
 
+// v0.15.0 and later: a Practical sessional paper and a Sessional blueprint, so the
+// upgrade covers the D131 rename and the D134 blueprint mapping.
+let practicalPdf: Uint8Array | undefined;
+if (blueprints) {
+  await page.goto("/blueprints/new");
+  await page.getByLabel("Course code").fill("BP604T");
+  await page.getByLabel("Exam group").selectOption({ label: "Sessional" });
+  await page.getByLabel("CO 1", { exact: true }).fill("BP604T.01");
+  await page.getByLabel("Target for CO 1 (marks)").fill("10");
+  await page.getByRole("button", { name: "Save blueprint" }).click();
+  await page.getByText("Blueprint saved.").waitFor();
+
+  await page.goto("/templates");
+  await page
+    .getByRole("link", { name: /Practical · Sessional \(10\)/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "New paper" }).click();
+  const pd = page.getByRole("dialog", { name: "New paper" });
+  await pd.getByLabel("Title", { exact: true }).fill(PRACTICAL);
+  await pd.getByLabel("Course code").fill("BP610P");
+  await pd.getByRole("button", { name: "Create paper" }).click();
+  await page.waitForURL(/\/papers\/[0-9a-f-]{36}$/);
+  await page.getByRole("img", { name: /page 1 of/ }).waitFor({ timeout: 120_000 });
+  await page
+    .getByRole("button", { name: /^Write Q\./ })
+    .first()
+    .click();
+  await page.keyboard.type("Prepare an invented buffer solution and report its pH.");
+  await page
+    .getByRole("status")
+    .filter({ hasText: "All changes saved" })
+    .waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Export" }).click();
+  const pdl = page.waitForEvent("download");
+  await page
+    .getByRole("dialog", { name: "Export with these gaps?" })
+    .getByRole("button", { name: "Export anyway" })
+    .click();
+  const pzip = unzipSync(fs.readFileSync(await (await pdl).path()));
+  practicalPdf = Object.entries(pzip).find(([n]) => n.endsWith("/paper.pdf"))?.[1];
+  if (!practicalPdf) throw new Error("paper.pdf missing from the practical export");
+}
+
 // A backup, made the way an administrator does.
 await page.goto("/admin/backups");
 await page.getByRole("button", { name: "Back up now" }).click();
@@ -199,4 +249,5 @@ fs.mkdirSync(out, { recursive: true });
 fs.copyFileSync(path.join(backups, newest.n), path.join(out, `${tag}-backup.zip`));
 fs.writeFileSync(path.join(out, `${tag}-paper.pdf`), pdfOf("paper.pdf"));
 fs.writeFileSync(path.join(out, `${tag}-key.pdf`), pdfOf("key.pdf"));
+if (practicalPdf) fs.writeFileSync(path.join(out, `${tag}-practical.pdf`), practicalPdf);
 console.log(`tests/fixtures/upgrade/${tag}-backup.zip, -paper.pdf, -key.pdf`);
