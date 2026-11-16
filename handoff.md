@@ -18,11 +18,11 @@ no chat history must be able to continue from this file alone.
 - Equation flake in fixture/guide scripts: wait for the field value before Enter (likely cause).
 
 ## In progress
-- Phase 16 code has not started beyond the seed. Next is D112/D126 FTS5.
+- FTS5 migration `20261117090000_question_search` done (index + triggers + fill, unit test). Next: `src/lib/bank/search.ts`.
 
 ## Next steps
 1. Session start per the operating rules.
-2. FTS5 migration (D125/D126): `CREATE VIRTUAL TABLE question_fts USING fts5(question_id UNINDEXED, body, tokenize='trigram remove_diacritics 1')` (or separate columns); body = searchText + answer text (`json_tree(answerKey)` where key='text') + tags (`json_each`) + courseCode + courseTitle + coTag; insert/update/delete triggers on "Question"; fill from existing rows in the migration. Do not rely on Question's rowid (it is a TEXT primary key table; rowid may change on VACUUM).
+2. Done: FTS5 migration (see memory.md D126 as built). Trigram folds non-ASCII case too (`CAFÉ` found by `café`/`cafe`, `Ω` by `ω`; probed).
 3. `src/lib/bank/search.ts` (pure): query → safe MATCH string (D127), queries under 3 characters → `instr()`; cursor encode/decode with Zod (D130). Unit tests: hostile input, `%` `_`, emoji, non-Latin, 100 characters.
 4. Rewrite `bank.list` as one raw SQL (visibility D73 with EXISTS on BankCourseShare, Trash, filters, MATCH, ORDER BY COALESCE(updatedAt, createdAt) DESC, id DESC, LIMIT 51), then load those ≤ 50 rows with Prisma. Compare with the old JS filter on the seed for plain words in question text and tags. Update `/bank` screen and picker to Older/Newer links; papers list keyset too (D59 URL filters stay).
 5. D114 near-duplicates; worst-search break-ui; guide section + screenshots; performance after; D115 after figures; restore/backup index checks (an index built by migration on restore; v0.16.0 backup restores with a working index).
