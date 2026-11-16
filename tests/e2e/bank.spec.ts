@@ -259,7 +259,7 @@ test("Possible duplicates lists the user's own alike questions (D114)", async ({
   await expect(page.getByRole("heading", { name: "Possible duplicates" })).toBeVisible();
   const pairs = page.getByRole("list", { name: "Possible duplicates" }).getByRole("listitem");
   await expect(pairs.first()).toContainText("XX616T");
-  await expect(page.getByText(/pairs, showing the 200 most alike/)).toBeVisible();
+  await expect(page.getByText(/pairs, showing the 50 most alike/)).toBeVisible();
   await pairs.first().getByRole("link").first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Question" })).toBeVisible();
   await expect(

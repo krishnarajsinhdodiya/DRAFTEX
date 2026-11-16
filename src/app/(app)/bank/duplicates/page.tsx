@@ -9,7 +9,8 @@ import { requireUser } from "@/server/auth";
 export const metadata: Metadata = { title: "Possible duplicates · DRAFTEX" };
 
 /** Pairs shown on one screen; the most similar come first. */
-const SHOWN = 200;
+// 200 made the page 55,000 px tall on a phone (/break-ui).
+const SHOWN = 50;
 
 // D114: pairs of the user's own questions (same course, not in Trash) that
 // read almost the same. Never colleagues' questions, for anyone (D73).
@@ -59,7 +60,7 @@ export default async function DuplicatesPage() {
                   <Link
                     key={q.id}
                     href={`/bank/${q.id}`}
-                    className="min-w-0 font-paper break-words text-ink underline-offset-2 hover:underline"
+                    className="min-w-0 font-paper wrap-anywhere text-ink underline-offset-2 hover:underline"
                   >
                     {q.summary || "Untitled question"}
                   </Link>

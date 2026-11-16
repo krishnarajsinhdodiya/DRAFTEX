@@ -79,10 +79,13 @@ export interface AddReport {
   skipped: SkipRow[];
 }
 
-/** One line of a question for lists and messages. */
+/**
+ * A question for near-duplicate lists: long enough that alike questions show
+ * where they differ (120 characters cut most templates before it, /break-ui).
+ */
 function summaryOf(text: string): string {
   const one = text.replace(/\s+/g, " ").trim();
-  return one.length > 120 ? `${one.slice(0, 119)}…` : one;
+  return one.length > 240 ? `${one.slice(0, 239)}…` : one;
 }
 
 function json(value: unknown): Prisma.InputJsonValue {
