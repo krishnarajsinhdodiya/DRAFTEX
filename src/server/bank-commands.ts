@@ -54,6 +54,8 @@ export interface SaveResult {
   warnings: string[];
   /** The actor's own questions with the same text in this course (D76); Trash included. */
   duplicates: number;
+  /** The actor's own questions in this course that read almost the same (D114). */
+  similar: { id: string; score: number; summary: string }[];
 }
 
 /** A course the bank form can suggest (D85): code, title, programme, COs and units. */
@@ -105,6 +107,7 @@ export function bankCommands(data: DataLayer, actor: Actor) {
           version: r.question.version,
           warnings: r.warnings,
           duplicates: r.duplicates.length,
+          similar: r.similar,
         };
       });
     },

@@ -86,6 +86,9 @@ export default async function BankPage({
               <Trash2 size={15} aria-hidden /> Trash ({trash.length})
             </Link>
           ) : null}
+          <Link href="/bank/duplicates" className={buttonStyles.quiet}>
+            Possible duplicates
+          </Link>
           <Link href="/bank/import" className={buttonStyles.secondary}>
             <FileUp size={16} aria-hidden /> Import CSV
           </Link>

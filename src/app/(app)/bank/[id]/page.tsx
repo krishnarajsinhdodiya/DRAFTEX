@@ -14,6 +14,7 @@ import { bankCommands } from "@/server/bank-commands";
 import { QuestionForm } from "../question-form";
 import { CopyButton, TrashQuestionButton } from "./buttons";
 import { OwnerBadge } from "../bank-list";
+import { SimilarNote } from "../similar-note";
 
 export const metadata: Metadata = { title: "Question · DRAFTEX" };
 
@@ -133,13 +134,16 @@ export default async function QuestionPage({
         <TrashQuestionButton id={q.id} />
       </div>
       {justSaved ? (
-        <FormAlert kind={q.warnings.length || q.duplicates ? "caution" : "notice"}>
+        <FormAlert
+          kind={q.warnings.length || q.duplicates || q.similar.length ? "caution" : "notice"}
+        >
           Saved. The question is in your bank.
           {q.duplicates
             ? ` You already have ${q.duplicates === 1 ? "a question" : `${q.duplicates} questions`} with the same text in this course (Trash included).`
             : ""}
         </FormAlert>
       ) : null}
+      <SimilarNote items={q.similar} />
       {q.warnings.length ? (
         <ul className="-mb-2 list-disc pl-5 text-small text-caution">
           {q.warnings.map((w) => (

@@ -1,7 +1,6 @@
 // Bank search terms (Phase 16; D125, D127). Pure. Nothing the user types ever reaches FTS5 as syntax:
 // each word becomes one quoted phrase (inner quotes doubled), and words too
 // short for the trigram index are matched with instr() on the indexed text.
-import { z } from "zod";
 
 export const SEARCH_MAX_CHARS = 100;
 export const SEARCH_MAX_WORDS = 8;

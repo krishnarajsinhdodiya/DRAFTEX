@@ -251,3 +251,23 @@ test("the bank shows 50 questions a page with Older and Newer links (D130)", asy
   await expect(items).toHaveCount(50);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test("Possible duplicates lists the user's own alike questions (D114)", async ({ browser }) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto("/bank");
+  await page.getByRole("link", { name: "Possible duplicates" }).click();
+  await expect(page.getByRole("heading", { name: "Possible duplicates" })).toBeVisible();
+  const pairs = page.getByRole("list", { name: "Possible duplicates" }).getByRole("listitem");
+  await expect(pairs.first()).toContainText("XX616T");
+  await expect(page.getByText(/pairs, showing the 200 most alike/)).toBeVisible();
+  await pairs.first().getByRole("link").first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Question" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Questions that read almost the same" }),
+  ).toBeVisible();
+
+  // A colleague sees none of them.
+  const other = await asUser(browser, ADMIN, ADMIN.password);
+  await other.goto("/bank/duplicates");
+  await expect(other.getByText("XX616T")).toHaveCount(0);
+});

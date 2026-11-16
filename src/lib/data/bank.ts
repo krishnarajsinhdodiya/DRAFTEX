@@ -30,6 +30,7 @@ import { type Doc, docSchema } from "@/lib/paper/schema";
 import { keyCriteriaSchema } from "@/lib/paper/key";
 import { CO_TAG_RE, CO_TAG_SEP } from "@/lib/paper/co-tag";
 import { searchTerms } from "@/lib/bank/search";
+import { similarPairs, similarTo } from "@/lib/bank/similar";
 import { decodeCursor, encodeCursor, msSql, PAGE_SIZE, pageRequestSchema } from "@/lib/paging";
 import type { Actor } from "./actor";
 import { assertOwnsAssets, shareAssets } from "./assets";
@@ -76,6 +77,12 @@ export interface AddReport {
   /** Added questions; `warning` names a CO or unit outside the syllabus lists (D85). */
   added: { label: string; id: string; warning?: string }[];
   skipped: SkipRow[];
+}
+
+/** One line of a question for lists and messages. */
+function summaryOf(text: string): string {
+  const one = text.replace(/\s+/g, " ").trim();
+  return one.length > 120 ? `${one.slice(0, 119)}…` : one;
 }
 
 function json(value: unknown): Prisma.InputJsonValue {
@@ -194,6 +201,29 @@ export function bank(db: Db) {
       where: { ownerId: actor.userId, courseCode, dupKey, ...(except && { id: { not: except } }) },
       select: { id: true, deletedAt: true },
     });
+  }
+
+  /**
+   * The actor's own questions in this course (not in Trash) that read almost
+   * the same as `text` (D114), most similar first, with a one-line summary.
+   * Never colleagues' questions (D73).
+   */
+  async function similarOf(actor: Actor, courseCode: string | null, text: string, except?: string) {
+    if (!courseCode) return [];
+    const own = await db.question.findMany({
+      where: {
+        ownerId: actor.userId,
+        courseCode,
+        deletedAt: null,
+        ...(except && { id: { not: except } }),
+      },
+      select: { id: true, searchText: true },
+    });
+    const byId = new Map(own.map((q) => [q.id, q.searchText ?? ""]));
+    return similarTo(
+      text,
+      own.map((q) => ({ id: q.id, text: q.searchText ?? "" })),
+    ).map((x) => ({ ...x, summary: summaryOf(byId.get(x.id) ?? "") }));
   }
 
   /**
@@ -365,6 +395,56 @@ export function bank(db: Db) {
       };
     },
 
+    /**
+     * Possible duplicates in the actor's own bank (D114): pairs of questions
+     * in the same course, not in Trash, that read almost the same, most
+     * similar first. Only the actor's own questions, never colleagues'.
+     */
+    async possibleDuplicates(actor: Actor) {
+      const own = await db.question.findMany({
+        where: { ownerId: actor.userId, deletedAt: null, courseCode: { not: null } },
+        select: { id: true, courseCode: true, searchText: true },
+      });
+      const byCourse = new Map<string, { id: string; text: string }[]>();
+      for (const q of own) {
+        const list = byCourse.get(q.courseCode ?? "") ?? [];
+        list.push({ id: q.id, text: q.searchText ?? "" });
+        byCourse.set(q.courseCode ?? "", list);
+      }
+      const text = new Map(own.map((q) => [q.id, q.searchText ?? ""]));
+      const out: {
+        courseCode: string;
+        score: number;
+        a: { id: string; summary: string };
+        b: { id: string; summary: string };
+      }[] = [];
+      for (const [courseCode, items] of byCourse) {
+        for (const p of similarPairs(items)) {
+          out.push({
+            courseCode,
+            score: p.score,
+            a: { id: p.a, summary: summaryOf(text.get(p.a) ?? "") },
+            b: { id: p.b, summary: summaryOf(text.get(p.b) ?? "") },
+          });
+        }
+      }
+      return out.sort(
+        (x, y) =>
+          y.score - x.score ||
+          x.courseCode.localeCompare(y.courseCode) ||
+          (x.a.id < y.a.id ? -1 : 1),
+      );
+    },
+
+    /** The actor's own questions of a course (not in Trash), for the CSV near-duplicate check. */
+    async ownTexts(actor: Actor, courseCode: string) {
+      const rows = await db.question.findMany({
+        where: { ownerId: actor.userId, courseCode, deletedAt: null },
+        select: { id: true, searchText: true },
+      });
+      return rows.map((r) => ({ id: r.id, text: r.searchText ?? "" }));
+    },
+
     /** What the bank filters can offer: courses and COs of the questions the actor can see. */
     async filterOptions(actor: Actor) {
       const visible = await visibleWhere(actor);
@@ -401,10 +481,16 @@ export function bank(db: Db) {
         q.ownerId === actor.userId && q.courseCode && q.dupKey
           ? (await duplicatesOf(actor, q.courseCode, q.dupKey, q.id)).length
           : 0;
+      const similar =
+        q.ownerId === actor.userId && q.deletedAt === null
+          ? await similarOf(actor, q.courseCode, q.searchText ?? "", q.id)
+          : [];
       return {
         ...shape(q),
         /** The author's other questions with the same text in this course, Trash included (D76). */
         duplicates,
+        /** The author's questions that read almost the same (D114); empty for others. */
+        similar,
         /** A CO or unit outside the syllabus lists (D85), shown as a note. */
         warnings: q.coTag
           ? bankCheck(
@@ -440,7 +526,8 @@ export function bank(db: Db) {
       });
       await audit(actor, "create", q.id);
       const duplicates = await duplicatesOf(actor, f.courseCode, cols.dupKey, q.id);
-      return { question: shape(q), duplicates, warnings };
+      const similar = await similarOf(actor, f.courseCode, cols.searchText, q.id);
+      return { question: shape(q), duplicates, similar, warnings };
     },
 
     async update(actor: Actor, id: string, version: number, input: BankFieldsInput) {
@@ -454,7 +541,8 @@ export function bank(db: Db) {
       if (count === 0) throw new ConflictError(STALE_VERSION);
       await audit(actor, "update", id);
       const duplicates = await duplicatesOf(actor, f.courseCode, cols.dupKey, id);
-      return { question: shape(await findOwn(actor, id)), duplicates, warnings };
+      const similar = await similarOf(actor, f.courseCode, cols.searchText, id);
+      return { question: shape(await findOwn(actor, id)), duplicates, similar, warnings };
     },
 
     /** Private or shared with every colleague (D73); the author only. */
