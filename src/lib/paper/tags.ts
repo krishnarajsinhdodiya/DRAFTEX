@@ -2,6 +2,7 @@
 // sub-part marks check, the export warnings and the summary panel (Phase 10,
 // D65-D69). Pure and client-safe.
 import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "./bloom.ts";
+import { splitCoTags } from "./co-tag.ts";
 import { marksNumber, sameMarks } from "./key.ts";
 import type { Doc, SubPartAttrs } from "./schema.ts";
 
@@ -78,7 +79,10 @@ export function tagSummary(questions: TaggedQuestion[]): TagSummary {
   const count = (b: Bloom | null, c: string | null, marks: number) => {
     items++;
     add(bloom, b ?? "", b ? BLOOM_LABEL[b] : "No level", marks);
-    add(co, c ?? "", c ?? "No CO", marks);
+    // Two COs share the marks equally and each counts the question (D121).
+    const tags = splitCoTags(c);
+    if (!tags.length) add(co, "", "No CO", marks);
+    for (const t of tags) add(co, t, t, marks / tags.length);
   };
   for (const q of questions) {
     if (q.content.content.length === 0) continue;

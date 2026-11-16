@@ -20,6 +20,7 @@ import {
   type TableNode,
 } from "../paper/schema.ts";
 import { type Bloom, bloomPrinted } from "../paper/bloom.ts";
+import { splitCoTags } from "../paper/co-tag.ts";
 import type { SlotRange } from "./compile.ts";
 import { type GroupNumbers, questionNumbers } from "../paper/numbering.ts";
 import {
@@ -697,7 +698,10 @@ interface TailParts {
 }
 
 /** A CO tag never splits at its suffix space (`BP607T.01~AEC1`, D63). */
-const coPrint = (tag: string) => tag.replace(/ /g, "~");
+const coPrint = (tag: string) =>
+  splitCoTags(tag)
+    .map((t) => t.replace(/ /g, "~"))
+    .join(",~");
 
 /**
  * Inside a grouped Advanced LaTeX block (D103) the tail is set at normal size

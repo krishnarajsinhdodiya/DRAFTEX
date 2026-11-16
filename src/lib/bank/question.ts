@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { unprintableCode } from "../latex/code.ts";
 import { escapeText, describeChar } from "../latex/escape.ts";
-import { coTag } from "../paper/co-tag.ts";
+import { coTag, splitCoTags } from "../paper/co-tag.ts";
 import { keyCriteriaSchema } from "../paper/key.ts";
 import { type Doc, bloomSchema, coTagSchema, docSchema, groupSchema } from "../paper/schema.ts";
 
@@ -90,7 +90,18 @@ export function courseCoTags(course: Pick<BankCourse, "code" | "outcomes">): str
  * the syllabus lists for the code, or (with no list) not the code plus a
  * number. Never an error: syllabi change and the user's own tag wins.
  */
-export function coNote(tag: string, course: Pick<BankCourse, "code" | "outcomes">): string | null {
+export function coNote(
+  value: string,
+  course: Pick<BankCourse, "code" | "outcomes">,
+): string | null {
+  const notes = splitCoTags(value).flatMap((t) => {
+    const n = oneCoNote(t, course);
+    return n ? [n] : [];
+  });
+  return notes.length ? notes.join(" ") : null;
+}
+
+function oneCoNote(tag: string, course: Pick<BankCourse, "code" | "outcomes">): string | null {
   if (course.outcomes.length > 0) {
     return courseCoTags(course).includes(tag)
       ? null

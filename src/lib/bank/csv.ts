@@ -6,7 +6,7 @@
 // and duplicates (src/server/bank-import.ts).
 import { describeChar, escapeText } from "../latex/escape.ts";
 import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "../paper/bloom.ts";
-import { coTag } from "../paper/co-tag.ts";
+import { CO_TAG_SEP, coTag } from "../paper/co-tag.ts";
 import type { Doc } from "../paper/schema.ts";
 import { GROUP_TYPE_LABEL } from "../templates/labels.ts";
 import type { BANK_PROGRAMS } from "./question.ts";
@@ -28,6 +28,8 @@ export const CSV_COLUMNS = [
   { key: "courseCode", header: "course code", required: true, long: false },
   { key: "unit", header: "unit", required: true, long: false },
   { key: "co", header: "co", required: true, long: false },
+  /** A second CO (D123); optional, so files made before Phase 15 still import. */
+  { key: "co2", header: "co 2", required: false, long: false },
   { key: "bloom", header: "bloom", required: true, long: false },
   { key: "marks", header: "marks", required: true, long: false },
   { key: "type", header: "type", required: true, long: false },
@@ -303,6 +305,9 @@ export function rowToInput(cells: CsvRow, row: number): RowResult {
 
   const co = v.co ? coCell(v.co, courseCode) : "";
   if (!co && !failed.has("co")) errors.push("co is empty.");
+  const co2 = v.co2 ? coCell(v.co2, courseCode) : "";
+  if (co2 && co2 === co) errors.push(`co 2 "${v.co2}" is the same CO as co.`);
+  if (co2 && !co) errors.push("co 2 is filled but co is empty.");
 
   const bloom = v.bloom ? BLOOM_BY_NAME.get(v.bloom.toLowerCase()) : undefined;
   if (!v.bloom) {
@@ -388,7 +393,7 @@ export function rowToInput(cells: CsvRow, row: number): RowResult {
       courseTitle: v.courseTitle ?? "",
       program,
       unit,
-      coTag: co,
+      coTag: co2 ? `${co}${CO_TAG_SEP}${co2}` : co,
       bloomLevel: bloom as Bloom,
       marks,
       type: type as BankType,
