@@ -1,5 +1,5 @@
 "use client";
-// Blueprint editor (Phase 15, D108): course code, exam group, marks or
+// Blueprint editor (Phase 15, D108): course code, exam (D134), marks or
 // percent, tolerance, and one target per CO. The same Zod rules as the data
 // layer run as the user types, so a save never surprises.
 import { Plus, Trash2 } from "lucide-react";
@@ -9,13 +9,14 @@ import { FormAlert } from "@/components/form";
 import { buttonStyles, eyebrowStyles, inputStyles, sheetStyles } from "@/components/styles";
 import { BLUEPRINT_MAX_TARGETS, blueprintFieldsSchema } from "@/lib/blueprint/schema";
 import { cleanCoTagInput, CO_TAG_MAX } from "@/lib/paper/co-tag";
-import { EXAM_GROUP_KEYS, EXAM_GROUPS, type ExamGroup, marksText } from "@/lib/templates/labels";
+import type { ExamKind } from "@/generated/prisma/enums";
+import { EXAM_KIND_LABEL, EXAM_KINDS, marksText } from "@/lib/templates/labels";
 import { saveBlueprintAction } from "@/server/blueprint-actions";
 import type { BlueprintCourse } from "@/server/blueprint-commands";
 
 export interface BlueprintFormValues {
   courseCode: string;
-  examGroup: ExamGroup;
+  examKind: ExamKind;
   unit: "MARKS" | "PERCENT";
   tolerance: number;
   targets: { co: string; target: number | null }[];
@@ -23,7 +24,7 @@ export interface BlueprintFormValues {
 
 export const NEW_BLUEPRINT: BlueprintFormValues = {
   courseCode: "",
-  examGroup: "SESSIONAL",
+  examKind: "SESSIONAL_1",
   unit: "MARKS",
   tolerance: 1,
   targets: [{ co: "", target: null }],
@@ -112,15 +113,15 @@ export function BlueprintForm({
           ) : null}
         </label>
         <label className={label}>
-          Exam group
+          Exam
           <select
-            value={v.examGroup}
-            onChange={(e) => set({ examGroup: e.target.value as ExamGroup })}
+            value={v.examKind}
+            onChange={(e) => set({ examKind: e.target.value as ExamKind })}
             className={`${inputStyles} w-full`}
           >
-            {EXAM_GROUP_KEYS.map((g) => (
+            {EXAM_KINDS.map((g) => (
               <option key={g} value={g}>
-                {EXAM_GROUPS[g].label}
+                {EXAM_KIND_LABEL[g]}
               </option>
             ))}
           </select>
@@ -246,8 +247,8 @@ export function BlueprintForm({
         </button>
       </div>
       <p className="text-caption text-ink-3">
-        The paper editor compares each paper of this course and exam group with these targets. It
-        never blocks an export and prints nothing.
+        The paper editor compares each paper of this course and exam with these targets. It never
+        blocks an export and prints nothing.
       </p>
     </form>
   );

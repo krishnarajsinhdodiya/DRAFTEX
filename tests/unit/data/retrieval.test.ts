@@ -46,7 +46,7 @@ describe("search and filters (D59)", () => {
     const s = await paper({ examKind: "SESSIONAL_IMPROVEMENT", academicYear: "2030-31" });
     const y = await paper({ examKind: "YEAR_END", academicYear: "2030-31" });
     const k = await paper({ examKind: "SUPPLEMENTARY_ATKT", academicYear: "2031-32" });
-    const p = await paper({ examKind: "PRACTICAL_SESSIONAL", academicYear: "2031-32" });
+    const p = await paper({ examKind: "PRACTICAL_SESSIONAL_1", academicYear: "2031-32" });
     const o = await paper({ examKind: "SYNOPSIS", academicYear: "2031-32" });
     const ids = async (f: object) => (await t.data.papers.list(me, f)).map((x) => x.id);
     expect(await ids({ group: "SESSIONAL", year: "2030-31" })).toEqual([s.id]);

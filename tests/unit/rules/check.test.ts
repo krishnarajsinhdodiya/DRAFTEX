@@ -358,9 +358,10 @@ describe("checkTemplate: practical warnings", () => {
       g("minor", "PRACTICAL_PERFORM", 1, 1, 2),
       g("viva", "VIVA", 1, 1, 2),
     );
-    expect(
-      checkTemplate(st, pMeta({ examKind: "PRACTICAL_SESSIONAL", maxMarks: 10 }), rules).pci,
-    ).toBe("COMPLIANT");
+    // D132: both practical sessionals use the practical sessional pattern.
+    for (const examKind of ["PRACTICAL_SESSIONAL_1", "PRACTICAL_SESSIONAL_2"] as const) {
+      expect(checkTemplate(st, pMeta({ examKind, maxMarks: 10 }), rules).pci).toBe("COMPLIANT");
+    }
     expect(checkTemplate(st, pMeta({ examKind: "SESSIONAL_2", maxMarks: 10 }), rules).pci).toBe(
       "COMPLIANT",
     );
@@ -375,7 +376,7 @@ describe("checkTemplate: practical warnings", () => {
     expect(
       checkTemplate(
         pEnd(),
-        pMeta({ credits: 3, examKind: "PRACTICAL_SESSIONAL", maxMarks: 30 }),
+        pMeta({ credits: 3, examKind: "PRACTICAL_SESSIONAL_1", maxMarks: 30 }),
         rules,
       ).warnings[0],
     ).toEqual({

@@ -12,21 +12,40 @@ export const EXAM_KIND_LABEL: Record<ExamKind, string> = {
   SESSIONAL_1: "Sessional 1",
   SESSIONAL_2: "Sessional 2",
   SESSIONAL_IMPROVEMENT: "Sessional improvement",
+  PRACTICAL_SESSIONAL_1: "Practical sessional 1",
+  PRACTICAL_SESSIONAL_2: "Practical sessional 2",
+  PRACTICAL_END: "Practical end-semester",
   END_SEMESTER: "End-semester",
   YEAR_END: "Year-end",
   SUPPLEMENTARY_ATKT: "Supplementary (ATKT)",
-  PRACTICAL_SESSIONAL: "Practical sessional",
-  PRACTICAL_END: "Practical end-semester",
   SYNOPSIS: "Synopsis",
-  CUSTOM: "Other",
+  CUSTOM: "Custom",
 };
+
+/** The exams in the order the forms list them (D135). */
+export const EXAM_KINDS = [
+  "SESSIONAL_1",
+  "SESSIONAL_2",
+  "SESSIONAL_IMPROVEMENT",
+  "PRACTICAL_SESSIONAL_1",
+  "PRACTICAL_SESSIONAL_2",
+  "PRACTICAL_END",
+  "END_SEMESTER",
+  "YEAR_END",
+  "SUPPLEMENTARY_ATKT",
+  "SYNOPSIS",
+  "CUSTOM",
+] as const satisfies readonly ExamKind[];
 
 /** Filter groups on the Papers list (D59): one table, every ExamKind in exactly one group. */
 export const EXAM_GROUPS = {
   SESSIONAL: { label: "Sessional", kinds: ["SESSIONAL_1", "SESSIONAL_2", "SESSIONAL_IMPROVEMENT"] },
   END_SEMESTER: { label: "End-semester", kinds: ["END_SEMESTER", "YEAR_END"] },
   ATKT: { label: "ATKT", kinds: ["SUPPLEMENTARY_ATKT"] },
-  PRACTICAL: { label: "Practical", kinds: ["PRACTICAL_SESSIONAL", "PRACTICAL_END"] },
+  PRACTICAL: {
+    label: "Practical",
+    kinds: ["PRACTICAL_SESSIONAL_1", "PRACTICAL_SESSIONAL_2", "PRACTICAL_END"],
+  },
   OTHER: { label: "Other", kinds: ["SYNOPSIS", "CUSTOM"] },
 } as const satisfies Record<string, { label: string; kinds: readonly ExamKind[] }>;
 export type ExamGroup = keyof typeof EXAM_GROUPS;
@@ -55,7 +74,9 @@ export const EXAM_TITLE: Record<ExamKind, string> = {
   END_SEMESTER: "Semester End Examination",
   YEAR_END: "Year End Examination",
   SUPPLEMENTARY_ATKT: "Supplementary Examination",
-  PRACTICAL_SESSIONAL: "Practical Sessional Examination",
+  // D136: kept as before until the owner accepts "... Examination I" on old papers.
+  PRACTICAL_SESSIONAL_1: "Practical Sessional Examination",
+  PRACTICAL_SESSIONAL_2: "Practical Sessional Examination II",
   PRACTICAL_END: "Semester End Practical Examination",
   SYNOPSIS: "Semester End Practical Exam",
   CUSTOM: "Examination",

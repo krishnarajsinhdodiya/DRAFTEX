@@ -176,7 +176,8 @@ function route(meta: CheckMeta, ruleSet: RuleSet | null): Route {
     };
   }
   switch (meta.examKind) {
-    case "PRACTICAL_SESSIONAL":
+    case "PRACTICAL_SESSIONAL_1":
+    case "PRACTICAL_SESSIONAL_2":
       return { kind: "practical", stage: "SESSIONAL" };
     case "PRACTICAL_END":
       return { kind: "practical", stage: "END_SEMESTER" };

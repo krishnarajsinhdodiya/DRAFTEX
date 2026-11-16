@@ -3,7 +3,7 @@ import Link from "next/link";
 import { buttonStyles, linkStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
 import { actorOf } from "@/lib/auth/service";
 import { getData } from "@/lib/data";
-import { EXAM_GROUPS } from "@/lib/templates/labels";
+import { EXAM_KIND_LABEL } from "@/lib/templates/labels";
 import { requireUser } from "@/server/auth";
 import { blueprintCommands } from "@/server/blueprint-commands";
 import { OwnerBadge } from "../bank/bank-list";
@@ -19,7 +19,7 @@ export default async function BlueprintsPage() {
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className={pageTitleStyles}>CO blueprints</h1>
           <p className="text-small text-ink-2">
-            Target marks per CO for a course and exam group. The paper editor shows how each paper
+            Target marks per CO for a course and exam. The paper editor shows how each paper
             compares.
           </p>
         </div>
@@ -38,7 +38,7 @@ export default async function BlueprintsPage() {
                 href={`/blueprints/${b.id}`}
                 className={`${linkStyles} min-w-0 font-medium break-words [overflow-wrap:anywhere]`}
               >
-                {b.courseCode} · {EXAM_GROUPS[b.examGroup].label}
+                {b.courseCode} · {EXAM_KIND_LABEL[b.examKind]}
               </Link>
               <span className="text-small text-ink-2">
                 {b.targets.length} CO{b.targets.length === 1 ? "" : "s"} ·{" "}

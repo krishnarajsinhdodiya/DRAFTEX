@@ -231,7 +231,7 @@ function practical(stage: "SESSIONAL" | "END"): SeedTemplate {
     title: `PCI 2026 · B.Pharm · Practical · ${end ? "End-Semester (30)" : "Sessional (10)"}`,
     description: `${end ? "KSV" : "KBIPER"} practical paper: synopsis, a major and a minor experiment, and viva voce. Set for 4 hours (courses with 4 or more lab hours a week); save a copy and choose 3 hours for the others.`,
     program: "B_PHARM",
-    examKind: end ? "PRACTICAL_END" : "PRACTICAL_SESSIONAL",
+    examKind: end ? "PRACTICAL_END" : "PRACTICAL_SESSIONAL_1",
     courseKind: "PRACTICAL",
     creditTier: 2,
     durationMinutes: 240,

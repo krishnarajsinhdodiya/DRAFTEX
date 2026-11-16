@@ -73,7 +73,7 @@ export interface PaperEditorView {
   coOptions: { value: string; label: string }[];
   pci: { status: PciStatus; warnings: Issue[]; notice?: string };
   courses: { id: string; code: string; title: string; semesterOrYear: number }[];
-  /** The CO blueprint for this course and exam group (D108, D110), or null. */
+  /** The CO blueprint for this course and exam (D108, D134), or null. */
   blueprint: {
     id: string;
     unit: "MARKS" | "PERCENT";

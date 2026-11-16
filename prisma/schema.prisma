@@ -30,7 +30,8 @@ enum ExamKind {
   END_SEMESTER
   YEAR_END
   SUPPLEMENTARY_ATKT
-  PRACTICAL_SESSIONAL
+  PRACTICAL_SESSIONAL_1
+  PRACTICAL_SESSIONAL_2
   PRACTICAL_END
   SYNOPSIS
   CUSTOM
@@ -480,8 +481,8 @@ model Blueprint {
   ownerId    String
   /// Course code as typed on papers (upper case, spaces folded).
   courseCode String
-  /// Exam group key from EXAM_GROUPS (SESSIONAL, END_SEMESTER, ...).
-  examGroup  String
+  /// The exact exam (D134): Sessional 1 and 2 cover different COs.
+  examKind   ExamKind
   /// MARKS or PERCENT: what the targets and tolerance are in.
   unit       String
   /// Allowed difference either side of each target, in `unit`.
@@ -495,6 +496,6 @@ model Blueprint {
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  @@unique([ownerId, courseCode, examGroup])
-  @@index([courseCode, examGroup])
+  @@unique([ownerId, courseCode, examKind])
+  @@index([courseCode, examKind])
 }

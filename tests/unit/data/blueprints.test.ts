@@ -6,7 +6,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Actor } from "@/lib/data";
 import { ConflictError, NotFoundError } from "@/lib/data";
 import { BLUEPRINT_TAKEN } from "@/lib/data/blueprints";
-import { EXAM_GROUPS, examGroupOf } from "@/lib/templates/labels";
+import {
+  EXAM_GROUPS,
+  EXAM_KIND_LABEL,
+  EXAM_KINDS,
+  EXAM_TITLE,
+  examGroupOf,
+} from "@/lib/templates/labels";
 import { ExamKind } from "@/generated/prisma/enums";
 import { createTestDb, type TestDb } from "../../support/db";
 
@@ -18,7 +24,7 @@ let priv: string;
 
 const fields = (over: Record<string, unknown> = {}) => ({
   courseCode: "XX604T",
-  examGroup: "SESSIONAL",
+  examKind: "SESSIONAL_1",
   unit: "MARKS",
   tolerance: 1,
   targets: [
@@ -49,6 +55,19 @@ describe("exam groups", () => {
       expect((EXAM_GROUPS[g].kinds as readonly string[]).includes(k)).toBe(true);
     }
   });
+
+  it("lists the 11 exams of D135, each labelled and titled, practicals in one filter group", () => {
+    expect([...EXAM_KINDS].sort()).toEqual(Object.values(ExamKind).sort());
+    expect(EXAM_KINDS).toHaveLength(11);
+    for (const k of EXAM_KINDS) {
+      expect(EXAM_KIND_LABEL[k]).toBeTruthy();
+      expect(EXAM_TITLE[k]).toBeTruthy();
+    }
+    expect(examGroupOf("PRACTICAL_SESSIONAL_1")).toBe("PRACTICAL");
+    expect(examGroupOf("PRACTICAL_SESSIONAL_2")).toBe("PRACTICAL");
+    // D136: old practical sessional papers keep their printed title.
+    expect(EXAM_TITLE.PRACTICAL_SESSIONAL_1).toBe("Practical Sessional Examination");
+  });
 });
 
 describe("owner", () => {
@@ -61,9 +80,9 @@ describe("owner", () => {
     expect((await t.data.blueprints.list(a)).map((x) => x.id)).toContain(priv);
   });
 
-  it("one per course and exam group", async () => {
+  it("one per course and exact exam", async () => {
     await expect(t.data.blueprints.create(a, fields())).rejects.toThrow(BLUEPRINT_TAKEN);
-    const other = await t.data.blueprints.create(a, fields({ examGroup: "END_SEMESTER" }));
+    const other = await t.data.blueprints.create(a, fields({ examKind: "SESSIONAL_2" }));
     await expect(t.data.blueprints.update(a, other.id, other.version, fields())).rejects.toThrow(
       BLUEPRINT_TAKEN,
     );
@@ -76,8 +95,15 @@ describe("owner", () => {
   });
 
   it("matches a paper by course code (any case) and exam kind", async () => {
-    expect((await t.data.blueprints.match(a, " xx604t ", "SESSIONAL_2"))?.id).toBe(priv);
+    expect((await t.data.blueprints.match(a, " xx604t ", "SESSIONAL_1"))?.id).toBe(priv);
+    // D134: the exact exam, not the D59 group.
+    expect(await t.data.blueprints.match(a, "XX604T", "SESSIONAL_2")).toBeNull();
+    expect(await t.data.blueprints.match(a, "XX604T", "SESSIONAL_IMPROVEMENT")).toBeNull();
     expect(await t.data.blueprints.match(a, "XX604T", "END_SEMESTER")).toBeNull();
+    const p2 = await t.data.blueprints.create(a, fields({ examKind: "PRACTICAL_SESSIONAL_2" }));
+    expect((await t.data.blueprints.match(a, "XX604T", "PRACTICAL_SESSIONAL_2"))?.id).toBe(p2.id);
+    expect(await t.data.blueprints.match(a, "XX604T", "PRACTICAL_SESSIONAL_1")).toBeNull();
+    await t.data.blueprints.remove(a, p2.id);
   });
 });
 
