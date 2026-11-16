@@ -355,6 +355,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-16 · Performance after Phase 15 (same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (294 / 268 over the 16 ms floor); warm preview p50 423 / 425 ms, max 447 / 431 ms. v0.14.0 measured again the same afternoon: 307 over the floor, preview p50 433 ms, so the higher count is the machine's state, not Phase 15 · targets met
 - 2026-11-16 · D124: Phase 15 merges to main on local gates only (lint, typecheck, format, unit 1378, golden 121, e2e 69 with v0.8.0/v0.10.0/v0.11.0/v0.14.0 upgrades, hygiene green on the Mac), as D117/D118 did: GitHub Actions is still blocked by billing. A full CI run follows once Actions runs. Applies to Phase 15 only · owner: "Merge on local gates"
 - 2026-11-16 · Real papers do print two COs on one question, in the form `[A, B]` (one bracket, comma, full tags): D120 confirmed · owner's father via owner
+- 2026-11-16 · Windows check for D124 done: the father's laptop moved from a ZIP copy to a git clone in `C:\DRAFTEX` and runs v0.15.0; two COs and blueprints work, as reported by the owner · owner: "it works"
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)

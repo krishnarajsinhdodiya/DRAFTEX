@@ -23,14 +23,14 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps
 1. Session start per the operating rules.
-2. Done 2026-11-16: Phase 15 merged (D124), v0.15.0 tagged and pushed. Update the father's laptop with `update-windows.bat` and check two COs and Blueprints on Windows (D124 relies on it, as D117/D118 did).
+2. Done 2026-11-16: Phase 15 merged (D124), v0.15.0 tagged; the father's laptop is now a git clone in `C:\DRAFTEX` on v0.15.0 and the owner reports it works. Future updates: `update-windows.bat`.
 3. Owner decision: fix the Bloom overflow when a question's last line is nearly full (see "Logged"); it changes `\dxBloom` in every Bloom paper's LaTeX, so it needs an explicit OK and a byte-identity exception.
 4. When CI runs again: CI on main; ubuntu baselines for `code`, `key-code`, `tables`, `key-tables` from the visual artifact (D4); then the two `fix/` branches.
 5. Then Phase 16 (D112-D115) on `phase/16-bank-search`: measure performance first.
 
 ## Owner tasks (not code)
 - Fix GitHub billing.
-- Carried: delete the copied `draftex.local.json` on the father's laptop or re-clone into `C:\DRAFTEX`; ASCII-only code and the backtick shortcut (his screenshot showed a stray backtick in "`its applications"); roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
+- Carried: delete the old `C:\draftex-main` after a few days; ASCII-only code and the backtick shortcut (his screenshot showed a stray backtick in "`its applications"); roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
 
 ## Failing tests
 - None locally.
