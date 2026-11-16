@@ -476,7 +476,19 @@ export function blocks(nodes: BlockNode[], ctx: BlockContext, tail: Tail = NO_TA
     out.push(s);
     prev = b.type;
   });
-  if (!tailDone && tail.plain) out.push(prev === "codeBlock" ? `\n${tail.plain}` : tail.plain);
+  if (!tailDone && tail.plain) {
+    // Bloom after a table or picture starts its own line (it printed beside a
+    // full-width table and overflowed the page). The kern cancels the space
+    // \dxBloom puts before itself. Without Bloom the output is unchanged.
+    const bloomLine = (prev === "table" || prev === "image") && tail.plain.startsWith("\\dxBloom{");
+    out.push(
+      prev === "codeBlock"
+        ? `\n${tail.plain}`
+        : bloomLine
+          ? `\\par\\noindent\\kern-\\fontdimen2\\font${tail.plain}`
+          : tail.plain,
+    );
+  }
   return out.join("");
 }
 
