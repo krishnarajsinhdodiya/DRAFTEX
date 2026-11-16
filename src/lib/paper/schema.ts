@@ -2,7 +2,7 @@
 // TipTap JSON shape the Phase 5 editor will produce. Zod at the boundary.
 import { z } from "zod";
 import { BLOOM_LEVELS } from "./bloom.ts";
-import { CO_TAG_HINT, CO_TAG_RE } from "./co-tag.ts";
+import { CO_TAGS_HINT, validCoTags } from "./co-tag.ts";
 
 const key = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/, "Keys use letters, digits, - and _ only.");
 const inches = z.number().min(0).max(5);
@@ -167,7 +167,8 @@ export const leafBlockNode = z.discriminatedUnion("type", [...leafBlocks]);
 export type LeafBlockNode = z.infer<typeof leafBlockNode>;
 
 export const bloomSchema = z.enum(BLOOM_LEVELS);
-export const coTagSchema = z.string().regex(CO_TAG_RE, CO_TAG_HINT);
+/** One CO tag or two different ones, `BP604T.01, BP604T.03` (D119). */
+export const coTagSchema = z.string().refine(validCoTags, CO_TAGS_HINT);
 
 /**
  * A sub-part's own marks, CO tag and Bloom level (D65). The editor writes

@@ -247,6 +247,10 @@ has **Print Bloom levels**:
 
 ![Sub-parts with their own marks and Bloom levels, the summary, and the preview](user-guide/13-bloom.png)
 
+**Two COs.** Once a question (or sub-part) has a CO, a second CO box
+appears next to it. Both print in one bracket, `[BP604T.01, BP604T.03]`.
+Leave the second box empty when one CO is enough.
+
 **Bloom and CO summary**, above the questions, counts the questions and
 marks for each Bloom level and each CO. It counts every written question,
 optional ones too, so the marks can add up to more than the paper's total.
@@ -472,6 +476,44 @@ papers (Papers page, **Trash**) and are deleted for good after 30 days.
 Papers that used the question keep their own copy.
 
 ---
+
+### CO blueprints
+
+A **CO blueprint** says how many marks (or what percent of the paper) each
+CO should get, for one course and one kind of exam (Sessional,
+End-semester, ATKT, Practical or Other). It is optional and only advises:
+it never stops an export and prints nothing on the paper.
+
+1. Open **Blueprints** at the top, then **New blueprint**.
+2. Type the course code (suggestions come from the syllabus), choose the
+   exam group, and choose **Marks** or **Percent of the paper**.
+3. Set the **allowed difference**: a CO within this many marks (or percent)
+   of its target counts as fine.
+4. Add a row per CO with its target. **Fill from syllabus** adds every CO of
+   a syllabus course. Percent targets must add up to 100.
+5. **Save blueprint**. Tick **Share with colleagues** to let others use it;
+   they cannot change it.
+
+![A blueprint with three COs](user-guide/21-blueprint.png)
+
+In the paper editor, **Bloom and CO summary** then shows each CO's target,
+the paper's marks and **Under**, **Over** or **Within range**, and updates
+as you type. The **Export** dialog lists the same notes; choose **Export
+anyway** to go ahead.
+
+![The paper against its blueprint](user-guide/22-blueprint-check.png)
+
+How marks are counted:
+
+- A question with two COs gives each CO half its marks.
+- Sub-parts with their own CO count on their own when their marks add up to
+  the question's.
+- In a group like "answer any 5 of 7", each question counts 5/7 of its
+  marks, so the totals match what a student answers.
+- Marks on questions with no CO are shown as **No CO**.
+
+Your own blueprint is used first; if you have none, the most recently
+changed one a colleague shared for the same course and exam group.
 
 ## 9. Templates
 

@@ -28,7 +28,7 @@ import { advancedSnippets, imageShas, onlyKnownSnippets } from "@/lib/paper/cont
 import { questionNumbers } from "@/lib/paper/numbering";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { keyCriteriaSchema } from "@/lib/paper/key";
-import { CO_TAG_RE } from "@/lib/paper/co-tag";
+import { CO_TAG_RE, CO_TAG_SEP } from "@/lib/paper/co-tag";
 import type { Actor } from "./actor";
 import { assertOwnsAssets, shareAssets } from "./assets";
 import { writeAudit } from "./audit";
@@ -269,7 +269,14 @@ export function bank(db: Db) {
             {
               ...(f.course && { courseCode: f.course }),
               ...(f.unit && { unit: f.unit }),
-              ...(f.co && { coTag: f.co }),
+              // Either tag of a two-CO question (D119); tags hold no LIKE wildcards.
+              ...(f.co && {
+                OR: [
+                  { coTag: f.co },
+                  { coTag: { startsWith: f.co + CO_TAG_SEP } },
+                  { coTag: { endsWith: CO_TAG_SEP + f.co } },
+                ],
+              }),
               ...(f.bloom && { bloomLevel: f.bloom }),
               ...(f.marks && { marks: f.marks }),
               ...(f.type && { type: f.type }),

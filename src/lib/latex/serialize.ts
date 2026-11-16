@@ -20,6 +20,7 @@ import {
   type TableNode,
 } from "../paper/schema.ts";
 import { type Bloom, bloomPrinted } from "../paper/bloom.ts";
+import { splitCoTags } from "../paper/co-tag.ts";
 import type { SlotRange } from "./compile.ts";
 import { type GroupNumbers, questionNumbers } from "../paper/numbering.ts";
 import {
@@ -476,7 +477,19 @@ export function blocks(nodes: BlockNode[], ctx: BlockContext, tail: Tail = NO_TA
     out.push(s);
     prev = b.type;
   });
-  if (!tailDone && tail.plain) out.push(prev === "codeBlock" ? `\n${tail.plain}` : tail.plain);
+  if (!tailDone && tail.plain) {
+    // Bloom after a table or picture starts its own line (it printed beside a
+    // full-width table and overflowed the page). The kern cancels the space
+    // \dxBloom puts before itself. Without Bloom the output is unchanged.
+    const bloomLine = (prev === "table" || prev === "image") && tail.plain.startsWith("\\dxBloom{");
+    out.push(
+      prev === "codeBlock"
+        ? `\n${tail.plain}`
+        : bloomLine
+          ? `\\par\\noindent\\kern-\\fontdimen2\\font${tail.plain}`
+          : tail.plain,
+    );
+  }
   return out.join("");
 }
 
@@ -685,7 +698,10 @@ interface TailParts {
 }
 
 /** A CO tag never splits at its suffix space (`BP607T.01~AEC1`, D63). */
-const coPrint = (tag: string) => tag.replace(/ /g, "~");
+const coPrint = (tag: string) =>
+  splitCoTags(tag)
+    .map((t) => t.replace(/ /g, "~"))
+    .join(",~");
 
 /**
  * Inside a grouped Advanced LaTeX block (D103) the tail is set at normal size

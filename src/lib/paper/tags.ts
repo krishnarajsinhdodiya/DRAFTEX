@@ -2,6 +2,7 @@
 // sub-part marks check, the export warnings and the summary panel (Phase 10,
 // D65-D69). Pure and client-safe.
 import { BLOOM_LABEL, BLOOM_LEVELS, type Bloom } from "./bloom.ts";
+import { splitCoTags } from "./co-tag.ts";
 import { marksNumber, sameMarks } from "./key.ts";
 import type { Doc, SubPartAttrs } from "./schema.ts";
 
@@ -44,6 +45,35 @@ export function missingTags(q: TaggedQuestion): { bloom: boolean; co: boolean } 
   };
 }
 
+/** One counted piece of a question: the question itself, or one sub-part when they split it. */
+export interface TagItem {
+  bloom: Bloom | null;
+  /** Stored CO value: null, one tag or two (`A, B`). */
+  co: string | null;
+  marks: number;
+}
+
+/**
+ * The pieces a question counts as (D69): itself, or its sub-parts when they
+ * carry their own values and their marks add up to the question's. An empty
+ * question counts as nothing. Shared by the summary and the blueprint check.
+ */
+export function questionItems(q: TaggedQuestion): TagItem[] {
+  if (q.content.content.length === 0) return [];
+  const parts = subPartAttrs(q.content);
+  const own = parts.some((a) => a?.bloom || a?.coTag);
+  const split =
+    own &&
+    parts.every((a) => typeof a?.marks === "number") &&
+    sameMarks(subPartTotal(parts) ?? 0, q.marks);
+  if (!split) return [{ bloom: q.bloomLevel, co: q.coTag, marks: q.marks }];
+  return parts.map((a) => ({
+    bloom: a?.bloom ?? q.bloomLevel,
+    co: a?.coTag ?? q.coTag,
+    marks: a?.marks as number,
+  }));
+}
+
 export interface SummaryRow {
   /** A Bloom level, a CO tag, or "" for questions without one. */
   key: string;
@@ -78,23 +108,13 @@ export function tagSummary(questions: TaggedQuestion[]): TagSummary {
   const count = (b: Bloom | null, c: string | null, marks: number) => {
     items++;
     add(bloom, b ?? "", b ? BLOOM_LABEL[b] : "No level", marks);
-    add(co, c ?? "", c ?? "No CO", marks);
+    // Two COs share the marks equally and each counts the question (D121).
+    const tags = splitCoTags(c);
+    if (!tags.length) add(co, "", "No CO", marks);
+    for (const t of tags) add(co, t, t, marks / tags.length);
   };
   for (const q of questions) {
-    if (q.content.content.length === 0) continue;
-    const parts = subPartAttrs(q.content);
-    const own = parts.some((a) => a?.bloom || a?.coTag);
-    const split =
-      own &&
-      parts.every((a) => typeof a?.marks === "number") &&
-      sameMarks(subPartTotal(parts) ?? 0, q.marks);
-    if (!split) {
-      count(q.bloomLevel, q.coTag, q.marks);
-      continue;
-    }
-    for (const a of parts) {
-      count(a?.bloom ?? q.bloomLevel, a?.coTag ?? q.coTag, a?.marks as number);
-    }
+    for (const it of questionItems(q)) count(it.bloom, it.co, it.marks);
   }
   const order = (m: Map<string, SummaryRow>, keys: string[]) => {
     const rows = keys.flatMap((k) => (m.has(k) ? [m.get(k) as SummaryRow] : []));

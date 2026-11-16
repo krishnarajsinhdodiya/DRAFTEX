@@ -8,7 +8,7 @@ import type { Db } from "@/lib/db/client";
 import { advancedSnippets, imageShas, onlyKnownSnippets } from "@/lib/paper/content";
 import { questionNumbers } from "@/lib/paper/numbering";
 import { keyCriteriaSchema } from "@/lib/paper/key";
-import { CO_TAG_HINT, CO_TAG_RE } from "@/lib/paper/co-tag";
+import { coTagSchema } from "@/lib/paper/schema";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { type PaperSnapshot, paperSnapshotSchema } from "@/lib/paper/snapshot";
 import { versionDataSchema, versionHash, versionOf } from "@/lib/paper/version";
@@ -69,7 +69,7 @@ export const slotInputSchema = z.object({
   position: z.number().int().min(1).max(100),
   content: docSchema,
   marks: z.number().positive().max(100),
-  coTag: z.string().regex(CO_TAG_RE, CO_TAG_HINT).nullable().default(null),
+  coTag: coTagSchema.nullable().default(null),
   bloomLevel: z.enum(BloomLevel).nullable().default(null),
   /** The answer key (D24); left as it is when not sent. */
   answerKey: docSchema.nullable().optional(),
