@@ -5,9 +5,9 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-17
-- **Current phase:** 16 (bank search, pages, near-duplicates): all code, tests, guide and docs done on `phase/16-bank-search`, pushed. Only the close-out is left: merge, version 0.16.0, tag v0.16.0, delete the branch.
-- **Branch:** `phase/16-bank-search`. `main` = v0.15.0. Local-only `fix/setup-honest-errors` and `fix/network-restart-windows` untouched.
-- **CI:** GitHub Actions still refuses every job (billing). Merging needs the owner's explicit OK ("merge on local gates"); D124 covered Phase 15 only.
+- **Current phase:** 16 done: merged to `main` on local gates (D137), version 0.16.0, tag v0.16.0, branch deleted. Next phase not started.
+- **Branch:** `main` = v0.16.0 (merge 097c16e). Local-only `fix/setup-honest-errors` and `fix/network-restart-windows` untouched.
+- **CI:** GitHub Actions still refuses every job (billing). D137 covered Phase 16 only; a full CI run is owed once Actions runs.
 - **Local gates on the branch tip (Mac):** lint, typecheck, format, unit 1412, golden 121 passed / 30 visual skipped, e2e 73 passed (upgrades v0.8.0, v0.10.0, v0.11.0, v0.14.0, v0.15.0).
 
 ## Done this phase
@@ -27,13 +27,13 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps
 1. Session start per the operating rules.
-2. When the owner says "merge on local gates" (or CI runs green): record the merge decision in memory.md (like D124), bump `package.json` to 0.16.0 in the merge, `git merge --no-ff phase/16-bank-search` on `main`, tag `v0.16.0`, push main and tag, delete the branch locally and on GitHub, `git ls-remote --heads origin`.
-3. After the merge: add a v0.16.0 upgrade fixture (`scripts/make-upgrade-fixture.ts` against a v0.16.0 worktree; include a bank question so the index is checked after restore) and add v0.16.0 to `FROMS` in tests/e2e/upgrade.spec.ts, as the first Phase 17 step.
+2. Done: merge, 0.16.0, tag, branch deleted.
+3. Add a v0.16.0 upgrade fixture (`scripts/make-upgrade-fixture.ts` against a v0.16.0 worktree; include a bank question so the index is checked after restore) and add v0.16.0 to `FROMS` in tests/e2e/upgrade.spec.ts, as the first Phase 17 step.
 4. Owner's father's laptop: `update-windows.bat`, then try search, Older/Newer and Possible duplicates; the data folder gets the two new migrations.
 
 ## Owner tasks (not code)
 - Fix GitHub billing.
-- Say whether to merge Phase 16 on local gates.
+- Update the father's laptop to v0.16.0 and report (Windows check for D137).
 - Answer the near-duplicate question below.
 - Carried: delete the old `C:\draftex-main`; ASCII-only code and the backtick shortcut; roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
 
@@ -61,13 +61,12 @@ no chat history must be able to continue from this file alone.
 - Perf: `npx vitest run --config vitest.perf.config.ts --silent=false` (SEED_COUNT env).
 
 ## Questions for owner
-- Merge Phase 16 on local gates?
 - Near-duplicates: keep 3-word shingles (every rewording caught; 3 of 8 alike-but-different test pairs also flagged) or 2-word shingles at 0.50 (1 of 8 flagged)? It changes only which notes appear.
 - Carried: Bloom near-full-line overflow fix? Grid header bold? Times font?
 
 ## Phase checklist
 - [x] 0-15 (see git tags v0.0.0 … v0.15.0)
-- [ ] 16 Bank search, pages, near-duplicates: built and green locally; merge waits for the owner
+- [x] 16 Bank search, pages, near-duplicates (v0.16.0, merged on local gates, D137)
 
 ## Template for future handoffs
 Status (date, phase, branch, last green commit, CI) · Done this session ·
