@@ -4,7 +4,7 @@ Replace this whole file at the end of every session. A fresh session with
 no chat history must be able to continue from this file alone.
 
 ## Status
-- **Date:** 2026-11-15
+- **Date:** 2026-11-16
 - **Current phase:** 14 merged to `main` and tagged v0.14.0 on local gates only (D118; owner: "Merge on local gates"). Next: Phase 15.
 - **Branch:** `main` (v0.14.0). `phase/14-table-builder` deleted locally and on GitHub. `fix/setup-honest-errors` and `fix/network-restart-windows` untouched, still waiting for CI.
 - **CI:** GitHub Actions still refuses every job (billing).
@@ -24,9 +24,9 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps
 1. Session start per the operating rules.
-2. Owner: update the Mac and the father's laptop to v0.14.0 (no migration).
+2. Done 2026-11-16: the father's laptop runs v0.14.0 and the owner reports everything in Phase 13-14 works.
 3. When CI runs again: run CI on main; take ubuntu baselines for `code`, `key-code`, `tables`, `key-tables` from the visual job artifact (D4) in a commit that says why; no existing baseline may change. Then `fix/network-restart-windows`, merge both `fix/` branches.
-4. Owner: try a merged-header table on the father's laptop (Windows check, as D117).
+4. Before Phase 15: the owner answers roadmap questions 2 (optional groups), 3 (more than one CO) and 5 (blueprint scope).
 5. Then Phase 15 (CO blueprint, D108+) on `phase/15-co-blueprint`: measure performance first.
 
 ## Owner tasks (not code)
