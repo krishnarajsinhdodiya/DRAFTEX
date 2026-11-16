@@ -161,7 +161,7 @@ const mine = Array.from({ length: 260 }, (_, i) => [
 await importFile(page, "mine.csv", csv([HEADER, ...mine]), true);
 await page.goto("/bank");
 await shoot(page, "02-bank-list");
-await page.goto("/bank?page=6");
+await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Older" }).click();
 await shoot(page, "03-bank-last-page");
 await page.goto("/bank?q=nothing+matches+this");
 await shoot(page, "04-bank-no-match");

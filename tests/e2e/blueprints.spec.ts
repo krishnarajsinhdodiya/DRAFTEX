@@ -1,7 +1,8 @@
 // Phase 15 end to end: a teacher makes a CO blueprint (D108); the paper
 // editor's summary compares the paper with it as COs change, a second CO
 // included (D109, D121); export lists the notes and still exports (D110);
-// an admin gets "not found" for the private blueprint (gate 8). Invented data.
+// an admin gets "not found" for the private blueprint (gate 8). Blueprints
+// match the exact exam (D134): Practical sessional 1 and 2 apart. Invented data.
 import { type Page, expect, test } from "@playwright/test";
 import { ADMIN, asUser, closeOpenContexts, FACULTY } from "./support";
 
@@ -16,12 +17,12 @@ const row = (page: Page, co: string) =>
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader", { name: co, exact: true }) });
 
-test("a teacher makes a blueprint for a course and exam group", async ({ browser }) => {
+test("a teacher makes a blueprint for a course and exam", async ({ browser }) => {
   const page = await asUser(browser, FACULTY, FACULTY.own);
   await page.goto("/blueprints");
   await page.getByRole("link", { name: "New blueprint" }).click();
   await page.getByLabel("Course code").fill("BP604T");
-  await page.getByLabel("Exam group").selectOption({ label: "End-semester" });
+  await page.getByRole("combobox", { name: /^Exam\b/ }).selectOption({ label: "End-semester" });
   await page.getByLabel("Allowed difference (±marks)").fill("1");
   await page.getByLabel("CO 1", { exact: true }).fill("BP604T.01");
   await page.getByLabel("Target for CO 1 (marks)").fill("10");
@@ -35,10 +36,10 @@ test("a teacher makes a blueprint for a course and exam group", async ({ browser
   blueprintUrl = page.url().replace(/\?.*$/, "");
   await expect(page.getByRole("heading", { name: "BP604T · End-semester" })).toBeVisible();
 
-  // One per course and exam group.
+  // One per course and exam.
   await page.goto("/blueprints/new");
   await page.getByLabel("Course code").fill("BP604T");
-  await page.getByLabel("Exam group").selectOption({ label: "End-semester" });
+  await page.getByRole("combobox", { name: /^Exam\b/ }).selectOption({ label: "End-semester" });
   await page.getByLabel("CO 1", { exact: true }).fill("BP604T.01");
   await page.getByLabel("Target for CO 1 (marks)").fill("5");
   await page.getByRole("button", { name: "Save blueprint" }).click();
@@ -99,4 +100,46 @@ test("the summary compares the paper as COs change, and export only warns", asyn
   const download = page.waitForEvent("download");
   await ask.getByRole("button", { name: "Export anyway" }).click();
   expect((await download).suggestedFilename()).toMatch(/Invented Blueprint Paper\.zip$/);
+});
+
+test("a blueprint applies to its exact exam only (D134)", async ({ browser }) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto("/blueprints/new");
+  await page.getByLabel("Course code").fill("XX610P");
+  await page
+    .getByRole("combobox", { name: /^Exam\b/ })
+    .selectOption({ label: "Practical sessional 2" });
+  await page.getByLabel("CO 1", { exact: true }).fill("XX610P.01");
+  await page.getByLabel("Target for CO 1 (marks)").fill("10");
+  await page.getByRole("button", { name: "Save blueprint" }).click();
+  await expect(page.getByRole("heading", { name: "XX610P · Practical sessional 2" })).toBeVisible();
+
+  await page.goto("/templates");
+  await page
+    .getByRole("link", { name: /Practical · Sessional \(10\)/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "New paper" }).click();
+  const dialog = page.getByRole("dialog", { name: "New paper" });
+  await dialog.getByLabel("Title", { exact: true }).fill("Invented Practical One");
+  await dialog.getByLabel("Course code").fill("XX610P");
+  await dialog.getByRole("button", { name: "Create paper" }).click();
+  await expect(page).toHaveURL(/\/papers\/[0-9a-f-]{36}$/);
+  await page.getByText("Bloom and CO summary").click();
+  // The built-in is Practical sessional 1 (D133): the sessional 2 blueprint does not apply.
+  await expect(
+    page.getByText("No CO blueprint for XX610P · Practical Sessional Examination."),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Duplicate as…" }).click();
+  const dup = page.getByRole("dialog", { name: "Duplicate as…" });
+  await dup.getByRole("radio", { name: /Another copy/ }).check();
+  await dup.getByLabel("Exam", { exact: true }).selectOption({ label: "Practical sessional 2" });
+  await dup.getByLabel("Title of the copy").fill("Invented Practical Two");
+  await dup.getByRole("button", { name: "Make the copy" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Invented Practical Two" }),
+  ).toBeVisible();
+  await page.getByText("Bloom and CO summary").click();
+  await expect(row(page, "XX610P.01")).toContainText("Under");
 });

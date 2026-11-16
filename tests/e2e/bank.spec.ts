@@ -207,3 +207,67 @@ test("a bank question goes to Trash and comes back", async ({ browser }) => {
   await page.goto("/bank?q=imported+question+one");
   await expect(page.getByText("1 question match")).toBeVisible();
 });
+
+test("the bank shows 50 questions a page with Older and Newer links (D130)", async ({
+  browser,
+}) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "draftex-csv-"));
+  const file = path.join(dir, "pages.csv");
+  const rows = Array.from(
+    { length: 55 },
+    (_, i) => `XX616T,1,XX616T.01,Remember,2,SHORT,Invented paging question number ${i + 1}.,,`,
+  );
+  fs.writeFileSync(
+    file,
+    ["course code,unit,co,bloom,marks,type,question,answer,tags", ...rows].join("\r\n"),
+  );
+  await page.goto("/bank/import");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Choose a CSV file" }).click();
+  await (await chooser).setFiles(file);
+  await page.getByRole("button", { name: /Save 55 questions/ }).click();
+  await expect(page.getByText("55 questions were saved to your bank.")).toBeVisible();
+
+  await page.goto("/bank?course=XX616T");
+  await expect(
+    page.getByText("Matching questions, most recently changed first, 50 to a page"),
+  ).toBeVisible();
+  const items = page.getByRole("listitem").filter({ hasText: "Invented paging question" });
+  await expect(items).toHaveCount(50);
+  const pages = page.getByRole("navigation", { name: "Pages" });
+  await expect(pages.getByRole("link", { name: "Newer" })).toHaveCount(0);
+  await pages.getByRole("link", { name: "Older" }).click();
+  await expect(page).toHaveURL(/course=XX616T&after=/);
+  await expect(items).toHaveCount(5);
+  await expect(pages.getByRole("link", { name: "Older" })).toHaveCount(0);
+  await pages.getByRole("link", { name: "Newer" }).click();
+  await expect(items).toHaveCount(50);
+  await expect(pages.getByRole("link", { name: "Newer" })).toHaveCount(0);
+
+  await page.goto("/bank?course=XX616T&q=number+55");
+  await expect(page.getByText("1 question match")).toBeVisible();
+  await page.goto("/bank?course=XX616T&after=not-a-cursor");
+  await expect(items).toHaveCount(50);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("Possible duplicates lists the user's own alike questions (D114)", async ({ browser }) => {
+  const page = await asUser(browser, FACULTY, FACULTY.own);
+  await page.goto("/bank");
+  await page.getByRole("link", { name: "Possible duplicates" }).click();
+  await expect(page.getByRole("heading", { name: "Possible duplicates" })).toBeVisible();
+  const pairs = page.getByRole("list", { name: "Possible duplicates" }).getByRole("listitem");
+  await expect(pairs.first()).toContainText("XX616T");
+  await expect(page.getByText(/pairs, showing the 50 most alike/)).toBeVisible();
+  await pairs.first().getByRole("link").first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Question" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Questions that read almost the same" }),
+  ).toBeVisible();
+
+  // A colleague sees none of them.
+  const other = await asUser(browser, ADMIN, ADMIN.password);
+  await other.goto("/bank/duplicates");
+  await expect(other.getByText("XX616T")).toHaveCount(0);
+});

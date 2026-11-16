@@ -101,6 +101,9 @@ generator must produce this structure.
 - Exam kinds: `SESSIONAL_1`, `SESSIONAL_2`, `SESSIONAL_IMPROVEMENT`,
   `END_SEMESTER`, `YEAR_END` (Pharm.D), `SUPPLEMENTARY_ATKT`,
   `PRACTICAL_SESSIONAL`, `PRACTICAL_END`, `SYNOPSIS`, `CUSTOM`.
+  [Amended 2026-11-16: `PRACTICAL_SESSIONAL` is renamed `PRACTICAL_SESSIONAL_1`
+  and `PRACTICAL_SESSIONAL_2` is added (D131); both use the practical
+  sessional pattern (D132). Forms list the 11 exams in the D135 order.]
 - Template library, template builder, paper editor with live PDF preview,
   answer key, exports, backup/restore, accounts, network modes, installers.
 - B.Pharm course catalogue seeded from the syllabus PDF (code, title, semester,
@@ -190,6 +193,17 @@ Names are binding; fields may be added.
   sharing (`PRIVATE`|`SHARED`), version; one per owner, course code and exam
   group; others see it only while shared, read-only; admins get nothing
   extra (D108).]
+- [Amended 2026-11-16: `Blueprint.examGroup` is replaced by `examKind`, the
+  exact exam; one per owner, course code and exam (D134). Migration
+  `exam_kinds` maps SESSIONAL → SESSIONAL_1, END_SEMESTER → END_SEMESTER,
+  PRACTICAL → PRACTICAL_SESSIONAL_1, ATKT → SUPPLEMENTARY_ATKT, OTHER → CUSTOM.]
+- [Amended 2026-11-17, Phase 16: FTS5 virtual table `question_fts`
+  (`question_id`, `body`; trigram tokenizer, accents folded) kept by
+  triggers on `Question` and filled by migration `question_search`; body =
+  question text, answer text, tags, course code and title, CO tags (D126).
+  Prisma does not model it: never run `migrate dev`, and remove the drop
+  lines for its shadow tables from any generated migration. Bank, picker
+  and papers list page by keyset cursor, 50 at a time (D130).]
 - `Asset` sha256 (pk), ownerId, mime, bytes, width, height, originalName.
 - `CompileJob` id, paperId, kind (`PAPER`|`KEY`), status, durationMs,
   errorSummary, createdAt (keep last 20 per paper).
@@ -317,7 +331,7 @@ Built-ins can't be edited; "Save as new" is the way to change them.
   CO gets half the question's marks (D121). CSV import has an optional
   `co 2` column (D123). A **CO blueprint** (Blueprints screen) sets target
   marks or percent per CO, with a tolerance, for a course code and exam
-  group. The editor's Bloom and CO summary compares the paper with the
+  group [amended 2026-11-16: the exact exam, e.g. Sessional 1, D134]. The editor's Bloom and CO summary compares the paper with the
   blueprint that matches it (the user's own, else the most recently changed
   shared one): target, the paper's value and Under / Over / Within range /
   Not in blueprint / No CO, as the user types. Optional groups count each

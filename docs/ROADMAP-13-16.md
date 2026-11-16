@@ -79,7 +79,7 @@ line. Size: medium.
 
 | D | Decision | Reason / cost / risk |
 |---|---|---|
-| D108 | A blueprint = target marks (or percent) per CO with a tolerance, keyed by course code and exam group (D59 groups), owned by the teacher who makes it (private, like templates) and shareable with colleagues; new table `Blueprint` (additive migration) | D85: the syllabus gives defaults, course codes are typed freely; admins see no one's private data |
+| D108 | A blueprint = target marks (or percent) per CO with a tolerance, keyed by course code and exam group (D59 groups) [exam group SUPERSEDED 2026-11-16 → D134: exact exam kind], owned by the teacher who makes it (private, like templates) and shareable with colleagues; new table `Blueprint` (additive migration) | D85: the syllabus gives defaults, course codes are typed freely; admins see no one's private data |
 | D109 | `coverage(paper, blueprint)` is a pure function: a question counts its marks to its one CO; sub-parts with their own COs split the question only when their marks add up (D69 rule); untagged marks go to "No CO"; optional groups per the owner's answer (question 2) | One CO per question is the current model; more than one is a schema change (question 3) |
 | D110 | The result shows in the editor's summary panel and in the export dialog as over/under per CO; it never blocks export; nothing is printed | No LaTeX change; the byte-identity check proves it |
 | D111 | The function takes a dimension (CO now, Bloom later) | A Bloom blueprint later needs no rewrite |

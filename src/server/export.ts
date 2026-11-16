@@ -128,7 +128,7 @@ export async function exportPaper(
   const paper = await deps.data.papers.getWithSlots(actor, paperId);
   const numbers = questionNumbers(paper.snapshot.structure);
   const warnings = exportWarnings(paper);
-  // D110: a CO blueprint for this course and exam group advises, never blocks.
+  // D110: a CO blueprint for this course and exam (D134) advises, never blocks.
   const bp = await deps.data.blueprints.match(actor, paper.courseCode, paper.examKind);
   if (bp) {
     const { questions, groups } = paperCoverageInput(paper.snapshot.structure, paper.slots);

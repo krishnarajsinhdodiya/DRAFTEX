@@ -20,6 +20,7 @@ import type { Doc } from "@/lib/paper/schema";
 import { GROUP_TYPE_LABEL, PROGRAM_LABEL } from "@/lib/templates/labels";
 import { saveQuestionAction, setQuestionSharingAction } from "@/server/bank-actions";
 import type { CourseSuggestion } from "@/server/bank-commands";
+import { type SimilarItem, SimilarNote } from "./similar-note";
 
 const EMPTY_DOC: Doc = { type: "doc", content: [] };
 const PROGRAMS = ["B_PHARM", "M_PHARM", "PHARM_D"] as const;
@@ -81,7 +82,11 @@ export function QuestionForm({
   const [focused, setFocused] = useState<EditorHandle | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [error, setError] = useState<{ message: string; issues: string[] } | null>(null);
-  const [notice, setNotice] = useState<{ warnings: string[]; duplicates: number } | null>(null);
+  const [notice, setNotice] = useState<{
+    warnings: string[];
+    duplicates: number;
+    similar: SimilarItem[];
+  } | null>(null);
   const [pending, start] = useTransition();
   const set = (patch: Partial<QuestionFormValues>) => {
     setV((x) => ({ ...x, ...patch }));
@@ -137,7 +142,11 @@ export function QuestionForm({
         router.replace(`/bank/${r.value.id}?saved=1`);
         return;
       }
-      setNotice({ warnings: r.value.warnings, duplicates: r.value.duplicates });
+      setNotice({
+        warnings: r.value.warnings,
+        duplicates: r.value.duplicates,
+        similar: r.value.similar,
+      });
       setVersion(r.value.version);
       router.refresh();
     });
@@ -389,7 +398,13 @@ export function QuestionForm({
         </FormAlert>
       ) : null}
       {notice ? (
-        <FormAlert kind={notice.warnings.length || notice.duplicates ? "caution" : "notice"}>
+        <FormAlert
+          kind={
+            notice.warnings.length || notice.duplicates || notice.similar.length
+              ? "caution"
+              : "notice"
+          }
+        >
           Saved.
           {notice.duplicates ? (
             <>
@@ -406,6 +421,7 @@ export function QuestionForm({
               ))}
             </ul>
           ) : null}
+          <SimilarNote items={notice.similar} />
         </FormAlert>
       ) : null}
 

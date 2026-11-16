@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { courseCodeSchema } from "../bank/question.ts";
 import { CO_TAG_HINT, CO_TAG_RE } from "../paper/co-tag.ts";
-import { EXAM_GROUP_KEYS, type ExamGroup } from "../templates/labels.ts";
+import { EXAM_KINDS } from "../templates/labels.ts";
 
 export const BLUEPRINT_UNITS = ["MARKS", "PERCENT"] as const;
 export type BlueprintUnit = (typeof BLUEPRINT_UNITS)[number];
@@ -34,7 +34,7 @@ export const blueprintTargetsSchema = z
 export const blueprintFieldsSchema = z
   .object({
     courseCode: courseCodeSchema,
-    examGroup: z.enum(EXAM_GROUP_KEYS as [ExamGroup, ...ExamGroup[]]),
+    examKind: z.enum(EXAM_KINDS),
     unit: z.enum(BLUEPRINT_UNITS),
     tolerance: z.number().min(0).max(100),
     targets: blueprintTargetsSchema,

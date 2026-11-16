@@ -5,7 +5,7 @@ import { FormAlert } from "@/components/form";
 import { linkStyles, pageTitleStyles, sheetStyles } from "@/components/styles";
 import { actorOf } from "@/lib/auth/service";
 import { NotFoundError, getData } from "@/lib/data";
-import { EXAM_GROUPS, marksText } from "@/lib/templates/labels";
+import { EXAM_KIND_LABEL, marksText } from "@/lib/templates/labels";
 import { requireUser } from "@/server/auth";
 import { blueprintCommands } from "@/server/blueprint-commands";
 import { OwnerBadge } from "../../bank/bank-list";
@@ -32,7 +32,7 @@ export default async function BlueprintPage({
     if (e instanceof NotFoundError) notFound();
     throw e;
   }
-  const title = `${b.courseCode} · ${EXAM_GROUPS[b.examGroup].label}`;
+  const title = `${b.courseCode} · ${EXAM_KIND_LABEL[b.examKind]}`;
   const back = (
     <Link href="/blueprints" className={`${linkStyles} self-start text-small`}>
       ← CO blueprints
@@ -93,7 +93,7 @@ export default async function BlueprintPage({
         version={b.version}
         initial={{
           courseCode: b.courseCode,
-          examGroup: b.examGroup,
+          examKind: b.examKind,
           unit: b.unit,
           tolerance: b.tolerance,
           targets: b.targets,

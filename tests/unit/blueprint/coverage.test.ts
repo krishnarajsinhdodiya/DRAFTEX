@@ -164,7 +164,7 @@ describe("coverage", () => {
 describe("blueprint fields", () => {
   const base = {
     courseCode: "XX604T",
-    examGroup: "SESSIONAL",
+    examKind: "SESSIONAL_1",
     unit: "MARKS",
     tolerance: 1,
     targets: [{ co: "XX604T.01", target: 10 }],
@@ -195,7 +195,7 @@ describe("blueprint fields", () => {
       { ...base, targets: [base.targets[0], base.targets[0]] },
       { ...base, targets: [{ co: "XX604T.01, XX604T.02", target: 1 }] },
       { ...base, targets: [] },
-      { ...base, examGroup: "MIDTERM" },
+      { ...base, examKind: "MIDTERM" },
       { ...base, tolerance: -1 },
     ];
     for (const b of bad) expect(blueprintFieldsSchema.safeParse(b).success).toBe(false);

@@ -174,9 +174,11 @@ export function BankPicker({
             {pending && !results
               ? "Searching…"
               : results
-                ? results.total === 1
-                  ? "1 question"
-                  : `${results.total} questions${results.total > results.rows.length ? `, showing the newest ${results.rows.length}; narrow them with the filters` : ""}`
+                ? results.older
+                  ? `Showing the newest ${results.rows.length}; narrow them with the filters to find older ones`
+                  : results.rows.length === 1
+                    ? "1 question"
+                    : `${results.rows.length} questions`
                 : ""}
           </p>
           {error ? <FormAlert kind="error">{error}</FormAlert> : null}

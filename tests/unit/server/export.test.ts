@@ -348,7 +348,7 @@ describe("CO blueprint (D110)", () => {
   it("adds over/under notes as warnings, never blocks, and ignores others' private ones", async () => {
     const theirs = await t.data.blueprints.create(other, {
       courseCode: "XX101T",
-      examGroup: "END_SEMESTER",
+      examKind: "END_SEMESTER",
       unit: "MARKS",
       tolerance: 0,
       targets: [{ co: "XX101T.09", target: 50 }],
@@ -359,7 +359,7 @@ describe("CO blueprint (D110)", () => {
 
     const mine = await t.data.blueprints.create(me, {
       courseCode: "XX101T",
-      examGroup: "END_SEMESTER",
+      examKind: "END_SEMESTER",
       unit: "MARKS",
       tolerance: 0,
       targets: [{ co: "XX101T.01", target: 10 }],

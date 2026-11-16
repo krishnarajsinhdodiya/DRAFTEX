@@ -171,6 +171,43 @@ describe("restore", () => {
     expect(fs.existsSync(empty.config)).toBe(false);
   });
 
+  it("carries the search index, which still finds and updates (Phase 16)", async () => {
+    const otherPaths = makeDataFolder(path.join(root, "other"), "Searcher");
+    const src = new Database(otherPaths.database);
+    src
+      .prepare(
+        `INSERT INTO "Question" (id, ownerId, createdAt, searchText, sharing, version)
+         VALUES ('q1', (SELECT id FROM "User"), CURRENT_TIMESTAMP, 'Invented isobutylphenyl question.', 'PRIVATE', 1)`,
+      )
+      .run();
+    src.close();
+    const b = await createBackup(
+      { paths: otherPaths, repoRoot: REPO, appVersion: "0.16.0" },
+      "manual",
+    );
+    const empty = dataPaths(path.join(root, "empty"));
+    fs.mkdirSync(empty.root);
+    await applyRestore(
+      { paths: empty, repoRoot: REPO, appVersion: "0.16.0" },
+      fs.readFileSync(path.join(otherPaths.backups, b.name)),
+      () => {},
+    );
+    const db = new Database(empty.database);
+    try {
+      const find = (q: string) =>
+        db.prepare(`SELECT question_id FROM question_fts WHERE question_fts MATCH ?`).all(q);
+      expect(find('"butyl"')).toEqual([{ question_id: "q1" }]);
+      db.exec(`INSERT INTO question_fts(question_fts) VALUES ('integrity-check')`);
+      db.prepare(
+        `UPDATE "Question" SET searchText = 'Invented tablet question.' WHERE id = 'q1'`,
+      ).run();
+      expect(find('"butyl"')).toEqual([]);
+      expect(find('"tablet"')).toEqual([{ question_id: "q1" }]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("refuses a damaged database and leaves the current data alone", async () => {
     const zip = await otherBackup();
     await expect(applyRestore(ctx(), new Uint8Array([0]), () => {})).rejects.toThrow(

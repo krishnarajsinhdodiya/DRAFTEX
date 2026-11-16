@@ -17,6 +17,7 @@ import {
   toCsv,
 } from "@/lib/bank/csv";
 import { type BankFieldsInput, bankCheck, bankFieldsSchema, plainText } from "@/lib/bank/question";
+import { percent, similarTo } from "@/lib/bank/similar";
 
 export type RowStatus = "valid" | "invalid" | "duplicate";
 
@@ -57,6 +58,9 @@ async function check(data: DataLayer, actor: Actor, bytes: Uint8Array) {
   const courses = new Map<string, Awaited<ReturnType<DataLayer["bank"]["resolveCourse"]>>>();
   const ownKeys = new Map<string, Map<string, boolean>>();
   const inFile = new Map<string, number>();
+  // Near-duplicates (D114): own questions per course, then earlier rows of this file.
+  const ownTexts = new Map<string, { id: string; text: string }[]>();
+  const fileTexts = new Map<string, { id: string; text: string }[]>();
   const out: Checked[] = [];
   for (const { row, cells } of rows) {
     const r = rowToInput(cells, row);
@@ -105,6 +109,25 @@ async function check(data: DataLayer, actor: Actor, bytes: Uint8Array) {
             ? `${ALREADY_IN_TRASH}.`
             : null;
     if (earlier === undefined) inFile.set(fileKey, row);
+    if (!reason) {
+      const text = plainText(f.content);
+      let own = ownTexts.get(course.code);
+      if (!own) {
+        own = await data.bank.ownTexts(actor, course.code);
+        ownTexts.set(course.code, own);
+      }
+      const rows = fileTexts.get(course.code) ?? [];
+      const near = similarTo(text, [...own, ...rows], 1)[0];
+      if (near) {
+        warnings.push(
+          near.id.startsWith("row:")
+            ? `Reads almost the same as row ${near.id.slice(4)} (${percent(near.score)}).`
+            : `Reads almost the same as a question already in your bank (${percent(near.score)}).`,
+        );
+      }
+      rows.push({ id: `row:${row}`, text });
+      fileTexts.set(course.code, rows);
+    }
     out.push({
       ...base,
       summary: plainText(f.content).replace(/\s+/g, " ").slice(0, 120),

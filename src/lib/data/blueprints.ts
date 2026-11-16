@@ -1,7 +1,7 @@
 // CO blueprints (Phase 15, D108). A blueprint belongs to its maker; others
 // see it only while it is SHARED, and then only read it (as D73/D74 for bank
 // questions). Admins get nothing extra: another person's private blueprint is
-// "not found" to them too. One blueprint per owner, course code and exam group.
+// "not found" to them too. One blueprint per owner, course code and exam (D134).
 import type { Db } from "@/lib/db/client";
 import {
   type BlueprintFields,
@@ -9,7 +9,6 @@ import {
   blueprintFieldsSchema,
   blueprintTargetsSchema,
 } from "@/lib/blueprint/schema";
-import { type ExamGroup, examGroupOf } from "@/lib/templates/labels";
 import type { ExamKind } from "@/generated/prisma/enums";
 import { type Actor, requireSignedIn } from "./actor";
 import { writeAudit } from "./audit";
@@ -18,13 +17,13 @@ import { isUniqueViolation } from "./users";
 
 const WHAT = "Blueprint";
 export const BLUEPRINT_TAKEN =
-  "You already have a blueprint for this course and exam group. Open it to change it.";
+  "You already have a blueprint for this course and exam. Open it to change it.";
 
 const select = {
   id: true,
   ownerId: true,
   courseCode: true,
-  examGroup: true,
+  examKind: true,
   unit: true,
   tolerance: true,
   targets: true,
@@ -38,7 +37,7 @@ type Row = {
   id: string;
   ownerId: string;
   courseCode: string;
-  examGroup: string;
+  examKind: ExamKind;
   unit: string;
   tolerance: number;
   targets: unknown;
@@ -51,7 +50,7 @@ type Row = {
 export interface BlueprintView {
   id: string;
   courseCode: string;
-  examGroup: ExamGroup;
+  examKind: ExamKind;
   unit: BlueprintFields["unit"];
   tolerance: number;
   targets: BlueprintTarget[];
@@ -70,7 +69,7 @@ function view(actor: Actor, r: Row): BlueprintView {
   return {
     id: r.id,
     courseCode: r.courseCode,
-    examGroup: r.examGroup as ExamGroup,
+    examKind: r.examKind,
     unit: r.unit as BlueprintFields["unit"],
     tolerance: r.tolerance,
     targets: targets.success ? targets.data : [],
@@ -104,12 +103,7 @@ export function blueprints(db: Db) {
       const rows = await db.blueprint.findMany({
         where: visible(actor),
         select,
-        orderBy: [
-          { courseCode: "asc" },
-          { examGroup: "asc" },
-          { updatedAt: "desc" },
-          { id: "asc" },
-        ],
+        orderBy: [{ courseCode: "asc" }, { examKind: "asc" }, { updatedAt: "desc" }, { id: "asc" }],
       });
       return rows.map((r) => view(actor, r)).sort((a, b) => Number(b.mine) - Number(a.mine));
     },
@@ -133,7 +127,7 @@ export function blueprints(db: Db) {
       requireSignedIn(actor);
       const where = {
         courseCode: courseCode.trim().toUpperCase(),
-        examGroup: examGroupOf(examKind),
+        examKind,
       };
       const own = await db.blueprint.findFirst({
         where: { ...where, ownerId: actor.userId },

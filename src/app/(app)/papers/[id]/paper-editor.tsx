@@ -21,7 +21,7 @@ import { PdfView } from "@/components/pdf-view";
 import { buttonStyles, eyebrowStyles, linkStyles } from "@/components/styles";
 import { isEmptyDoc } from "@/lib/editor/convert";
 import { marksLabel } from "@/lib/latex/serialize";
-import { EXAM_GROUPS, EXAM_KIND_LABEL, examGroupOf, marksText } from "@/lib/templates/labels";
+import { EXAM_KIND_LABEL, EXAM_TITLE, marksText } from "@/lib/templates/labels";
 import type { Problem } from "@/lib/paper/problems";
 import type { EditorGroup, PaperEditorView } from "@/server/paper-view";
 import { DetailsButton } from "./details";
@@ -516,7 +516,7 @@ export function PaperEditor({
               slots={paper.slots}
               groups={view.groups}
               blueprint={view.blueprint}
-              scopeLabel={`${view.courseCode || "this course"} · ${EXAM_GROUPS[examGroupOf(view.examKind)].label}`}
+              scopeLabel={`${view.courseCode || "this course"} · ${EXAM_TITLE[view.examKind]}`}
             />
 
             <fieldset disabled={locked} className="contents">

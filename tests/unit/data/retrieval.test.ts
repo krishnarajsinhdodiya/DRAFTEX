@@ -46,7 +46,7 @@ describe("search and filters (D59)", () => {
     const s = await paper({ examKind: "SESSIONAL_IMPROVEMENT", academicYear: "2030-31" });
     const y = await paper({ examKind: "YEAR_END", academicYear: "2030-31" });
     const k = await paper({ examKind: "SUPPLEMENTARY_ATKT", academicYear: "2031-32" });
-    const p = await paper({ examKind: "PRACTICAL_SESSIONAL", academicYear: "2031-32" });
+    const p = await paper({ examKind: "PRACTICAL_SESSIONAL_1", academicYear: "2031-32" });
     const o = await paper({ examKind: "SYNOPSIS", academicYear: "2031-32" });
     const ids = async (f: object) => (await t.data.papers.list(me, f)).map((x) => x.id);
     expect(await ids({ group: "SESSIONAL", year: "2030-31" })).toEqual([s.id]);
@@ -70,6 +70,38 @@ describe("search and filters (D59)", () => {
     expect(recent.map((p) => p.id)).toEqual(
       (await t.data.papers.list(me)).slice(0, 5).map((p) => p.id),
     );
+  });
+
+  it("page 50 at a time with Older and Newer, across tied times (D130)", async () => {
+    const made: string[] = [];
+    for (let i = 0; i < 112; i++) made.push((await paper({ academicYear: "2040-41" })).id);
+    // Ten papers share one time, so a page edge falls inside a tie.
+    await t.db.paper.updateMany({
+      where: { id: { in: made.slice(45, 55) } },
+      data: { updatedAt: new Date(Date.UTC(2040, 0, 1)) },
+    });
+    const filter = { year: "2040-41" };
+    const pages = [await t.data.papers.page(me, filter)];
+    while (pages.at(-1)!.older) {
+      pages.push(await t.data.papers.page(me, filter, { after: pages.at(-1)!.older! }));
+    }
+    expect(pages.map((p) => p.rows.length)).toEqual([50, 50, 12]);
+    expect(pages.every((p) => p.total === 112)).toBe(true);
+    const ids = pages.flatMap((p) => p.rows.map((r) => r.id));
+    expect(new Set(ids).size).toBe(112);
+    const key = (r: { updatedAt: Date; id: string }) => [r.updatedAt.getTime(), r.id] as const;
+    const rows = pages.flatMap((p) => p.rows.map(key));
+    for (let i = 1; i < rows.length; i++) {
+      const [[ta, ia], [tb, ib]] = [rows[i - 1]!, rows[i]!];
+      expect(ta > tb || (ta === tb && ia > ib)).toBe(true);
+    }
+    expect(pages[0]!.newer).toBeNull();
+    const back = await t.data.papers.page(me, filter, { before: pages[2]!.newer! });
+    expect(back.rows.map((r) => r.id)).toEqual(pages[1]!.rows.map((r) => r.id));
+    const first = await t.data.papers.page(me, filter, { before: back.newer! });
+    expect(first.rows.map((r) => r.id)).toEqual(pages[0]!.rows.map((r) => r.id));
+    expect(first.newer).toBeNull();
+    expect((await t.data.papers.page(me, filter, { after: "junk" })).rows).toEqual(pages[0]!.rows);
   });
 
   it("leave out papers in Trash", async () => {

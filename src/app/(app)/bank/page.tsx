@@ -28,7 +28,9 @@ const filterSchema = z.object({
   marks: z.coerce.number().positive().max(100).optional().catch(undefined),
   type: z.enum(BANK_TYPES).optional().catch(undefined),
   scope: z.enum(["mine", "shared"]).optional().catch(undefined),
-  page: z.coerce.number().int().min(1).max(10_000).optional().catch(undefined),
+  // Keyset cursors (D130); the data layer treats anything else as the first page.
+  after: z.string().max(200).optional().catch(undefined),
+  before: z.string().max(200).optional().catch(undefined),
 });
 
 const fieldClass = `${inputStyles} w-full text-small sm:w-auto`;
@@ -58,22 +60,21 @@ export default async function BankPage({
     scope: f.scope,
   };
   const filtered = Object.values(filter).some((v) => v !== undefined);
-  const page = f.page ?? 1;
   const [list, courses, trash, shares, myCourses] = await Promise.all([
-    data.bank.list(actor, { ...filter, page }),
+    data.bank.list(actor, { ...filter, after: f.after, before: f.before }),
     data.bank.filterOptions(actor),
     data.bank.listTrash(actor),
     commands.courseShares(),
     data.bank.ownCourses(actor),
   ]);
-  const pages = Math.max(1, Math.ceil(list.total / list.pageSize));
-  const pageHref = (n: number) => {
+  const pageHref = (cursor: { after?: string; before?: string }) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(filter)) if (v !== undefined) p.set(k, String(v));
-    if (n > 1) p.set("page", String(n));
+    for (const [k, v] of Object.entries(cursor)) if (v) p.set(k, v);
     const s = p.toString();
     return s ? `/bank?${s}` : "/bank";
   };
+  const paged = list.older !== null || list.newer !== null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10">
@@ -85,6 +86,9 @@ export default async function BankPage({
               <Trash2 size={15} aria-hidden /> Trash ({trash.length})
             </Link>
           ) : null}
+          <Link href="/bank/duplicates" className={buttonStyles.quiet}>
+            Possible duplicates
+          </Link>
           <Link href="/bank/import" className={buttonStyles.secondary}>
             <FileUp size={16} aria-hidden /> Import CSV
           </Link>
@@ -205,9 +209,9 @@ export default async function BankPage({
       </form>
 
       <p className="-mt-2 text-small text-ink-2" aria-live="polite">
-        {list.total === 1 ? "1 question" : `${list.total} questions`}
-        {filtered ? " match" : ""}, most recently changed first
-        {pages > 1 ? ` · page ${page} of ${pages}` : ""}
+        {paged
+          ? `${filtered ? "Matching questions" : "Questions"}, most recently changed first, ${list.pageSize} to a page`
+          : `${list.rows.length === 1 ? "1 question" : `${list.rows.length} questions`}${filtered ? " match" : ""}, most recently changed first`}
       </p>
 
       {list.rows.length === 0 ? (
@@ -236,16 +240,16 @@ export default async function BankPage({
         <BankList rows={list.rows} />
       )}
 
-      {pages > 1 ? (
+      {paged ? (
         <nav aria-label="Pages" className="flex items-center justify-center gap-2">
-          {page > 1 ? (
-            <Link href={pageHref(page - 1)} className={buttonStyles.secondary}>
-              Previous
+          {list.newer ? (
+            <Link href={pageHref({ before: list.newer })} className={buttonStyles.secondary}>
+              Newer
             </Link>
           ) : null}
-          {page < pages ? (
-            <Link href={pageHref(page + 1)} className={buttonStyles.secondary}>
-              Next
+          {list.older ? (
+            <Link href={pageHref({ after: list.older })} className={buttonStyles.secondary}>
+              Older
             </Link>
           ) : null}
         </nav>

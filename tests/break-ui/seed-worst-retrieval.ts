@@ -54,6 +54,7 @@ const kinds = [
   "SESSIONAL_1",
   "SUPPLEMENTARY_ATKT",
   "PRACTICAL_END",
+  "PRACTICAL_SESSIONAL_2",
   "SYNOPSIS",
   "YEAR_END",
 ];

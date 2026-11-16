@@ -1,6 +1,7 @@
 // Papers are always private to their owner in v1 (SPEC §7), admins included.
 // Anything that is not the actor's own paper is "not found".
 import { z } from "zod";
+import { pageOf, pageRequestSchema } from "@/lib/paging";
 import type { CompileKind, CompileStatus, SnapshotReason } from "@/generated/prisma/enums";
 import { BloomLevel, ExamKind, PaperStatus, Program } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
@@ -235,30 +236,46 @@ export function papers(db: Db) {
     return value === null || value === undefined ? [] : [docSchema.parse(value) as Doc];
   }
 
+  async function list(actor: Actor, filter: PaperFilter = {}) {
+    const f = paperFilterSchema.parse(filter);
+    const rows = await db.paper.findMany({
+      where: {
+        ownerId: actor.userId,
+        deletedAt: null,
+        ...(f.group && { examKind: { in: [...EXAM_GROUPS[f.group].kinds] } }),
+        ...(f.year && { academicYear: f.year }),
+        ...(f.status && { status: f.status }),
+        ...(f.course && { courseCode: f.course }),
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    const q = f.q?.toLocaleLowerCase("en");
+    if (!q) return rows;
+    return rows.filter((p) =>
+      [p.title, p.courseCode, p.courseTitle].some((x) => x.toLocaleLowerCase("en").includes(q)),
+    );
+  }
+
   return {
     /**
      * The actor's papers, most recently edited first, narrowed by search and
      * filters (D59). The text search runs here, not in SQL: SQLite LIKE treats
      * % and _ as wildcards and folds only ASCII case; one person's papers are few.
      */
-    async list(actor: Actor, filter: PaperFilter = {}) {
-      const f = paperFilterSchema.parse(filter);
-      const rows = await db.paper.findMany({
-        where: {
-          ownerId: actor.userId,
-          deletedAt: null,
-          ...(f.group && { examKind: { in: [...EXAM_GROUPS[f.group].kinds] } }),
-          ...(f.year && { academicYear: f.year }),
-          ...(f.status && { status: f.status }),
-          ...(f.course && { courseCode: f.course }),
-        },
-        orderBy: { updatedAt: "desc" },
-      });
-      const q = f.q?.toLocaleLowerCase("en");
-      if (!q) return rows;
-      return rows.filter((p) =>
-        [p.title, p.courseCode, p.courseTitle].some((x) => x.toLocaleLowerCase("en").includes(q)),
-      );
+    list,
+
+    /** One page of `list` (D130): 50 papers, Older/Newer cursors, same filters. */
+    async page(
+      actor: Actor,
+      filter: PaperFilter = {},
+      request: { after?: string; before?: string } = {},
+    ) {
+      const rows = await list(actor, filter);
+      // One person's papers are all loaded anyway, so the page can say how many match.
+      return {
+        ...pageOf(rows, (p) => p.updatedAt, pageRequestSchema.parse(request)),
+        total: rows.length,
+      };
     },
 
     /** The last `n` papers the actor edited, for the home screen. */

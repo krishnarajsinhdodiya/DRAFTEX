@@ -1,12 +1,14 @@
 // Upgrading from earlier versions (roadmap rule; D28, D35, D84): backups made
-// by v0.8.0, v0.10.0, v0.11.0 and v0.14.0 (tests/fixtures/upgrade, invented data, made by
+// by v0.8.0, v0.10.0, v0.11.0, v0.14.0 and v0.15.0 (tests/fixtures/upgrade, invented data, made by
 // scripts/make-upgrade-fixture.ts) are restored into this version with
 // `npm run restore`; the start applies the newer migrations. Their templates,
 // papers and questions must come through unchanged, their exports must look
 // exactly like the ones those versions made, and their questions must go into
 // the question bank (Phase 11). The v0.11.0 paper holds an Advanced LaTeX
 // block, so its unchanged export also covers the Phase 12 sanitiser (D95).
-// v0.14.0 is the last version before the blueprint migration (Phase 15).
+// v0.14.0 is the last version before the blueprint migration (Phase 15). v0.15.0
+// adds a Practical sessional paper and a Sessional blueprint: the exam_kinds
+// migration renames the paper's exam (D131) and keys the blueprint by exam (D134).
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -21,7 +23,7 @@ test.describe.configure({ mode: "serial", timeout: 180_000 });
 
 test.afterEach(closeOpenContexts);
 
-const FROMS = ["v0.8.0", "v0.10.0", "v0.11.0", "v0.14.0"] as const;
+const FROMS = ["v0.8.0", "v0.10.0", "v0.11.0", "v0.14.0", "v0.15.0"] as const;
 const FIXTURE = path.resolve("tests", "fixtures", "upgrade");
 const ADMIN = { name: "Upgrade Admin", email: "upgrade@example.test", password: "upgrade fixture" };
 const PAPER = "Upgrade Example Paper";
@@ -69,6 +71,25 @@ function rows(file: string) {
   } finally {
     db.close();
   }
+}
+
+/** What the rows look like after D131: the old practical sessional is Practical sessional 1. */
+function renamed(r: ReturnType<typeof rows>): ReturnType<typeof rows> {
+  const fix = (v: unknown) =>
+    typeof v === "string"
+      ? v.replaceAll('"examKind":"PRACTICAL_SESSIONAL"', '"examKind":"PRACTICAL_SESSIONAL_1"')
+      : v;
+  return {
+    ...r,
+    papers: r.papers.map((p) => {
+      const row = p as Record<string, unknown>;
+      return {
+        ...row,
+        examKind: row.examKind === "PRACTICAL_SESSIONAL" ? "PRACTICAL_SESSIONAL_1" : row.examKind,
+        templateSnapshot: fix(row.templateSnapshot),
+      };
+    }),
+  };
 }
 
 async function stopServer() {
@@ -133,7 +154,7 @@ for (const FROM of FROMS)
     }
     console.log(`upgrade server answered after ${Date.now() - started} ms`);
     await api.dispose();
-    expect(rows(path.join(dir, "data.db"))).toEqual(before);
+    expect(rows(path.join(dir, "data.db"))).toEqual(renamed(before));
 
     const ctx = await browser.newContext({ baseURL: BASE });
     try {
@@ -186,6 +207,36 @@ for (const FROM of FROMS)
       await report.getByRole("button", { name: "OK" }).click();
       await page.goto("/bank");
       await expect(page.getByText("1 question, most recently changed first")).toBeVisible();
+
+      // v0.15.0: the practical paper is Practical sessional 1 and exports the same;
+      // the Sessional blueprint is now the Sessional 1 one (D131, D134).
+      const practicalPdf = path.join(FIXTURE, `${FROM}-practical.pdf`);
+      if (fs.existsSync(practicalPdf)) {
+        const db = new Database(path.join(dir, "data.db"), { readonly: true });
+        const practical = db
+          .prepare("SELECT id, examKind FROM Paper WHERE title = 'Upgrade Practical Paper'")
+          .get() as { id: string; examKind: string };
+        const kinds = db.prepare("SELECT examKind FROM Blueprint").pluck().all();
+        db.close();
+        expect(practical.examKind).toBe("PRACTICAL_SESSIONAL_1");
+        expect(kinds).toEqual(["SESSIONAL_1"]);
+        const pres = await page.request.post(`/api/papers/${practical.id}/export`, {
+          headers: { Origin: BASE },
+          data: { confirmed: true },
+          timeout: 120_000,
+        });
+        expect(pres.status(), await pres.text().catch(() => "")).toBe(200);
+        const pdf = Object.entries(unzipSync(new Uint8Array(await pres.body()))).find(([n]) =>
+          n.endsWith("/paper.pdf"),
+        )?.[1] as Uint8Array;
+        const [a, b] = await Promise.all([
+          renderPdf(pdf),
+          renderPdf(new Uint8Array(fs.readFileSync(practicalPdf))),
+        ]);
+        expect(a.length).toBe(b.length);
+        for (const d of diffPages(a, b))
+          expect(d.changedPixels, `practical page ${d.page}`).toBe(0);
+      }
     } finally {
       await ctx.close();
     }

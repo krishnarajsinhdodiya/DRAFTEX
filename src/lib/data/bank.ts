@@ -29,6 +29,9 @@ import { questionNumbers } from "@/lib/paper/numbering";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { keyCriteriaSchema } from "@/lib/paper/key";
 import { CO_TAG_RE, CO_TAG_SEP } from "@/lib/paper/co-tag";
+import { searchTerms } from "@/lib/bank/search";
+import { similarPairs, similarTo } from "@/lib/bank/similar";
+import { decodeCursor, encodeCursor, msSql, PAGE_SIZE, pageRequestSchema } from "@/lib/paging";
 import type { Actor } from "./actor";
 import { assertOwnsAssets, shareAssets } from "./assets";
 import { writeAudit } from "./audit";
@@ -44,7 +47,7 @@ import { ADVANCED_NOT_ALLOWED, papers, slotPlaceSchema, type SlotPlace } from ".
 const WHAT = "Question";
 /** How long a bank question stays in Trash before it is removed for good (D82, as D51). */
 export const BANK_TRASH_DAYS = 30;
-export const BANK_PAGE_SIZE = 50;
+export const BANK_PAGE_SIZE = PAGE_SIZE;
 
 export const ALREADY_IN_BANK = "Already in your bank";
 export const ALREADY_IN_TRASH = "Already in your Trash";
@@ -61,7 +64,8 @@ export const bankFilterSchema = z.object({
   type: z.enum(BANK_TYPES).optional(),
   /** "mine": only the actor's own; "shared": only colleagues' shared ones. */
   scope: z.enum(["mine", "shared"]).optional(),
-  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  /** Keyset page cursors (D130); a value that is not a cursor reads as the first page. */
+  ...pageRequestSchema.shape,
 });
 export type BankFilter = z.input<typeof bankFilterSchema>;
 
@@ -73,6 +77,15 @@ export interface AddReport {
   /** Added questions; `warning` names a CO or unit outside the syllabus lists (D85). */
   added: { label: string; id: string; warning?: string }[];
   skipped: SkipRow[];
+}
+
+/**
+ * A question for near-duplicate lists: long enough that alike questions show
+ * where they differ (120 characters cut most templates before it, /break-ui).
+ */
+function summaryOf(text: string): string {
+  const one = text.replace(/\s+/g, " ").trim();
+  return one.length > 240 ? `${one.slice(0, 239)}…` : one;
 }
 
 function json(value: unknown): Prisma.InputJsonValue {
@@ -194,6 +207,29 @@ export function bank(db: Db) {
   }
 
   /**
+   * The actor's own questions in this course (not in Trash) that read almost
+   * the same as `text` (D114), most similar first, with a one-line summary.
+   * Never colleagues' questions (D73).
+   */
+  async function similarOf(actor: Actor, courseCode: string | null, text: string, except?: string) {
+    if (!courseCode) return [];
+    const own = await db.question.findMany({
+      where: {
+        ownerId: actor.userId,
+        courseCode,
+        deletedAt: null,
+        ...(except && { id: { not: except } }),
+      },
+      select: { id: true, searchText: true },
+    });
+    const byId = new Map(own.map((q) => [q.id, q.searchText ?? ""]));
+    return similarTo(
+      text,
+      own.map((q) => ({ id: q.id, text: q.searchText ?? "" })),
+    ).map((x) => ({ ...x, summary: summaryOf(byId.get(x.id) ?? "") }));
+  }
+
+  /**
    * Checks a question; throws with every error. Returns the fields as stored
    * and the warnings (a CO or unit outside the syllabus lists, D85).
    */
@@ -255,36 +291,71 @@ export function bank(db: Db) {
 
   return {
     /**
-     * Questions the actor may see (D73), newest first, narrowed by the filters.
-     * Text search runs here, not in SQL (as D59): SQLite LIKE treats % and _
-     * as wildcards. Each row carries the actor's own last use only (D75).
+     * Questions the actor may see (D73), newest changed first (D129), narrowed
+     * by the filters, 50 at a time (D130). One SQL query picks the page's ids:
+     * visibility, Trash, filters and the full-text search together (D128), so
+     * no visible-row count can overflow a query (the P2029 failure before
+     * Phase 16). Prisma then loads only those rows. Each row carries the
+     * actor's own last use only (D75).
      */
     async list(actor: Actor, filter: BankFilter = {}) {
       const f = bankFilterSchema.parse(filter);
-      const visible = await visibleWhere(actor);
-      const rows = await db.question.findMany({
-        where: {
-          AND: [
-            visible,
-            {
-              ...(f.course && { courseCode: f.course }),
-              ...(f.unit && { unit: f.unit }),
-              // Either tag of a two-CO question (D119); tags hold no LIKE wildcards.
-              ...(f.co && {
-                OR: [
-                  { coTag: f.co },
-                  { coTag: { startsWith: f.co + CO_TAG_SEP } },
-                  { coTag: { endsWith: CO_TAG_SEP + f.co } },
-                ],
-              }),
-              ...(f.bloom && { bloomLevel: f.bloom }),
-              ...(f.marks && { marks: f.marks }),
-              ...(f.type && { type: f.type }),
-              ...(f.scope === "mine" && { ownerId: actor.userId }),
-              ...(f.scope === "shared" && { ownerId: { not: actor.userId } }),
-            },
-          ],
-        },
+      const terms = searchTerms(f.q);
+      const before = decodeCursor(f.before);
+      const after = before ? null : decodeCursor(f.after);
+      const where: string[] = [
+        `q."deletedAt" IS NULL`,
+        `(q."ownerId" = ? OR q."sharing" = 'SHARED' OR EXISTS (SELECT 1 FROM "BankCourseShare" s WHERE s."ownerId" = q."ownerId" AND s."courseCode" = q."courseCode"))`,
+      ];
+      const args: unknown[] = [actor.userId];
+      const add = (sql: string, ...values: unknown[]) => {
+        where.push(sql);
+        args.push(...values);
+      };
+      if (f.course) add(`q."courseCode" = ?`, f.course);
+      if (f.unit) add(`q."unit" = ?`, f.unit);
+      // Either tag of a two-CO question (D119).
+      if (f.co) {
+        const head = f.co + CO_TAG_SEP;
+        const tail = CO_TAG_SEP + f.co;
+        add(
+          `(q."coTag" = ? OR substr(q."coTag", 1, ?) = ? OR substr(q."coTag", -?) = ?)`,
+          f.co,
+          head.length,
+          head,
+          tail.length,
+          tail,
+        );
+      }
+      if (f.bloom) add(`q."bloomLevel" = ?`, f.bloom);
+      if (f.marks) add(`q."marks" = ?`, f.marks);
+      if (f.type) add(`q."type" = ?`, f.type);
+      if (f.scope === "mine") add(`q."ownerId" = ?`, actor.userId);
+      if (f.scope === "shared") add(`q."ownerId" <> ?`, actor.userId);
+      if (terms) {
+        const inner = [
+          ...(terms.match ? [`question_fts MATCH ?`] : []),
+          ...terms.short.map(() => `instr(lower(body), ?) > 0`),
+        ];
+        add(
+          `q."id" IN (SELECT question_id FROM question_fts WHERE ${inner.join(" AND ")})`,
+          ...(terms.match ? [terms.match] : []),
+          ...terms.short,
+        );
+      }
+      const t = msSql(`COALESCE(q."updatedAt", q."createdAt")`);
+      if (after) add(`(${t} < ? OR (${t} = ? AND q."id" < ?))`, after.t, after.t, after.id);
+      if (before) add(`(${t} > ? OR (${t} = ? AND q."id" > ?))`, before.t, before.t, before.id);
+      const dir = before ? "ASC" : "DESC";
+      const picked = await db.$queryRawUnsafe<{ id: string }[]>(
+        `SELECT q."id" AS id, ${t} AS t FROM "Question" q WHERE ${where.join(" AND ")} ORDER BY t ${dir}, q."id" ${dir} LIMIT ${BANK_PAGE_SIZE + 1}`,
+        ...args,
+      );
+      const more = picked.length > BANK_PAGE_SIZE;
+      const page = picked.slice(0, BANK_PAGE_SIZE);
+      if (before) page.reverse();
+      const loaded = await db.question.findMany({
+        where: { id: { in: page.map((r) => r.id) } },
         include: {
           course: { select: { code: true, title: true } },
           owner: { select: { name: true } },
@@ -295,31 +366,86 @@ export function bank(db: Db) {
             select: { paperTitle: true, usedAt: true, paperId: true },
           },
         },
-        // The id breaks ties: an import saves many rows in the same millisecond,
-        // and without it pages could repeat or skip rows (/break-ui).
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "asc" }],
       });
-      const q = f.q?.toLocaleLowerCase("en");
-      const hits = q
-        ? rows.filter((r) =>
-            [r.searchText ?? "", ...z.array(z.string()).catch([]).parse(r.tags)].some((x) =>
-              x.toLocaleLowerCase("en").includes(q),
-            ),
-          )
-        : rows;
-      const start = (f.page - 1) * BANK_PAGE_SIZE;
-      return {
-        total: hits.length,
-        page: f.page,
-        pageSize: BANK_PAGE_SIZE,
-        rows: hits.slice(start, start + BANK_PAGE_SIZE).map(({ uses, owner, ...r }) => ({
-          ...shape(r),
-          course: r.course,
-          ownerName: owner.name,
-          mine: r.ownerId === actor.userId,
-          lastUse: uses[0] ?? null,
-        })),
+      const byId = new Map(loaded.map((r) => [r.id, r]));
+      const edge = (p: { id: string } | undefined) => {
+        const r = p && byId.get(p.id);
+        return r ? { t: (r.updatedAt ?? r.createdAt).getTime(), id: r.id } : null;
       };
+      const first = edge(page[0]);
+      const last = edge(page[page.length - 1]);
+      // "Older" exists when this page was cut short going back, or we came from newer pages.
+      const hasOlder = before ? true : more;
+      const hasNewer = before ? more : after !== null;
+      return {
+        pageSize: BANK_PAGE_SIZE,
+        older: hasOlder && last ? encodeCursor(last) : null,
+        newer: hasNewer && first ? encodeCursor(first) : null,
+        rows: page.flatMap((p) => {
+          const r = byId.get(p.id);
+          if (!r) return [];
+          const { uses, owner, ...rest } = r;
+          return [
+            {
+              ...shape(rest),
+              course: rest.course,
+              ownerName: owner.name,
+              mine: rest.ownerId === actor.userId,
+              lastUse: uses[0] ?? null,
+            },
+          ];
+        }),
+      };
+    },
+
+    /**
+     * Possible duplicates in the actor's own bank (D114): pairs of questions
+     * in the same course, not in Trash, that read almost the same, most
+     * similar first. Only the actor's own questions, never colleagues'.
+     */
+    async possibleDuplicates(actor: Actor) {
+      const own = await db.question.findMany({
+        where: { ownerId: actor.userId, deletedAt: null, courseCode: { not: null } },
+        select: { id: true, courseCode: true, searchText: true },
+      });
+      const byCourse = new Map<string, { id: string; text: string }[]>();
+      for (const q of own) {
+        const list = byCourse.get(q.courseCode ?? "") ?? [];
+        list.push({ id: q.id, text: q.searchText ?? "" });
+        byCourse.set(q.courseCode ?? "", list);
+      }
+      const text = new Map(own.map((q) => [q.id, q.searchText ?? ""]));
+      const out: {
+        courseCode: string;
+        score: number;
+        a: { id: string; summary: string };
+        b: { id: string; summary: string };
+      }[] = [];
+      for (const [courseCode, items] of byCourse) {
+        for (const p of similarPairs(items)) {
+          out.push({
+            courseCode,
+            score: p.score,
+            a: { id: p.a, summary: summaryOf(text.get(p.a) ?? "") },
+            b: { id: p.b, summary: summaryOf(text.get(p.b) ?? "") },
+          });
+        }
+      }
+      return out.sort(
+        (x, y) =>
+          y.score - x.score ||
+          x.courseCode.localeCompare(y.courseCode) ||
+          (x.a.id < y.a.id ? -1 : 1),
+      );
+    },
+
+    /** The actor's own questions of a course (not in Trash), for the CSV near-duplicate check. */
+    async ownTexts(actor: Actor, courseCode: string) {
+      const rows = await db.question.findMany({
+        where: { ownerId: actor.userId, courseCode, deletedAt: null },
+        select: { id: true, searchText: true },
+      });
+      return rows.map((r) => ({ id: r.id, text: r.searchText ?? "" }));
     },
 
     /** What the bank filters can offer: courses and COs of the questions the actor can see. */
@@ -358,10 +484,16 @@ export function bank(db: Db) {
         q.ownerId === actor.userId && q.courseCode && q.dupKey
           ? (await duplicatesOf(actor, q.courseCode, q.dupKey, q.id)).length
           : 0;
+      const similar =
+        q.ownerId === actor.userId && q.deletedAt === null
+          ? await similarOf(actor, q.courseCode, q.searchText ?? "", q.id)
+          : [];
       return {
         ...shape(q),
         /** The author's other questions with the same text in this course, Trash included (D76). */
         duplicates,
+        /** The author's questions that read almost the same (D114); empty for others. */
+        similar,
         /** A CO or unit outside the syllabus lists (D85), shown as a note. */
         warnings: q.coTag
           ? bankCheck(
@@ -397,7 +529,8 @@ export function bank(db: Db) {
       });
       await audit(actor, "create", q.id);
       const duplicates = await duplicatesOf(actor, f.courseCode, cols.dupKey, q.id);
-      return { question: shape(q), duplicates, warnings };
+      const similar = await similarOf(actor, f.courseCode, cols.searchText, q.id);
+      return { question: shape(q), duplicates, similar, warnings };
     },
 
     async update(actor: Actor, id: string, version: number, input: BankFieldsInput) {
@@ -411,7 +544,8 @@ export function bank(db: Db) {
       if (count === 0) throw new ConflictError(STALE_VERSION);
       await audit(actor, "update", id);
       const duplicates = await duplicatesOf(actor, f.courseCode, cols.dupKey, id);
-      return { question: shape(await findOwn(actor, id)), duplicates, warnings };
+      const similar = await similarOf(actor, f.courseCode, cols.searchText, id);
+      return { question: shape(await findOwn(actor, id)), duplicates, similar, warnings };
     },
 
     /** Private or shared with every colleague (D73); the author only. */
