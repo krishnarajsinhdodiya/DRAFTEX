@@ -163,7 +163,7 @@ function BlueprintCheck({
       </table>
       <p aria-live="polite" className="text-caption text-ink-2">
         {notes.length
-          ? `${notes.length} CO${notes.length === 1 ? " needs" : "s need"} a look. Export still works.`
+          ? `${notes.length} row${notes.length === 1 ? " needs" : "s need"} a look. Export still works.`
           : "Every CO is within range."}{" "}
         Optional groups count their marks times attempt/slots; a question with two COs gives each
         half.

@@ -183,6 +183,13 @@ Names are binding; fields may be added.
   `QuestionUse` (per-user usage) and `BankCourseShare` (D72-D85 in
   memory.md). The 2026 syllabus gives defaults and suggestions, never rules
   (D85).]
+- [Amended 2026-11-16, Phase 15: `coTag` on Slot, Question and a sub-part
+  holds one CO tag or two different ones, stored as `A, B` (D119; no new
+  column). New table `Blueprint`: owner, course code, exam group (D59 keys),
+  unit (`MARKS`|`PERCENT`), tolerance, targets (JSON `[{co, target}]`),
+  sharing (`PRIVATE`|`SHARED`), version; one per owner, course code and exam
+  group; others see it only while shared, read-only; admins get nothing
+  extra (D108).]
 - `Asset` sha256 (pk), ownerId, mime, bytes, width, height, originalName.
 - `CompileJob` id, paperId, kind (`PAPER`|`KEY`), status, durationMs,
   errorSummary, createdAt (keep last 20 per paper).
@@ -302,6 +309,21 @@ Built-ins can't be edited; "Save as new" is the way to change them.
   lines (checked by the engine, `\dxMerged`); maths in any table cell may
   not use `&`, `\\` or `\hline` outside an environment. Not in the
   objective key table. See docs/SECURITY-REVIEW-PHASE14.md.
+- Two COs and the CO blueprint (Phase 15, D108-D111, D119-D123; amended
+  2026-11-16): a question or sub-part may carry a second CO (a second box
+  appears once the first holds a tag). Two COs print in one bracket,
+  `[BP604T.01, BP604T.03]`, on the paper and in the key, under the same
+  placement rules as one (D67, D70); in the summary and the blueprint each
+  CO gets half the question's marks (D121). CSV import has an optional
+  `co 2` column (D123). A **CO blueprint** (Blueprints screen) sets target
+  marks or percent per CO, with a tolerance, for a course code and exam
+  group. The editor's Bloom and CO summary compares the paper with the
+  blueprint that matches it (the user's own, else the most recently changed
+  shared one): target, the paper's value and Under / Over / Within range /
+  Not in blueprint / No CO, as the user types. Optional groups count each
+  question's marks × attempt/slots; sub-parts split a question as in D69.
+  Export lists the same notes as warnings to confirm; a blueprint never
+  blocks export and prints nothing.
 
 ### TipTap → LaTeX serialiser (most error-prone component)
 - Pure, deterministic, unit-tested per node type; escapes `\ { } $ & # ^ _ % ~`

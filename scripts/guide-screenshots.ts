@@ -345,4 +345,29 @@ await page
   .waitFor({ timeout: 15_000 });
 await shot(page, "20-table");
 
+// Phase 15: a CO blueprint for the example paper's course, then the check.
+await page.goto("/blueprints/new");
+await page.getByLabel("Course code").fill("BP604T");
+await page.getByLabel("Exam group").selectOption({ label: "End-semester" });
+await page.getByLabel("Allowed difference (±marks)").fill("2");
+for (const [i, [co, target]] of (
+  [
+    ["BP604T.01", "20"],
+    ["BP604T.02", "20"],
+    ["BP604T.03", "20"],
+  ] as const
+).entries()) {
+  if (i > 0) await page.getByRole("button", { name: "Add CO" }).click();
+  await page.getByLabel(`CO ${i + 1}`, { exact: true }).fill(co);
+  await page.getByLabel(`Target for CO ${i + 1} (marks)`).fill(target);
+}
+await shot(page, "21-blueprint");
+await page.getByRole("button", { name: "Save blueprint" }).click();
+await page.getByText("Blueprint saved.").waitFor();
+await page.goto(paperUrl);
+await page.getByText("Bloom and CO summary").click();
+const check = page.getByRole("region", { name: "CO blueprint check" });
+await check.scrollIntoViewIfNeeded();
+await shot(page, "22-blueprint-check");
+
 await browser.close();
