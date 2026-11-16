@@ -29,6 +29,13 @@ import { questionNumbers } from "@/lib/paper/numbering";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { keyCriteriaSchema } from "@/lib/paper/key";
 import { CO_TAG_RE, CO_TAG_SEP } from "@/lib/paper/co-tag";
+import {
+  decodeCursor,
+  encodeCursor,
+  msSql,
+  pageRequestSchema,
+  searchTerms,
+} from "@/lib/bank/search";
 import type { Actor } from "./actor";
 import { assertOwnsAssets, shareAssets } from "./assets";
 import { writeAudit } from "./audit";
@@ -61,7 +68,8 @@ export const bankFilterSchema = z.object({
   type: z.enum(BANK_TYPES).optional(),
   /** "mine": only the actor's own; "shared": only colleagues' shared ones. */
   scope: z.enum(["mine", "shared"]).optional(),
-  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  /** Keyset page cursors (D130); a value that is not a cursor reads as the first page. */
+  ...pageRequestSchema.shape,
 });
 export type BankFilter = z.input<typeof bankFilterSchema>;
 
@@ -255,36 +263,71 @@ export function bank(db: Db) {
 
   return {
     /**
-     * Questions the actor may see (D73), newest first, narrowed by the filters.
-     * Text search runs here, not in SQL (as D59): SQLite LIKE treats % and _
-     * as wildcards. Each row carries the actor's own last use only (D75).
+     * Questions the actor may see (D73), newest changed first (D129), narrowed
+     * by the filters, 50 at a time (D130). One SQL query picks the page's ids:
+     * visibility, Trash, filters and the full-text search together (D128), so
+     * no visible-row count can overflow a query (the P2029 failure before
+     * Phase 16). Prisma then loads only those rows. Each row carries the
+     * actor's own last use only (D75).
      */
     async list(actor: Actor, filter: BankFilter = {}) {
       const f = bankFilterSchema.parse(filter);
-      const visible = await visibleWhere(actor);
-      const rows = await db.question.findMany({
-        where: {
-          AND: [
-            visible,
-            {
-              ...(f.course && { courseCode: f.course }),
-              ...(f.unit && { unit: f.unit }),
-              // Either tag of a two-CO question (D119); tags hold no LIKE wildcards.
-              ...(f.co && {
-                OR: [
-                  { coTag: f.co },
-                  { coTag: { startsWith: f.co + CO_TAG_SEP } },
-                  { coTag: { endsWith: CO_TAG_SEP + f.co } },
-                ],
-              }),
-              ...(f.bloom && { bloomLevel: f.bloom }),
-              ...(f.marks && { marks: f.marks }),
-              ...(f.type && { type: f.type }),
-              ...(f.scope === "mine" && { ownerId: actor.userId }),
-              ...(f.scope === "shared" && { ownerId: { not: actor.userId } }),
-            },
-          ],
-        },
+      const terms = searchTerms(f.q);
+      const before = decodeCursor(f.before);
+      const after = before ? null : decodeCursor(f.after);
+      const where: string[] = [
+        `q."deletedAt" IS NULL`,
+        `(q."ownerId" = ? OR q."sharing" = 'SHARED' OR EXISTS (SELECT 1 FROM "BankCourseShare" s WHERE s."ownerId" = q."ownerId" AND s."courseCode" = q."courseCode"))`,
+      ];
+      const args: unknown[] = [actor.userId];
+      const add = (sql: string, ...values: unknown[]) => {
+        where.push(sql);
+        args.push(...values);
+      };
+      if (f.course) add(`q."courseCode" = ?`, f.course);
+      if (f.unit) add(`q."unit" = ?`, f.unit);
+      // Either tag of a two-CO question (D119).
+      if (f.co) {
+        const head = f.co + CO_TAG_SEP;
+        const tail = CO_TAG_SEP + f.co;
+        add(
+          `(q."coTag" = ? OR substr(q."coTag", 1, ?) = ? OR substr(q."coTag", -?) = ?)`,
+          f.co,
+          head.length,
+          head,
+          tail.length,
+          tail,
+        );
+      }
+      if (f.bloom) add(`q."bloomLevel" = ?`, f.bloom);
+      if (f.marks) add(`q."marks" = ?`, f.marks);
+      if (f.type) add(`q."type" = ?`, f.type);
+      if (f.scope === "mine") add(`q."ownerId" = ?`, actor.userId);
+      if (f.scope === "shared") add(`q."ownerId" <> ?`, actor.userId);
+      if (terms) {
+        const inner = [
+          ...(terms.match ? [`question_fts MATCH ?`] : []),
+          ...terms.short.map(() => `instr(lower(body), ?) > 0`),
+        ];
+        add(
+          `q."id" IN (SELECT question_id FROM question_fts WHERE ${inner.join(" AND ")})`,
+          ...(terms.match ? [terms.match] : []),
+          ...terms.short,
+        );
+      }
+      const t = msSql(`COALESCE(q."updatedAt", q."createdAt")`);
+      if (after) add(`(${t} < ? OR (${t} = ? AND q."id" < ?))`, after.t, after.t, after.id);
+      if (before) add(`(${t} > ? OR (${t} = ? AND q."id" > ?))`, before.t, before.t, before.id);
+      const dir = before ? "ASC" : "DESC";
+      const picked = await db.$queryRawUnsafe<{ id: string }[]>(
+        `SELECT q."id" AS id, ${t} AS t FROM "Question" q WHERE ${where.join(" AND ")} ORDER BY t ${dir}, q."id" ${dir} LIMIT ${BANK_PAGE_SIZE + 1}`,
+        ...args,
+      );
+      const more = picked.length > BANK_PAGE_SIZE;
+      const page = picked.slice(0, BANK_PAGE_SIZE);
+      if (before) page.reverse();
+      const loaded = await db.question.findMany({
+        where: { id: { in: page.map((r) => r.id) } },
         include: {
           course: { select: { code: true, title: true } },
           owner: { select: { name: true } },
@@ -295,30 +338,35 @@ export function bank(db: Db) {
             select: { paperTitle: true, usedAt: true, paperId: true },
           },
         },
-        // The id breaks ties: an import saves many rows in the same millisecond,
-        // and without it pages could repeat or skip rows (/break-ui).
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "asc" }],
       });
-      const q = f.q?.toLocaleLowerCase("en");
-      const hits = q
-        ? rows.filter((r) =>
-            [r.searchText ?? "", ...z.array(z.string()).catch([]).parse(r.tags)].some((x) =>
-              x.toLocaleLowerCase("en").includes(q),
-            ),
-          )
-        : rows;
-      const start = (f.page - 1) * BANK_PAGE_SIZE;
+      const byId = new Map(loaded.map((r) => [r.id, r]));
+      const edge = (p: { id: string } | undefined) => {
+        const r = p && byId.get(p.id);
+        return r ? { t: (r.updatedAt ?? r.createdAt).getTime(), id: r.id } : null;
+      };
+      const first = edge(page[0]);
+      const last = edge(page[page.length - 1]);
+      // "Older" exists when this page was cut short going back, or we came from newer pages.
+      const hasOlder = before ? true : more;
+      const hasNewer = before ? more : after !== null;
       return {
-        total: hits.length,
-        page: f.page,
         pageSize: BANK_PAGE_SIZE,
-        rows: hits.slice(start, start + BANK_PAGE_SIZE).map(({ uses, owner, ...r }) => ({
-          ...shape(r),
-          course: r.course,
-          ownerName: owner.name,
-          mine: r.ownerId === actor.userId,
-          lastUse: uses[0] ?? null,
-        })),
+        older: hasOlder && last ? encodeCursor(last) : null,
+        newer: hasNewer && first ? encodeCursor(first) : null,
+        rows: page.flatMap((p) => {
+          const r = byId.get(p.id);
+          if (!r) return [];
+          const { uses, owner, ...rest } = r;
+          return [
+            {
+              ...shape(rest),
+              course: rest.course,
+              ownerName: owner.name,
+              mine: rest.ownerId === actor.userId,
+              lastUse: uses[0] ?? null,
+            },
+          ];
+        }),
       };
     },
 

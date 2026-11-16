@@ -42,18 +42,34 @@ beforeAll(async () => {
 });
 afterAll(() => t.close());
 
-it("times today's bank list, search and paging", async () => {
-  const all = await t.data.bank.list(author, {});
-  console.log(
-    `visible to author: ${all.total}; to admin: ${(await t.data.bank.list(admin, {})).total}`,
-  );
-  expect(all.total).toBeGreaterThan(0);
+it("times the bank list, search and keyset paging (D115)", async () => {
+  const count = async (actor: Actor) => {
+    let n = 0;
+    let page = await t.data.bank.list(actor, {});
+    n += page.rows.length;
+    while (page.older) {
+      page = await t.data.bank.list(actor, { after: page.older });
+      n += page.rows.length;
+    }
+    return n;
+  };
+  const visible = await count(author);
+  console.log(`visible to author: ${visible}; to admin: ${await count(admin)}`);
+  expect(visible).toBeGreaterThan(0);
+  // The cursor of page 40, found once by walking.
+  let page = await t.data.bank.list(author, {});
+  for (let i = 1; i < 40 && page.older; i++) {
+    page = await t.data.bank.list(author, { after: page.older });
+  }
+  const after40 = page.older ?? undefined;
   await time("list page 1", () => t.data.bank.list(author, {}));
-  await time("list page 40", () => t.data.bank.list(author, { page: 40 }));
+  await time("list page 41", () => t.data.bank.list(author, { after: after40 }));
   await time("search 'paracetamol'", () => t.data.bank.list(author, { q: "paracetamol" }));
   await time("search 'butyl' (substring)", () => t.data.bank.list(author, { q: "butyl" }));
+  await time("search 'of' (short word)", () => t.data.bank.list(author, { q: "of" }));
   await time("search no hit", () => t.data.bank.list(author, { q: "zzzzqq" }));
   await time("search + course + bloom", () =>
     t.data.bank.list(author, { q: "synthesis", course: "XX603T", bloom: "APPLY" }),
   );
+  await time("colleague, two words", () => t.data.bank.list(colleague, { q: "stability tablets" }));
 });

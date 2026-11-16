@@ -110,7 +110,7 @@ describe("save", () => {
     const r = await bankImport(t.data, a).save(enc(file));
     expect(r.saved).toBe(4);
     const list = await t.data.bank.list(a);
-    expect(list.total).toBe(4);
+    expect(list.rows).toHaveLength(4);
     const tex = list.rows.find((x) => x.searchText?.startsWith("\\input"));
     expect(tex?.content.content[0]).toEqual({
       type: "paragraph",
@@ -131,7 +131,7 @@ describe("save", () => {
   it("checks another person's import against their own bank only", async () => {
     const p = await bankImport(t.data, b).preview(enc(file));
     expect(p.counts.valid).toBe(4);
-    expect((await t.data.bank.list(b)).total).toBe(0);
+    expect((await t.data.bank.list(b)).rows).toEqual([]);
   });
 });
 

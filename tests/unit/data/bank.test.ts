@@ -522,9 +522,11 @@ describe("list", () => {
     });
     expect(r.rows.every((x) => x.courseCode === "XX604T" && x.mine)).toBe(true);
     expect((await t.data.bank.list(a, { co: "XX605T.02" })).rows.map((x) => x.id)).toEqual([q3]);
-    expect((await t.data.bank.list(a, { unit: 5 })).total).toBe(1);
+    expect((await t.data.bank.list(a, { unit: 5 })).rows).toHaveLength(1);
     expect((await t.data.bank.list(b, { scope: "shared" })).rows.every((x) => !x.mine)).toBe(true);
-    expect((await t.data.bank.list(a, { page: 2 })).rows).toEqual([]);
-    expect((await t.data.bank.list(a, { q: "%" })).total).toBe(0);
+    const first = await t.data.bank.list(a);
+    expect([first.older, first.newer]).toEqual([null, null]);
+    expect((await t.data.bank.list(a, { after: "not-a-cursor" })).rows).toEqual(first.rows);
+    expect((await t.data.bank.list(a, { q: "%" })).rows).toEqual([]);
   });
 });
