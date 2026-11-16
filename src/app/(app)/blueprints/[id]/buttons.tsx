@@ -9,21 +9,28 @@ export function ShareSwitch({ id, shared }: { id: string; shared: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Ticks at once; goes back if the save fails (it waited for a refresh before).
+  const [on, setOn] = useState(shared);
   return (
     <span className="flex flex-col gap-1">
       <label className="flex items-center gap-2 text-small text-ink">
         <input
           type="checkbox"
-          checked={shared}
+          checked={on}
           disabled={pending}
-          onChange={(e) =>
+          onChange={(e) => {
+            const next = e.target.checked;
+            setOn(next);
             start(async () => {
               setError(null);
-              const r = await setBlueprintSharingAction(id, e.target.checked);
+              const r = await setBlueprintSharingAction(id, next);
               if (r.ok) router.refresh();
-              else setError(r.message);
-            })
-          }
+              else {
+                setOn(!next);
+                setError(r.message);
+              }
+            });
+          }}
         />
         Share with colleagues (they can see and use it, not change it)
       </label>
