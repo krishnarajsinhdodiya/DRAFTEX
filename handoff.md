@@ -30,7 +30,6 @@ no chat history must be able to continue from this file alone.
 
 ## Owner tasks (not code)
 - Fix GitHub billing.
-- Ask the father: do real papers print two COs, and in what form? (Built as `[A, B]`.)
 - Carried: delete the copied `draftex.local.json` on the father's laptop or re-clone into `C:\DRAFTEX`; ASCII-only code and the backtick shortcut (his screenshot showed a stray backtick in "`its applications"); roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
 
 ## Failing tests
