@@ -230,6 +230,7 @@ fs.writeFileSync(
     "course code,unit,co,bloom,marks,type,question,answer,tags,choice a,choice b,choice c,choice d,correct",
     "BP604T,1,1,Remember,1,OBJECTIVE,Which of these is an invented drug class?,,example,First,Second,Third,Fourth,b",
     "BP604T,2,2,Understand,5,SHORT,Explain an invented process in your own words.,Points to cover.,example,,,,,",
+    "BP604T,2,2,Understand,5,SHORT,Explain the invented process in your own words with an example.,,,,,,,",
     "BP604T,2,2,Recall,5,SHORT,Describe an invented assay.,,,,,,,",
     "MPH101T,,MPH101T.03,Evaluate,10,LONG,Evaluate an invented delivery system.,,,,,,,",
   ].join("\r\n"),
@@ -240,7 +241,14 @@ await page.getByRole("button", { name: "Choose a CSV file" }).click();
 await (await chooser).setFiles(csvFile);
 await page.getByRole("status").filter({ hasText: "Read as" }).waitFor();
 await shot(page, "17-import");
+// Phase 16 (D114): save the ready rows (Save sends the file again, so it is
+// deleted only afterwards), then the alike pair is listed.
+await page.getByRole("button", { name: /^Save \d+ question/ }).click();
+await page.getByText(/were saved to your bank/).waitFor();
 fs.rmSync(csvFile, { force: true });
+await page.goto("/bank/duplicates");
+await page.getByRole("list", { name: "Possible duplicates" }).waitFor();
+await shot(page, "23-duplicates");
 
 await page.goto("/admin/backups");
 await page.getByRole("button", { name: "Back up now" }).click();
@@ -350,7 +358,7 @@ await shot(page, "20-table");
 // Phase 15: a CO blueprint for the example paper's course, then the check.
 await page.goto("/blueprints/new");
 await page.getByLabel("Course code").fill("BP604T");
-await page.getByLabel("Exam group").selectOption({ label: "End-semester" });
+await page.getByRole("combobox", { name: /^Exam\b/ }).selectOption({ label: "End-semester" });
 await page.getByLabel("Allowed difference (±marks)").fill("2");
 for (const [i, [co, target]] of (
   [

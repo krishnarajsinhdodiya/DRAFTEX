@@ -394,6 +394,9 @@ The **Papers** page lists your papers, the most recently changed first.
 The search looks at titles and courses, not at the questions. Like
 everything in DRAFTEX, it only ever shows your own papers.
 
+The list shows 50 papers at a time. **Older** and **Newer** at the bottom
+move between pages, and keep your search and filters.
+
 ---
 
 ## 8. The question bank
@@ -418,6 +421,20 @@ syllabus, or an M.Pharm or Pharm.D course. A CO that the syllabus does not
 list is saved with a note, never refused. Every question needs a **Bloom
 level** and a **CO**.
 
+### Finding questions
+
+Type words in **Search** and click **Show**. A question is listed when it
+contains **every** word you typed, in its text, its answer, its tags, its
+course code or title, or its COs. A word can be part of a longer one:
+`butyl` finds *isobutylphenyl*. Capitals and accents do not matter (`cafe`
+finds *Café*). Words of one or two letters are matched as typed, apart from
+capitals. Up to eight words are used.
+
+The bank shows 50 questions at a time, the most recently changed first;
+**Older** and **Newer** move between pages. The same search in the paper's
+bank picker shows the newest 50: narrow it with the filters to reach older
+ones.
+
 ### Adding questions
 
 - **New question** on the Bank page: write it like a question in a paper
@@ -433,6 +450,26 @@ level** and a **CO**.
 A question counts as already in your bank when its text is the same in the
 same course, ignoring capitals, extra spaces and bold or italic. Writing one
 by hand that is already there only gives a note.
+
+### Questions that read almost the same
+
+DRAFTEX also notices questions that are worded **almost** the same as one
+of yours in the same course, for example the same question with one word
+changed. When you save such a question, open one, or import one from CSV,
+you get a note naming the similar ones, with a link to each. Nothing is
+blocked: two questions about different drugs can look alike and both be
+right.
+
+**Possible duplicates** on the Bank page lists the 50 most alike pairs in
+your own bank, to tidy it up. Only your own questions are compared, never a
+colleague's, and questions in Trash are left out.
+
+![Possible duplicates](user-guide/23-duplicates.png)
+
+The comparison counts runs of three words that both questions share.
+Phrases that appear in very many of your questions in one course (such as
+"explain the mechanism of action of") do not make two questions alike on
+their own.
 
 ### Using a bank question in a paper
 
@@ -459,7 +496,9 @@ an insert back.
    and 1 MB per file.
 4. Choose the file. DRAFTEX shows how it read the file (for example
    "Read as UTF-8") and checks every row: **Ready**, **Problem** with the
-   reason, or **Duplicate**. Nothing is saved yet.
+   reason, or **Duplicate**. A ready row that reads almost the same as a
+   question in your bank, or as an earlier row, gets a note; it is still
+   saved. Nothing is saved yet.
 
    ![Import preview](user-guide/17-import.png)
 
