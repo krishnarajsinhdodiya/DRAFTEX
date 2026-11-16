@@ -72,4 +72,9 @@ it("times the bank list, search and keyset paging (D115)", async () => {
     t.data.bank.list(author, { q: "synthesis", course: "XX603T", bloom: "APPLY" }),
   );
   await time("colleague, two words", () => t.data.bank.list(colleague, { q: "stability tablets" }));
+  const pairs = await t.data.bank.possibleDuplicates(author);
+  console.log(`possible duplicate pairs for the author: ${pairs.length}`);
+  await time("possible duplicates (own bank)", () => t.data.bank.possibleDuplicates(author), 3);
+  const one = page.rows[0]!;
+  await time("similar on save (one course)", () => t.data.bank.get(author, one.id), 5);
 });

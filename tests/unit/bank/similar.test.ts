@@ -141,3 +141,26 @@ describe("similarPairs", () => {
     expect(pairs.every((p) => p.score >= NEAR_THRESHOLD && p.score < 1)).toBe(true);
   });
 });
+
+describe("template phrases (COMMON_SHINGLE)", () => {
+  it("keep 3,000 questions from one template fast, and still find a real pair", () => {
+    const items = Array.from({ length: 3000 }, (_, i) => ({
+      id: `q${String(i).padStart(4, "0")}`,
+      text: `Explain the mechanism of action of drug number ${i} in detail.`,
+    }));
+    items.push(
+      {
+        id: "r1",
+        text: "Explain the mechanism of action of loop diuretics on the nephron in detail.",
+      },
+      {
+        id: "r2",
+        text: "Explain the mechanism of action of loop diuretics on the nephron with detail.",
+      },
+    );
+    const start = performance.now();
+    const pairs = similarPairs(items);
+    expect(performance.now() - start).toBeLessThan(1000);
+    expect(pairs.map((p) => `${p.a}/${p.b}`)).toEqual(["r1/r2"]);
+  });
+});

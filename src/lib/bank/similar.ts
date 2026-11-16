@@ -13,6 +13,13 @@ export const SHINGLE = 3;
  * (highest 0.50), which a warning that never blocks can afford (memory.md).
  */
 export const NEAR_THRESHOLD = 0.35;
+/**
+ * A shingle in more questions than this (one person, one course) is a
+ * template phrase ("explain the mechanism of"): it does not make two
+ * questions candidates on its own, though it still counts in their score.
+ * Without it, 3,000 questions from one template took 3.3 s (4.5 million pairs).
+ */
+export const COMMON_SHINGLE = 200;
 /** Texts shorter than this many words are left to the exact check (D76). */
 export const MIN_WORDS = 4;
 
@@ -75,7 +82,7 @@ export interface SimilarPair {
 /**
  * Every pair in one set of questions at or above the threshold, most similar
  * first. An inverted index on shingles limits the work to pairs that share
- * at least one shingle.
+ * at least one shingle that is not a template phrase (COMMON_SHINGLE).
  */
 export function similarPairs(items: Candidate[]): SimilarPair[] {
   const sets = items.map((c) => ({ id: c.id, norm: normaliseText(c.text), s: shingles(c.text) }));
@@ -91,6 +98,7 @@ export function similarPairs(items: Candidate[]): SimilarPair[] {
   const out: SimilarPair[] = [];
   const n = sets.length;
   for (const list of index.values()) {
+    if (list.length > COMMON_SHINGLE) continue;
     for (let x = 0; x < list.length; x++) {
       for (let y = x + 1; y < list.length; y++) {
         const i = list[x]!;
