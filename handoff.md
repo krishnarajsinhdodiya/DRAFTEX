@@ -5,67 +5,63 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-16
-- **Current phase:** 15 merged to `main` and tagged v0.15.0 on local gates only (D124; owner: "Merge on local gates"). Next: Phase 16.
-- **Branch:** `main` (v0.15.0). `phase/15-co-blueprint` deleted locally and on GitHub. `fix/setup-honest-errors` and `fix/network-restart-windows` deleted on GitHub at the owner's request (2026-11-16); they live only on the owner's Mac, unmerged. Push one again to merge it.
-- **CI:** GitHub Actions still refuses every job (billing).
-- **Local gates on the branch tip:** lint, typecheck, format, unit 1378, golden 121 passed / 30 visual skipped (Linux only), e2e 69 passed (v0.8.0, v0.10.0, v0.11.0, v0.14.0 upgrades), commit hygiene (hook).
+- **Current phase:** 16 (bank search, pages, near-duplicates) on `phase/16-bank-search`, pushed. Before it, the owner's exam-kind decision (D131-D136) was built and committed on the same branch.
+- **Branch:** `phase/16-bank-search` (tip 4efe24b). `main` = v0.15.0. Local-only `fix/setup-honest-errors` and `fix/network-restart-windows` untouched.
+- **CI:** GitHub Actions still refuses every job (billing). Merging needs the owner's explicit OK ("merge on local gates"); D124 covered Phase 15 only.
+- **Local gates on the branch tip:** lint, typecheck, format, unit 1381, golden 121 passed / 30 visual skipped, e2e 71 passed (upgrades v0.8.0, v0.10.0, v0.11.0, v0.14.0, v0.15.0).
 
 ## Done this session
-- Performance before and after (memory.md).
-- D119-D123 (owner: "Approve, build it"): two CO tags per question/sub-part, stored as `A, B` in the existing `coTag` (as built: no `coTag2` column, reported to the owner); one bracket on paper and key; equal split; bank filter matches either tag; CSV `co 2`; editor second box.
-- `fix(latex)`: Bloom after a table or picture starts its own line (owner's screenshot: it overflowed beside the table). Only Bloom papers ending a question in a table/picture change, and those had an overfull line.
-- D108-D111: `Blueprint` model + additive migration, data layer (gate 8), pure `coverage()`, Blueprints screens (list, new, edit, share, delete), editor summary check, export warnings.
-- Tests: `tests/unit/paper/two-cos.test.ts`, `tests/unit/blueprint/coverage.test.ts`, `tests/unit/data/blueprints.test.ts`, export test, `tests/golden/two-cos.test.ts`, `tests/golden/bloom-after-table.test.ts`, e2e `blueprints.spec.ts` + second CO in `tags.spec.ts`, upgrade fixture v0.14.0, `tests/break-ui/worst-blueprint.ts`.
-- Guide: two-CO note, "CO blueprints" section, screenshots 21-22. SPEC §6 and §8 amended.
+- Session start; performance before Phase 16 (memory.md).
+- D115 before: `tests/perf/seed-bank.ts` (5,000 invented questions, ties every 25 rows, a course share, Trash) and `tests/perf/bank-search.test.ts` (`npx vitest run --config vitest.perf.config.ts`, `SEED_COUNT` env). Finding: today's `bank.list` fails with Prisma P2029 once ~1,000 questions are visible (942 works); figures at 942 in memory.md.
+- FTS5 probe: SQLite 3.53.2 has FTS5; unicode61 misses `butyl` in `isobutylphenyl`, trigram finds it. D125-D130 approved (trigram, columns, query rules, visibility in SQL, order, keyset pages).
+- Exam kinds (owner decision, D131-D136): migration `20261116180000_exam_kinds` (PRACTICAL_SESSIONAL → PRACTICAL_SESSIONAL_1 in rows and JSON copies; PRACTICAL_SESSIONAL_2 added; `Blueprint.examGroup` → `examKind` with the D134 mapping); `EXAM_KINDS` order; rules, filter group, seeds; blueprint form/list/panel per exact exam; migration unit test; e2e exact-exam test; v0.15.0 upgrade fixture with a practical paper and a blueprint; guide, SPEC.
+- Equation flake in fixture/guide scripts: wait for the field value before Enter (likely cause).
 
 ## In progress
-- Nothing half-done in code.
+- Phase 16 code has not started beyond the seed. Next is D112/D126 FTS5.
 
 ## Next steps
 1. Session start per the operating rules.
-2. Done 2026-11-16: Phase 15 merged (D124), v0.15.0 tagged; the father's laptop is now a git clone in `C:\DRAFTEX` on v0.15.0 and the owner reports it works. Future updates: `update-windows.bat`.
-3. Owner decision: fix the Bloom overflow when a question's last line is nearly full (see "Logged"); it changes `\dxBloom` in every Bloom paper's LaTeX, so it needs an explicit OK and a byte-identity exception.
-4. When CI runs again: CI on main; ubuntu baselines for `code`, `key-code`, `tables`, `key-tables` from the visual artifact (D4); then the two `fix/` branches.
-5. Then Phase 16 (D112-D115) on `phase/16-bank-search`: measure performance first.
+2. FTS5 migration (D125/D126): `CREATE VIRTUAL TABLE question_fts USING fts5(question_id UNINDEXED, body, tokenize='trigram remove_diacritics 1')` (or separate columns); body = searchText + answer text (`json_tree(answerKey)` where key='text') + tags (`json_each`) + courseCode + courseTitle + coTag; insert/update/delete triggers on "Question"; fill from existing rows in the migration. Do not rely on Question's rowid (it is a TEXT primary key table; rowid may change on VACUUM).
+3. `src/lib/bank/search.ts` (pure): query → safe MATCH string (D127), queries under 3 characters → `instr()`; cursor encode/decode with Zod (D130). Unit tests: hostile input, `%` `_`, emoji, non-Latin, 100 characters.
+4. Rewrite `bank.list` as one raw SQL (visibility D73 with EXISTS on BankCourseShare, Trash, filters, MATCH, ORDER BY COALESCE(updatedAt, createdAt) DESC, id DESC, LIMIT 51), then load those ≤ 50 rows with Prisma. Compare with the old JS filter on the seed for plain words in question text and tags. Update `/bank` screen and picker to Older/Newer links; papers list keyset too (D59 URL filters stay).
+5. D114 near-duplicates; worst-search break-ui; guide section + screenshots; performance after; D115 after figures; restore/backup index checks (an index built by migration on restore; v0.16.0 backup restores with a working index).
+6. Owner answer pending on D136 (below).
 
 ## Owner tasks (not code)
 - Fix GitHub billing.
-- Carried: delete the old `C:\draftex-main` after a few days; ASCII-only code and the backtick shortcut (his screenshot showed a stray backtick in "`its applications"); roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
+- Answer D136.
+- Carried: delete the old `C:\draftex-main`; ASCII-only code and the backtick shortcut; roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
 
 ## Failing tests
 - None locally.
 
 ## Logged, not fixed
-- With Bloom on, a question whose last line is nearly full overflows ~20 pt (any CO count, exists on main): `\dxBloom`'s `\ ` break is too loose. Proposed fix: a ragged break before Bloom (`\hfil\penalty50\hskip… \hfilneg`); changes every Bloom paper's LaTeX.
-- Two CO tags both at the schema maximum overflow the key heading with Bloom on; real codes fit.
-- `scripts/guide-screenshots.ts` fails ~2 runs in 3 at the equation step (dev script).
-- Admin navigation scrolls sideways on a phone (carried; one link more).
-- Carried from Phase 14: table followed by choices has no gap; no `\cmidrule` under merged booktabs headers; Tab past 30 rows; key answer table on criteria table; long inline code; small space before Bloom after a code block; key code numbers in margin; `framed` before the number; Windows `\openout`; server start sweeps all job folders; picker shows newest 50; `bloom-p1` baselines predate D70; stale lock pid checks; chemical-name overflow; ubuntu drift on three baselines; four-column choice overflow; papers list not paginated.
+- Bloom near-full-line overflow (~20 pt); proposed ragged break changes every Bloom paper's LaTeX; waiting for the owner.
+- Two CO tags both at the schema maximum overflow the key heading with Bloom on.
+- `PaperSnapshot.sha256` is not recomputed by the exam_kinds migration (one extra version may be stored later; harmless).
+- Admin navigation scrolls sideways on a phone; plus the Phase 14 carried list (see git history of this file).
 
 ## Blockers / risks
 - CI billing.
-- The sanitiser, code-line rule and table generator are the barriers to file access; CO tags reach LaTeX only through `CO_TAGS_RE` (letters, digits, dots, single spaces, ", ").
-- LAN mode is plain HTTP (D40).
+- FTS5 triggers during restore and migration of an existing backup (roadmap's riskiest item).
 
 ## Decisions made (copied to memory.md)
-- D119-D123 and D119 as built; Bloom-after-table fix; Bloom overflow and max-pair limit found; D108-D111 as built; matching rule; coverage statuses; break-ui; upgrade fixture; guide-script flake; performance before/after with a same-day v0.14.0 comparison.
+- D125-D130 (search design), D131-D136 (exam kinds, blueprints per exact exam) and their as-built notes; P2029 finding; FTS5 probe; equation flake cause.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`).
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`); not migrated past Phase 14 (no Blueprint table): run `npm run db:migrate` before using the real app.
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"`.
-- `.claude/launch.json` (git-ignored): `draftex-e2e` (3212, built app, fresh folder each start), `draftex-e2e-2` (3213), `draftex-wifi-demo` (3215), `draftex-dev-throwaway` (3216, dev). E2E 3211, restore 3214, server mode 3218, fixture server 3219, upgrade spec 3220. Stop preview servers before `npm run build`.
-- Scripts against a fresh `draftex-e2e` (each needs its own fresh start): `node scripts/measure-performance.ts http://127.0.0.1:3212`, `node scripts/guide-screenshots.ts …` (rewrites every PNG; keep only new ones), `node tests/break-ui/worst-blueprint.ts …`.
-- Old-version fixtures: `git worktree add /tmp/dx-vX vX`, `npm ci`, `npm run build`, then `DRAFTEX_DATA_DIR=/Volumes/DRAFTEX/DRAFTEX-data node scripts/e2e-server.ts 3219` inside it (links the engine only), then `node scripts/make-upgrade-fixture.ts http://127.0.0.1:3219 <os tmp>/draftex-e2e-3219 vX` here.
+- `.claude/launch.json`: `draftex-e2e` (3212) etc. as before. Stop preview servers before `npm run build`. Never start a server while goldens run.
+- v0.15.0 worktree at `/tmp/dx-v0.15.0` (built); fixture runner `/tmp/fixture-run.sh` (temporary, not tracked).
 
 ## Questions for owner
-- Fix the Bloom near-full-line overflow (changes LaTeX of Bloom papers)?
-- Grid header row prints bold, Lines header does not. Keep?
-- Later: Times font? Picker beyond 50 matches?
+- D136: old Practical sessional papers print "Practical Sessional Examination"; Practical sessional 2 prints "Practical Sessional Examination II". Change 1 to "Practical Sessional Examination I" (changes the header of every existing practical sessional paper), or keep?
+- Bloom near-full-line overflow fix? Grid header bold? Times font? Picker beyond 50 (D130 fixes)?
 
 ## Phase checklist
 - [x] 0-15 (see git tags v0.0.0 … v0.15.0)
-- [x] 15 Two COs + CO blueprint check (v0.15.0, local gates only, D124; CI run owed)
-- [ ] 16 Bank search, pages, near-duplicates
+- [ ] 16 Bank search, pages, near-duplicates (exam-kind change D131-D136 rides with it)
 
 ## Template for future handoffs
 Status (date, phase, branch, last green commit, CI) · Done this session ·
