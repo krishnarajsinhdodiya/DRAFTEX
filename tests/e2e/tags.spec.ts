@@ -51,6 +51,8 @@ test("a paper for an elective course offers CO tags as BP607T.01 AEC1", async ({
   const list = await co.getAttribute("list");
   await expect(page.locator(`[id="${list}"] option[value="BP607T.01 AEC1"]`)).toHaveCount(1);
   await co.fill("BP607T.01 AEC1");
+  // A second CO (D119): its box appears once the first holds a tag.
+  await q.getByLabel("Second CO tag for Q.3(1) (optional)", { exact: true }).fill("BP607T.03 AEC1");
   await q.getByLabel("Bloom level for Q.3(1)", { exact: true }).selectOption({ label: "Apply" });
   // A sub-part follows the question until it gets its own value (D66).
   const fields = async (part: string) => {
@@ -116,6 +118,9 @@ test("Print Bloom levels is the paper's own switch, and the summary counts sub-p
   await expect(bloom.getByRole("row", { name: "Apply 1 4" })).toBeVisible();
   const co = page.getByRole("table", { name: "Questions and marks per CO" });
   await expect(co.getByRole("row", { name: "BP607T.02 AEC1 1 6" })).toBeVisible();
+  // (b) follows the question's two COs: its 4 marks split equally (D121).
+  await expect(co.getByRole("row", { name: "BP607T.01 AEC1 1 2" })).toBeVisible();
+  await expect(co.getByRole("row", { name: "BP607T.03 AEC1 1 2" })).toBeVisible();
 });
 
 test("export warns about missing tags and prints Bloom and CO on the paper and key", async ({
@@ -145,7 +150,7 @@ test("export warns about missing tags and prints Bloom and CO on the paper and k
   expect(paper).toContain("\\part Describe an invented catalyst.\\dxBloom{(Bloom: Understand)}");
   expect(paper).toContain("[BP607T.02~AEC1]");
   expect(paper).toContain(
-    "\\part Evaluate its yield.\\dxBloom{(Bloom: Apply)}\\dxTail{[BP607T.01~AEC1]}",
+    "\\part Evaluate its yield.\\dxBloom{(Bloom: Apply)}\\dxTail{[BP607T.01~AEC1,~BP607T.03~AEC1]}",
   );
   const key = read("key.tex");
   expect(key).toContain("(a) (Bloom: Understand) {[}BP607T.02 AEC1{]}");
