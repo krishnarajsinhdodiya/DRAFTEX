@@ -4,61 +4,70 @@ Replace this whole file at the end of every session. A fresh session with
 no chat history must be able to continue from this file alone.
 
 ## Status
-- **Date:** 2026-11-16
-- **Current phase:** 16 (bank search, pages, near-duplicates) on `phase/16-bank-search`, pushed. Before it, the owner's exam-kind decision (D131-D136) was built and committed on the same branch.
-- **Branch:** `phase/16-bank-search` (tip 4efe24b). `main` = v0.15.0. Local-only `fix/setup-honest-errors` and `fix/network-restart-windows` untouched.
+- **Date:** 2026-11-17
+- **Current phase:** 16 (bank search, pages, near-duplicates): all code, tests, guide and docs done on `phase/16-bank-search`, pushed. Only the close-out is left: merge, version 0.16.0, tag v0.16.0, delete the branch.
+- **Branch:** `phase/16-bank-search`. `main` = v0.15.0. Local-only `fix/setup-honest-errors` and `fix/network-restart-windows` untouched.
 - **CI:** GitHub Actions still refuses every job (billing). Merging needs the owner's explicit OK ("merge on local gates"); D124 covered Phase 15 only.
-- **Local gates on the branch tip:** lint, typecheck, format, unit 1381, golden 121 passed / 30 visual skipped, e2e 71 passed (upgrades v0.8.0, v0.10.0, v0.11.0, v0.14.0, v0.15.0).
+- **Local gates on the branch tip (Mac):** lint, typecheck, format, unit 1412, golden 121 passed / 30 visual skipped, e2e 73 passed (upgrades v0.8.0, v0.10.0, v0.11.0, v0.14.0, v0.15.0).
 
-## Done this session
-- Session start; performance before Phase 16 (memory.md).
-- D115 before: `tests/perf/seed-bank.ts` (5,000 invented questions, ties every 25 rows, a course share, Trash) and `tests/perf/bank-search.test.ts` (`npx vitest run --config vitest.perf.config.ts`, `SEED_COUNT` env). Finding: today's `bank.list` fails with Prisma P2029 once ~1,000 questions are visible (942 works); figures at 942 in memory.md.
-- FTS5 probe: SQLite 3.53.2 has FTS5; unicode61 misses `butyl` in `isobutylphenyl`, trigram finds it. D125-D130 approved (trigram, columns, query rules, visibility in SQL, order, keyset pages).
-- Exam kinds (owner decision, D131-D136): migration `20261116180000_exam_kinds` (PRACTICAL_SESSIONAL → PRACTICAL_SESSIONAL_1 in rows and JSON copies; PRACTICAL_SESSIONAL_2 added; `Blueprint.examGroup` → `examKind` with the D134 mapping); `EXAM_KINDS` order; rules, filter group, seeds; blueprint form/list/panel per exact exam; migration unit test; e2e exact-exam test; v0.15.0 upgrade fixture with a practical paper and a blueprint; guide, SPEC.
-- Equation flake in fixture/guide scripts: wait for the field value before Enter (likely cause).
+## Done this phase
+- Exam kinds D131-D136 (two practical sessionals, blueprints per exact exam); D136 answered: keep "Practical Sessional Examination".
+- FTS5 index `question_fts` (migration `20261117090000_question_search`, triggers, fill, keyed by id).
+- `src/lib/bank/search.ts` (safe search terms), `src/lib/paging.ts` (cursors, `msSql`, `pageOf`).
+- `bank.list` = one SQL query per page (visibility, Trash, filters, search); no more P2029 above ~1,000 visible questions. /bank and picker use Older/Newer.
+- Papers list pages 50 at a time (`data.papers.page`).
+- Near-duplicates D114 (`src/lib/bank/similar.ts`): note after save, on the question page, in CSV import; `/bank/duplicates`; template phrases skipped (COMMON_SHINGLE 200).
+- Backup → restore keeps a working index (unit test).
+- Worst-case data `tests/break-ui/worst-search.ts`; fixes (50 pairs, 240-character summaries).
+- Guide: Finding questions, pages, Questions that read almost the same, shot `23-duplicates.png`; guide script fixed (blueprint label, CSV kept until Save).
+- SPEC §6 amended; memory.md as-built lines, D115 after figures, performance after.
 
 ## In progress
-- Done: FTS5 migration; `src/lib/bank/search.ts`; `bank.list` keyset SQL; /bank Older/Newer; picker message; tests (unit 1399, e2e 72). Next: papers list keyset (D130).
+- Nothing half-done.
 
 ## Next steps
 1. Session start per the operating rules.
-2. Done: FTS5 migration (see memory.md D126 as built). Trigram folds non-ASCII case too (`CAFÉ` found by `café`/`cafe`, `Ω` by `ω`; probed).
-3. Done: search.ts and bank.list keyset (memory.md "D127-D130 as built"; the DateTime-format finding).
-4. Papers list keyset pages (D130): today's /papers list; keep the D59 URL filters; reuse `encodeCursor`/`decodeCursor`/`msSql` from src/lib/bank/search.ts (move them to a neutral module if papers import them).
-5. D114 near-duplicates; worst-search break-ui; guide section + screenshots; performance after; D115 after figures; restore/backup index checks (an index built by migration on restore; v0.16.0 backup restores with a working index).
+2. When the owner says "merge on local gates" (or CI runs green): record the merge decision in memory.md (like D124), bump `package.json` to 0.16.0 in the merge, `git merge --no-ff phase/16-bank-search` on `main`, tag `v0.16.0`, push main and tag, delete the branch locally and on GitHub, `git ls-remote --heads origin`.
+3. After the merge: add a v0.16.0 upgrade fixture (`scripts/make-upgrade-fixture.ts` against a v0.16.0 worktree; include a bank question so the index is checked after restore) and add v0.16.0 to `FROMS` in tests/e2e/upgrade.spec.ts, as the first Phase 17 step.
+4. Owner's father's laptop: `update-windows.bat`, then try search, Older/Newer and Possible duplicates; the data folder gets the two new migrations.
 
 ## Owner tasks (not code)
 - Fix GitHub billing.
+- Say whether to merge Phase 16 on local gates.
+- Answer the near-duplicate question below.
 - Carried: delete the old `C:\draftex-main`; ASCII-only code and the backtick shortcut; roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
 
 ## Failing tests
 - None locally.
 
 ## Logged, not fixed
-- Bloom near-full-line overflow (~20 pt); proposed ragged break changes every Bloom paper's LaTeX; waiting for the owner.
+- Short search words (1-2 characters) fold ASCII case only and no accents.
+- Bloom near-full-line overflow (~20 pt); waiting for the owner.
 - Two CO tags both at the schema maximum overflow the key heading with Bloom on.
-- `PaperSnapshot.sha256` is not recomputed by the exam_kinds migration (one extra version may be stored later; harmless).
-- Admin navigation scrolls sideways on a phone; plus the Phase 14 carried list (see git history of this file).
+- `PaperSnapshot.sha256` not recomputed by the exam_kinds migration (harmless).
+- Admin navigation scrolls sideways on a phone (579 px at 375); plus the Phase 14 carried list.
+- `prisma migrate diff/dev` would drop the FTS5 shadow tables; never run them, edit generated migrations by hand.
 
 ## Blockers / risks
-- CI billing.
-- FTS5 triggers during restore and migration of an existing backup (roadmap's riskiest item).
+- CI billing; Windows not checked for Phase 16 yet (FTS5 trigram is in the bundled SQLite on every OS, likely fine).
 
 ## Decisions made (copied to memory.md)
-- D125-D130 (search design), D131-D136 (exam kinds, blueprints per exact exam) and their as-built notes; D136 answered (keep the title); P2029 finding; FTS5 probe; equation flake cause.
+- D125-D136 and as-built notes; DateTime text format finding (ms comparison); D114 threshold 0.35 and COMMON_SHINGLE; papers list keeps its count; worst-case fixes.
 
 ## Machine setup (owner's Mac)
-- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`); not migrated past Phase 14 (no Blueprint table): run `npm run db:migrate` before using the real app.
+- Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`); not migrated past Phase 14: run `npm run db:migrate` before using the real app.
 - Node 24: `export PATH="/opt/homebrew/opt/node@24/bin:$PATH"`.
-- `.claude/launch.json`: `draftex-e2e` (3212) etc. as before. Stop preview servers before `npm run build`. Never start a server while goldens run.
-- v0.15.0 worktree at `/tmp/dx-v0.15.0` (built); fixture runner `/tmp/fixture-run.sh` (temporary, not tracked).
+- `.claude/launch.json`: `draftex-e2e` (3212), `draftex-guide` (3210, fresh folder for scripts/guide-screenshots.ts) etc. Stop preview servers before `npm run build`. Never start a server while goldens run.
+- Perf: `npx vitest run --config vitest.perf.config.ts --silent=false` (SEED_COUNT env).
 
 ## Questions for owner
-- Bloom near-full-line overflow fix? Grid header bold? Times font? Picker beyond 50 (D130 fixes)?
+- Merge Phase 16 on local gates?
+- Near-duplicates: keep 3-word shingles (every rewording caught; 3 of 8 alike-but-different test pairs also flagged) or 2-word shingles at 0.50 (1 of 8 flagged)? It changes only which notes appear.
+- Carried: Bloom near-full-line overflow fix? Grid header bold? Times font?
 
 ## Phase checklist
 - [x] 0-15 (see git tags v0.0.0 … v0.15.0)
-- [ ] 16 Bank search, pages, near-duplicates (exam-kind change D131-D136 rides with it)
+- [ ] 16 Bank search, pages, near-duplicates: built and green locally; merge waits for the owner
 
 ## Template for future handoffs
 Status (date, phase, branch, last green commit, CI) · Done this session ·

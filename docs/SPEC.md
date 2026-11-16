@@ -197,6 +197,13 @@ Names are binding; fields may be added.
   exact exam; one per owner, course code and exam (D134). Migration
   `exam_kinds` maps SESSIONAL → SESSIONAL_1, END_SEMESTER → END_SEMESTER,
   PRACTICAL → PRACTICAL_SESSIONAL_1, ATKT → SUPPLEMENTARY_ATKT, OTHER → CUSTOM.]
+- [Amended 2026-11-17, Phase 16: FTS5 virtual table `question_fts`
+  (`question_id`, `body`; trigram tokenizer, accents folded) kept by
+  triggers on `Question` and filled by migration `question_search`; body =
+  question text, answer text, tags, course code and title, CO tags (D126).
+  Prisma does not model it: never run `migrate dev`, and remove the drop
+  lines for its shadow tables from any generated migration. Bank, picker
+  and papers list page by keyset cursor, 50 at a time (D130).]
 - `Asset` sha256 (pk), ownerId, mime, bytes, width, height, originalName.
 - `CompileJob` id, paperId, kind (`PAPER`|`KEY`), status, durationMs,
   errorSummary, createdAt (keep last 20 per paper).
