@@ -26,7 +26,7 @@ no chat history must be able to continue from this file alone.
 1. Session start per the operating rules.
 2. Done 2026-11-16: the father's laptop runs v0.14.0 and the owner reports everything in Phase 13-14 works.
 3. When CI runs again: run CI on main; take ubuntu baselines for `code`, `key-code`, `tables`, `key-tables` from the visual job artifact (D4) in a commit that says why; no existing baseline may change. Then `fix/network-restart-windows`, merge both `fix/` branches.
-4. Before Phase 15: the owner answers roadmap questions 2 (optional groups), 3 (more than one CO) and 5 (blueprint scope).
+4. Answered 2026-11-16: optional groups scale by attempt/slots; blueprint per course and exam group; a question may have two COs. Still needed before Phase 15: how two COs print, and whether marks split equally (advisor's default) or count fully to both.
 5. Then Phase 15 (CO blueprint, D108+) on `phase/15-co-blueprint`: measure performance first.
 
 ## Owner tasks (not code)

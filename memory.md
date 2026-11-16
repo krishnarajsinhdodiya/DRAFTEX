@@ -336,6 +336,7 @@ One line each: `YYYY-MM-DD · decision · reason`. Supersede, never delete.
 - 2026-11-15 · Performance after Phase 14 (same method and machine): key events p50 ≤ 16 ms, p95 ≤ 16 ms, max 24 ms (196 over the 16 ms floor); warm preview p50 429 ms, max 469 ms · targets met
 - 2026-11-15 · D118: Phase 14 merges to main on local gates only (lint, typecheck, format, unit 1328, golden 114, e2e 65, hygiene green on the Mac), as D117 did for Phase 13: GitHub Actions is still blocked by billing. Windows is checked on the end user's laptop; ubuntu baselines for `tables`/`key-tables` follow once Actions runs. Applies to Phase 14 only · owner: "Merge on local gates"
 - 2026-11-16 · Windows check for D117/D118 done: v0.14.0 on the end user's Windows 11 laptop works (tables, code blocks and the rest of Phase 13-14), as reported by the owner · owner: "everything works in 14th phase"
+- 2026-11-16 · Roadmap answers for Phase 15: Q2 optional groups ("any 5 of 7") count each question's marks scaled by attempt/slots (5/7); Q5 one blueprint per course code and exam group (D59); Q3 a question may carry two COs (schema change, printed form and mark split still to be confirmed by the owner) · owner answers
 ## Pinned versions
 Verified against the npm registry / nodejs.org / GitHub releases on 2026-11-03.
 - Node 24.22.2 (`.nvmrc`, `engines`), npm 11.19.1 (bundled)
