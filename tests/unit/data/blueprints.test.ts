@@ -5,8 +5,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Actor } from "@/lib/data";
 import { ConflictError, NotFoundError } from "@/lib/data";
-import { BLUEPRINT_TAKEN, examGroupOf } from "@/lib/data/blueprints";
-import { EXAM_GROUPS } from "@/lib/templates/labels";
+import { BLUEPRINT_TAKEN } from "@/lib/data/blueprints";
+import { EXAM_GROUPS, examGroupOf } from "@/lib/templates/labels";
 import { ExamKind } from "@/generated/prisma/enums";
 import { createTestDb, type TestDb } from "../../support/db";
 

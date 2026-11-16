@@ -142,3 +142,44 @@ export function coverage(
   }
   return { rows, total: round(total), problems: rows.filter((r) => r.status !== "OK").length };
 }
+
+const num = (n: number) => String(Number(n.toFixed(2)));
+
+/**
+ * One plain sentence per row that needs attention, for the export dialog and
+ * the summary panel (D110). Never an error: a blueprint only advises.
+ */
+export function coverageNotes(c: Coverage, unit: BlueprintUnit): string[] {
+  const u = (n: number) => (unit === "PERCENT" ? `${num(n)}%` : `${num(n)} marks`);
+  return c.rows.flatMap((r) => {
+    switch (r.status) {
+      case "UNDER":
+        return [
+          `${r.key} has ${u(r.actual)}; the blueprint asks for ${u(r.target ?? 0)} (${u(-r.difference)} short).`,
+        ];
+      case "OVER":
+        return [
+          `${r.key} has ${u(r.actual)}; the blueprint asks for ${u(r.target ?? 0)} (${u(r.difference)} over).`,
+        ];
+      case "NOT_PLANNED":
+        return [`${r.key} (${u(r.actual)}) is not in the blueprint.`];
+      case "UNTAGGED":
+        return [`${u(r.actual)} have no CO.`];
+      default:
+        return [];
+    }
+  });
+}
+
+/** The coverage inputs from a paper's template structure and its saved questions. */
+export function paperCoverageInput(
+  structure: { parts: { groups: { key: string; slots: number; attempt: number }[] }[] },
+  slots: CoverageQuestion[],
+): { questions: CoverageQuestion[]; groups: CoverageGroup[] } {
+  return {
+    questions: slots,
+    groups: structure.parts.flatMap((p) =>
+      p.groups.map((g) => ({ key: g.key, slots: g.slots, attempt: g.attempt })),
+    ),
+  };
+}

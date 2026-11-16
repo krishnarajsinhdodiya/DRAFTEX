@@ -73,6 +73,15 @@ export interface PaperEditorView {
   coOptions: { value: string; label: string }[];
   pci: { status: PciStatus; warnings: Issue[]; notice?: string };
   courses: { id: string; code: string; title: string; semesterOrYear: number }[];
+  /** The CO blueprint for this course and exam group (D108, D110), or null. */
+  blueprint: {
+    id: string;
+    unit: "MARKS" | "PERCENT";
+    tolerance: number;
+    targets: { co: string; target: number }[];
+    mine: boolean;
+    ownerName: string;
+  } | null;
 }
 
 export async function paperEditorView(
@@ -86,6 +95,7 @@ export async function paperEditorView(
   const check = checkTemplateFields(s, { labHoursPerWeek: course?.practicalHrs ?? null });
   const numbers = new Map(questionNumbers(s.structure).map((n) => [n.key, n]));
   const courses = await data.courses.list(actor, { program: p.program, courseKind: s.courseKind });
+  const bp = await data.blueprints.match(actor, p.courseCode, p.examKind);
   return {
     id: p.id,
     version: p.version,
@@ -157,5 +167,15 @@ export async function paperEditorView(
       title: c.title,
       semesterOrYear: c.semesterOrYear,
     })),
+    blueprint: bp
+      ? {
+          id: bp.id,
+          unit: bp.unit,
+          tolerance: bp.tolerance,
+          targets: bp.targets,
+          mine: bp.mine,
+          ownerName: bp.ownerName,
+        }
+      : null,
   };
 }

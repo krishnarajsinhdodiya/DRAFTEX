@@ -17,6 +17,7 @@ import { questionNumbers } from "@/lib/paper/numbering";
 import { missingTags, subPartMarksNote } from "@/lib/paper/tags";
 import { type Problem, errorSummary, fromDiagnostics, fromSerializer } from "@/lib/paper/problems";
 import { PROGRAM_LABEL } from "@/lib/templates/labels";
+import { coverage, coverageNotes, paperCoverageInput } from "@/lib/blueprint/coverage";
 import type { ResolveImages } from "./images";
 import { keySlots } from "./paper-preview";
 
@@ -24,7 +25,7 @@ import { keySlots } from "./paper-preview";
 const OWNER_FILE = ".draftex-paper";
 
 export interface ExportDeps {
-  data: Pick<DataLayer, "papers">;
+  data: Pick<DataLayer, "papers" | "blueprints">;
   compile: Pick<CompileService, "compile">;
   images: ResolveImages;
   /** <data folder>/exports */
@@ -127,6 +128,14 @@ export async function exportPaper(
   const paper = await deps.data.papers.getWithSlots(actor, paperId);
   const numbers = questionNumbers(paper.snapshot.structure);
   const warnings = exportWarnings(paper);
+  // D110: a CO blueprint for this course and exam group advises, never blocks.
+  const bp = await deps.data.blueprints.match(actor, paper.courseCode, paper.examKind);
+  if (bp) {
+    const { questions, groups } = paperCoverageInput(paper.snapshot.structure, paper.slots);
+    for (const message of coverageNotes(coverage(questions, groups, bp), bp.unit)) {
+      warnings.push({ level: "note", message: `Blueprint: ${message}` });
+    }
+  }
   const full = paperInput({
     ...paper,
     instructionsOverride: paper.instructionsOverride as string[] | null,

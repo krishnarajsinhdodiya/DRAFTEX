@@ -32,6 +32,15 @@ export const EXAM_GROUPS = {
 export type ExamGroup = keyof typeof EXAM_GROUPS;
 export const EXAM_GROUP_KEYS = Object.keys(EXAM_GROUPS) as ExamGroup[];
 
+/** The exam group a paper's exam kind belongs to (D59). */
+export function examGroupOf(kind: ExamKind): ExamGroup {
+  for (const g of EXAM_GROUP_KEYS) {
+    if ((EXAM_GROUPS[g].kinds as readonly ExamKind[]).includes(kind)) return g;
+  }
+  /* v8 ignore next -- every ExamKind is in the table (checked by a unit test) */
+  return "OTHER";
+}
+
 export const PAPER_STATUS_LABEL: Record<PaperStatus, string> = {
   DRAFT: "Draft",
   FINAL: "Final",

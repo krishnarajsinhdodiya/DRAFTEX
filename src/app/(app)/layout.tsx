@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <NavLink href="/papers">Papers</NavLink>
             <NavLink href="/templates">Templates</NavLink>
             <NavLink href="/bank">Bank</NavLink>
+            <NavLink href="/blueprints">Blueprints</NavLink>
             {user.role === "ADMIN" ? (
               <>
                 <NavLink href="/admin/users">People</NavLink>

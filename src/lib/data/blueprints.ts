@@ -9,7 +9,7 @@ import {
   blueprintFieldsSchema,
   blueprintTargetsSchema,
 } from "@/lib/blueprint/schema";
-import { EXAM_GROUPS, type ExamGroup } from "@/lib/templates/labels";
+import { type ExamGroup, examGroupOf } from "@/lib/templates/labels";
 import type { ExamKind } from "@/generated/prisma/enums";
 import { type Actor, requireSignedIn } from "./actor";
 import { writeAudit } from "./audit";
@@ -19,15 +19,6 @@ import { isUniqueViolation } from "./users";
 const WHAT = "Blueprint";
 export const BLUEPRINT_TAKEN =
   "You already have a blueprint for this course and exam group. Open it to change it.";
-
-/** The exam group a paper's exam kind belongs to (D59). */
-export function examGroupOf(kind: ExamKind): ExamGroup {
-  for (const [g, v] of Object.entries(EXAM_GROUPS)) {
-    if ((v.kinds as readonly ExamKind[]).includes(kind)) return g as ExamGroup;
-  }
-  /* v8 ignore next -- every ExamKind is in the table (checked by a unit test) */
-  return "OTHER";
-}
 
 const select = {
   id: true,

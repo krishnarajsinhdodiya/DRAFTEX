@@ -343,3 +343,37 @@ describe.each([
     expect(fs.readdirSync(dir, { recursive: true }).length).toBe(before);
   });
 });
+
+describe("CO blueprint (D110)", () => {
+  it("adds over/under notes as warnings, never blocks, and ignores others' private ones", async () => {
+    const theirs = await t.data.blueprints.create(other, {
+      courseCode: "XX101T",
+      examGroup: "END_SEMESTER",
+      unit: "MARKS",
+      tolerance: 0,
+      targets: [{ co: "XX101T.09", target: 50 }],
+    });
+    const before = await exportPaper(deps(), me, paperId, { confirmed: false });
+    const msgs = (r: typeof before) => (r.ok ? r.warnings : r.problems).map((p) => p.message);
+    expect(msgs(before).some((m) => m.startsWith("Blueprint:"))).toBe(false);
+
+    const mine = await t.data.blueprints.create(me, {
+      courseCode: "XX101T",
+      examGroup: "END_SEMESTER",
+      unit: "MARKS",
+      tolerance: 0,
+      targets: [{ co: "XX101T.01", target: 10 }],
+    });
+    const asked = await exportPaper(deps(), me, paperId, { confirmed: false });
+    expect(asked).toMatchObject({ ok: false, status: 409 });
+    expect(msgs(asked).filter((m) => m.startsWith("Blueprint:"))).toEqual([
+      "Blueprint: XX101T.01 has 0 marks; the blueprint asks for 10 marks (10 marks short).",
+      // Group 2 is "any 5 of 7": its 4 marks count as 4 × 5/7.
+      "Blueprint: 2.86 marks have no CO.",
+    ]);
+    const done = await exportPaper(deps(), me, paperId, { confirmed: true });
+    expect(done.ok).toBe(true);
+    await t.data.blueprints.remove(me, mine.id);
+    await t.data.blueprints.remove(other, theirs.id);
+  });
+});
