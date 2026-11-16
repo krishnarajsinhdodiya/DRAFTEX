@@ -29,13 +29,8 @@ import { questionNumbers } from "@/lib/paper/numbering";
 import { type Doc, docSchema } from "@/lib/paper/schema";
 import { keyCriteriaSchema } from "@/lib/paper/key";
 import { CO_TAG_RE, CO_TAG_SEP } from "@/lib/paper/co-tag";
-import {
-  decodeCursor,
-  encodeCursor,
-  msSql,
-  pageRequestSchema,
-  searchTerms,
-} from "@/lib/bank/search";
+import { searchTerms } from "@/lib/bank/search";
+import { decodeCursor, encodeCursor, msSql, PAGE_SIZE, pageRequestSchema } from "@/lib/paging";
 import type { Actor } from "./actor";
 import { assertOwnsAssets, shareAssets } from "./assets";
 import { writeAudit } from "./audit";
@@ -51,7 +46,7 @@ import { ADVANCED_NOT_ALLOWED, papers, slotPlaceSchema, type SlotPlace } from ".
 const WHAT = "Question";
 /** How long a bank question stays in Trash before it is removed for good (D82, as D51). */
 export const BANK_TRASH_DAYS = 30;
-export const BANK_PAGE_SIZE = 50;
+export const BANK_PAGE_SIZE = PAGE_SIZE;
 
 export const ALREADY_IN_BANK = "Already in your bank";
 export const ALREADY_IN_TRASH = "Already in your Trash";

@@ -1,6 +1,7 @@
 // Search terms and page cursors (Phase 16; D127, D130). Invented text only.
 import { describe, expect, it } from "vitest";
-import { decodeCursor, encodeCursor, searchTerms } from "@/lib/bank/search";
+import { searchTerms } from "@/lib/bank/search";
+import { decodeCursor, encodeCursor } from "@/lib/paging";
 
 describe("searchTerms", () => {
   it("is null for an empty or blank search", () => {

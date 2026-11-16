@@ -23,6 +23,9 @@ const filterSchema = z.object({
   status: z.enum(PaperStatus).optional().catch(undefined),
   course: z.string().max(40).optional().catch(undefined),
   trashed: z.string().max(64).optional().catch(undefined),
+  // Keyset cursors (D130); anything that is not one reads as the first page.
+  after: z.string().max(200).optional().catch(undefined),
+  before: z.string().max(200).optional().catch(undefined),
 });
 
 const selectClass = `${inputStyles} w-full text-small sm:w-auto`;
@@ -44,13 +47,23 @@ export default async function PapersPage({
     course: f.course || undefined,
   };
   const filtered = Object.values(filter).some(Boolean);
-  const [rows, trash, bankTrash, options, any] = await Promise.all([
-    data.papers.list(actor, filter),
+  const [list, trash, bankTrash, options, any] = await Promise.all([
+    data.papers.page(actor, filter, { after: f.after, before: f.before }),
     data.papers.listTrash(actor),
     data.bank.listTrash(actor),
     data.papers.filterOptions(actor),
     filtered ? data.papers.recent(actor, 1) : null,
   ]);
+  const rows = list.rows;
+  const paged = list.older !== null || list.newer !== null;
+  const total = list.total;
+  const pageHref = (cursor: { after?: string; before?: string }) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(filter)) if (v !== undefined) p.set(k, String(v));
+    for (const [k, v] of Object.entries(cursor)) if (v) p.set(k, v);
+    const s = p.toString();
+    return s ? `/papers?${s}` : "/papers";
+  };
   const hasPapers = filtered ? (any?.length ?? 0) > 0 : rows.length > 0;
   const justTrashed = f.trashed ? trash.find((p) => p.id === f.trashed) : undefined;
   return (
@@ -149,8 +162,9 @@ export default async function PapersPage({
             ) : null}
           </form>
           <p className="-mt-2 text-small text-ink-2" aria-live="polite">
-            {rows.length === 1 ? "1 paper" : `${rows.length} papers`}
+            {total === 1 ? "1 paper" : `${total} papers`}
             {filtered ? " match" : ""}, most recently changed first
+            {paged ? `, ${list.pageSize} to a page` : ""}
           </p>
         </>
       ) : null}
@@ -179,6 +193,20 @@ export default async function PapersPage({
       ) : (
         <PaperList rows={rows} />
       )}
+      {paged ? (
+        <nav aria-label="Pages" className="flex items-center justify-center gap-2">
+          {list.newer ? (
+            <Link href={pageHref({ before: list.newer })} className={buttonStyles.secondary}>
+              Newer
+            </Link>
+          ) : null}
+          {list.older ? (
+            <Link href={pageHref({ after: list.older })} className={buttonStyles.secondary}>
+              Older
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,4 @@
-// Bank search terms and page cursors (Phase 16; D125, D127, D129, D130).
-// Pure; server side (cursors use Buffer). Nothing the user types ever reaches FTS5 as syntax:
+// Bank search terms (Phase 16; D125, D127). Pure. Nothing the user types ever reaches FTS5 as syntax:
 // each word becomes one quoted phrase (inner quotes doubled), and words too
 // short for the trigram index are matched with instr() on the indexed text.
 import { z } from "zod";
@@ -37,42 +36,3 @@ export function searchTerms(input: string | null | undefined): SearchTerms | nul
     words,
   };
 }
-
-// --- Keyset cursors (D130) ------------------------------------------------
-
-const cursorSchema = z.object({
-  /** COALESCE(updatedAt, createdAt) of the edge row, in whole milliseconds since 1970. */
-  t: z.number().int().min(0).max(8.64e15),
-  /** Question id of the edge row (uuid). */
-  id: z.string().min(1).max(64),
-});
-export type Cursor = z.infer<typeof cursorSchema>;
-
-export function encodeCursor(c: Cursor): string {
-  return Buffer.from(JSON.stringify({ t: c.t, id: c.id }), "utf8").toString("base64url");
-}
-
-/** A cursor from the address bar; anything that is not one of ours reads as "first page". */
-export function decodeCursor(raw: string | null | undefined): Cursor | null {
-  if (!raw || raw.length > 200 || !/^[A-Za-z0-9_-]+$/.test(raw)) return null;
-  try {
-    const r = cursorSchema.safeParse(JSON.parse(Buffer.from(raw, "base64url").toString("utf8")));
-    return r.success ? r.data : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * The order key in SQL: whole milliseconds, because the stored text is not one
- * format (the adapter writes "+00:00", a JavaScript date reads "Z").
- */
-export function msSql(column: string): string {
-  return `CAST(round((julianday(${column}) - 2440587.5) * 86400000) AS INTEGER)`;
-}
-
-/** Cursor fields of a page request: `after` = older than the cursor, `before` = newer. */
-export const pageRequestSchema = z.object({
-  after: z.string().max(200).optional(),
-  before: z.string().max(200).optional(),
-});
