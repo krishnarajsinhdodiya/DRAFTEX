@@ -113,6 +113,7 @@ model User {
   questions      Question[]
   questionUses   QuestionUse[]
   courseShares   BankCourseShare[]
+  blueprints     Blueprint[]
   auditLogs      AuditLog[]
   loginLocks     LoginLock[]
 }
@@ -468,4 +469,32 @@ model PaperSnapshot {
   paper Paper @relation(fields: [paperId], references: [id], onDelete: Cascade)
 
   @@index([paperId, createdAt])
+}
+
+/// CO blueprint (Phase 15, D108): target marks or percent per CO for one
+/// course code and exam group (D59), owned by its maker, one per owner and
+/// course/exam group. Private unless SHARED; colleagues may read a shared
+/// one, never change it; admins get nothing extra.
+model Blueprint {
+  id         String      @id @default(uuid())
+  ownerId    String
+  /// Course code as typed on papers (upper case, spaces folded).
+  courseCode String
+  /// Exam group key from EXAM_GROUPS (SESSIONAL, END_SEMESTER, ...).
+  examGroup  String
+  /// MARKS or PERCENT: what the targets and tolerance are in.
+  unit       String
+  /// Allowed difference either side of each target, in `unit`.
+  tolerance  Float
+  /// JSON array of { co, target }, validated by blueprintTargetsSchema.
+  targets    Json
+  sharing    BankSharing @default(PRIVATE)
+  version    Int         @default(1)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, courseCode, examGroup])
+  @@index([courseCode, examGroup])
 }
