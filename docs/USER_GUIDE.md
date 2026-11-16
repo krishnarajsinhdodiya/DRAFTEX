@@ -369,7 +369,9 @@ Open the paper and click **Duplicate as…**, then choose:
   other way, type the new one.
 - **ATKT copy**: the supplementary (ATKT) version for the same year. This is
   the suggestion for an end-semester paper.
-- **Another copy**: choose the exam yourself.
+- **Another copy**: choose the exam yourself. This is how you make a
+  Sessional 2 or Practical sessional 2 paper from a Sessional 1 or Practical
+  sessional 1 one (the built-in templates start at 1).
 
 **Make the copy** copies the questions and the answer key into a new Draft
 paper with no exam date; then change what you need. The paper you copied
@@ -480,13 +482,20 @@ Papers that used the question keep their own copy.
 ### CO blueprints
 
 A **CO blueprint** says how many marks (or what percent of the paper) each
-CO should get, for one course and one kind of exam (Sessional,
-End-semester, ATKT, Practical or Other). It is optional and only advises:
-it never stops an export and prints nothing on the paper.
+CO should get, for one course and one exam. Each exam has its own
+blueprint, because Sessional 1 and Sessional 2 cover different units: the
+exams are Sessional 1, Sessional 2, Sessional improvement, Practical
+sessional 1, Practical sessional 2, Practical end-semester, End-semester,
+Year-end, Supplementary (ATKT), Synopsis and Custom. It is optional and
+only advises: it never stops an export and prints nothing on the paper.
+
+Blueprints made before version 0.16 were for a group of exams; the update
+moves each to one exam (a Sessional one becomes Sessional 1). Make a second
+one for Sessional 2 if you need it.
 
 1. Open **Blueprints** at the top, then **New blueprint**.
 2. Type the course code (suggestions come from the syllabus), choose the
-   exam group, and choose **Marks** or **Percent of the paper**.
+   exam, and choose **Marks** or **Percent of the paper**.
 3. Set the **allowed difference**: a CO within this many marks (or percent)
    of its target counts as fine.
 4. Add a row per CO with its target. **Fill from syllabus** adds every CO of
