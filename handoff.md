@@ -26,11 +26,9 @@ no chat history must be able to continue from this file alone.
 3. `src/lib/bank/search.ts` (pure): query → safe MATCH string (D127), queries under 3 characters → `instr()`; cursor encode/decode with Zod (D130). Unit tests: hostile input, `%` `_`, emoji, non-Latin, 100 characters.
 4. Rewrite `bank.list` as one raw SQL (visibility D73 with EXISTS on BankCourseShare, Trash, filters, MATCH, ORDER BY COALESCE(updatedAt, createdAt) DESC, id DESC, LIMIT 51), then load those ≤ 50 rows with Prisma. Compare with the old JS filter on the seed for plain words in question text and tags. Update `/bank` screen and picker to Older/Newer links; papers list keyset too (D59 URL filters stay).
 5. D114 near-duplicates; worst-search break-ui; guide section + screenshots; performance after; D115 after figures; restore/backup index checks (an index built by migration on restore; v0.16.0 backup restores with a working index).
-6. Owner answer pending on D136 (below).
 
 ## Owner tasks (not code)
 - Fix GitHub billing.
-- Answer D136.
 - Carried: delete the old `C:\draftex-main`; ASCII-only code and the backtick shortcut; roadmap question 6; firewall helper and real `update-windows.bat`; CSV from Windows Excel.
 
 ## Failing tests
@@ -47,7 +45,7 @@ no chat history must be able to continue from this file alone.
 - FTS5 triggers during restore and migration of an existing backup (roadmap's riskiest item).
 
 ## Decisions made (copied to memory.md)
-- D125-D130 (search design), D131-D136 (exam kinds, blueprints per exact exam) and their as-built notes; P2029 finding; FTS5 probe; equation flake cause.
+- D125-D130 (search design), D131-D136 (exam kinds, blueprints per exact exam) and their as-built notes; D136 answered (keep the title); P2029 finding; FTS5 probe; equation flake cause.
 
 ## Machine setup (owner's Mac)
 - Data folder `/Volumes/DRAFTEX/DRAFTEX-data` (pointer `draftex.local.json`); not migrated past Phase 14 (no Blueprint table): run `npm run db:migrate` before using the real app.
@@ -56,7 +54,6 @@ no chat history must be able to continue from this file alone.
 - v0.15.0 worktree at `/tmp/dx-v0.15.0` (built); fixture runner `/tmp/fixture-run.sh` (temporary, not tracked).
 
 ## Questions for owner
-- D136: old Practical sessional papers print "Practical Sessional Examination"; Practical sessional 2 prints "Practical Sessional Examination II". Change 1 to "Practical Sessional Examination I" (changes the header of every existing practical sessional paper), or keep?
 - Bloom near-full-line overflow fix? Grid header bold? Times font? Picker beyond 50 (D130 fixes)?
 
 ## Phase checklist
