@@ -6,7 +6,7 @@ no chat history must be able to continue from this file alone.
 ## Status
 - **Date:** 2026-11-16
 - **Current phase:** 15 merged to `main` and tagged v0.15.0 on local gates only (D124; owner: "Merge on local gates"). Next: Phase 16.
-- **Branch:** `main` (v0.15.0). `phase/15-co-blueprint` deleted locally and on GitHub. `fix/setup-honest-errors` and `fix/network-restart-windows` untouched, still waiting for CI.
+- **Branch:** `main` (v0.15.0). `phase/15-co-blueprint` deleted locally and on GitHub. `fix/setup-honest-errors` and `fix/network-restart-windows` deleted on GitHub at the owner's request (2026-11-16); they live only on the owner's Mac, unmerged. Push one again to merge it.
 - **CI:** GitHub Actions still refuses every job (billing).
 - **Local gates on the branch tip:** lint, typecheck, format, unit 1378, golden 121 passed / 30 visual skipped (Linux only), e2e 69 passed (v0.8.0, v0.10.0, v0.11.0, v0.14.0 upgrades), commit hygiene (hook).
 
