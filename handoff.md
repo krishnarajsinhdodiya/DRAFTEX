@@ -18,13 +18,13 @@ no chat history must be able to continue from this file alone.
 - Equation flake in fixture/guide scripts: wait for the field value before Enter (likely cause).
 
 ## In progress
-- FTS5 migration `20261117090000_question_search` done (index + triggers + fill, unit test). Next: `src/lib/bank/search.ts`.
+- Done: FTS5 migration; `src/lib/bank/search.ts`; `bank.list` keyset SQL; /bank Older/Newer; picker message; tests (unit 1399, e2e 72). Next: papers list keyset (D130).
 
 ## Next steps
 1. Session start per the operating rules.
 2. Done: FTS5 migration (see memory.md D126 as built). Trigram folds non-ASCII case too (`CAFÉ` found by `café`/`cafe`, `Ω` by `ω`; probed).
-3. `src/lib/bank/search.ts` (pure): query → safe MATCH string (D127), queries under 3 characters → `instr()`; cursor encode/decode with Zod (D130). Unit tests: hostile input, `%` `_`, emoji, non-Latin, 100 characters.
-4. Rewrite `bank.list` as one raw SQL (visibility D73 with EXISTS on BankCourseShare, Trash, filters, MATCH, ORDER BY COALESCE(updatedAt, createdAt) DESC, id DESC, LIMIT 51), then load those ≤ 50 rows with Prisma. Compare with the old JS filter on the seed for plain words in question text and tags. Update `/bank` screen and picker to Older/Newer links; papers list keyset too (D59 URL filters stay).
+3. Done: search.ts and bank.list keyset (memory.md "D127-D130 as built"; the DateTime-format finding).
+4. Papers list keyset pages (D130): today's /papers list; keep the D59 URL filters; reuse `encodeCursor`/`decodeCursor`/`msSql` from src/lib/bank/search.ts (move them to a neutral module if papers import them).
 5. D114 near-duplicates; worst-search break-ui; guide section + screenshots; performance after; D115 after figures; restore/backup index checks (an index built by migration on restore; v0.16.0 backup restores with a working index).
 
 ## Owner tasks (not code)
