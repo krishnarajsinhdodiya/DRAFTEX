@@ -5,8 +5,8 @@ no chat history must be able to continue from this file alone.
 
 ## Status
 - **Date:** 2026-11-16
-- **Current phase:** 15 (two COs + CO blueprint) built and green locally on `phase/15-co-blueprint`. **Not merged, not tagged.** Merging needs CI green or the owner saying "merge on local gates" in chat (D118 covered Phase 14 only).
-- **Branch:** `phase/15-co-blueprint` (pushed). `main` is v0.14.0. `fix/setup-honest-errors` and `fix/network-restart-windows` untouched, still waiting for CI.
+- **Current phase:** 15 merged to `main` and tagged v0.15.0 on local gates only (D124; owner: "Merge on local gates"). Next: Phase 16.
+- **Branch:** `main` (v0.15.0). `phase/15-co-blueprint` deleted locally and on GitHub. `fix/setup-honest-errors` and `fix/network-restart-windows` untouched, still waiting for CI.
 - **CI:** GitHub Actions still refuses every job (billing).
 - **Local gates on the branch tip:** lint, typecheck, format, unit 1378, golden 121 passed / 30 visual skipped (Linux only), e2e 69 passed (v0.8.0, v0.10.0, v0.11.0, v0.14.0 upgrades), commit hygiene (hook).
 
@@ -23,7 +23,7 @@ no chat history must be able to continue from this file alone.
 
 ## Next steps
 1. Session start per the operating rules.
-2. Get the owner's answer: merge Phase 15 on local gates, or wait for CI. On "merge": `git switch main && git merge --no-ff phase/15-co-blueprint`, bump `package.json` to 0.15.0 in the merge, tag v0.15.0, push main + tag, delete the branch locally and on GitHub, confirm with `git ls-remote --heads origin`; record D124 (merge on local gates) in memory.md.
+2. Done 2026-11-16: Phase 15 merged (D124), v0.15.0 tagged and pushed. Update the father's laptop with `update-windows.bat` and check two COs and Blueprints on Windows (D124 relies on it, as D117/D118 did).
 3. Owner decision: fix the Bloom overflow when a question's last line is nearly full (see "Logged"); it changes `\dxBloom` in every Bloom paper's LaTeX, so it needs an explicit OK and a byte-identity exception.
 4. When CI runs again: CI on main; ubuntu baselines for `code`, `key-code`, `tables`, `key-tables` from the visual artifact (D4); then the two `fix/` branches.
 5. Then Phase 16 (D112-D115) on `phase/16-bank-search`: measure performance first.
@@ -59,14 +59,13 @@ no chat history must be able to continue from this file alone.
 - Old-version fixtures: `git worktree add /tmp/dx-vX vX`, `npm ci`, `npm run build`, then `DRAFTEX_DATA_DIR=/Volumes/DRAFTEX/DRAFTEX-data node scripts/e2e-server.ts 3219` inside it (links the engine only), then `node scripts/make-upgrade-fixture.ts http://127.0.0.1:3219 <os tmp>/draftex-e2e-3219 vX` here.
 
 ## Questions for owner
-- Merge Phase 15 on local gates?
 - Fix the Bloom near-full-line overflow (changes LaTeX of Bloom papers)?
 - Grid header row prints bold, Lines header does not. Keep?
 - Later: Times font? Picker beyond 50 matches?
 
 ## Phase checklist
-- [x] 0-14 (see git tags v0.0.0 … v0.14.0)
-- [ ] 15 CO blueprint check (built on `phase/15-co-blueprint`, local gates green, not merged)
+- [x] 0-15 (see git tags v0.0.0 … v0.15.0)
+- [x] 15 Two COs + CO blueprint check (v0.15.0, local gates only, D124; CI run owed)
 - [ ] 16 Bank search, pages, near-duplicates
 
 ## Template for future handoffs
